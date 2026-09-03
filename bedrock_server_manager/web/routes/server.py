@@ -3,6 +3,10 @@ server 相关路由处理方法
 """
 
 import os
+from ...config import load_properties, properties_to_dict
+from ...server import get_server_proc
+from ...state import console
+from ...utils import installed, resolve_server_dir
 import time
 
 from ..route_decorator import register_route
@@ -11,13 +15,10 @@ from ..route_decorator import register_route
 class ServerRoutesMixin:
     """server 相关路由处理方法 mixin。"""
 
+
     @register_route("/api/server/start")
     def _route_server_start(self, data):
-        from ...config import load_properties, properties_to_dict
-        from ...server import get_server_proc
-        from ...state import console
-        from ...utils import installed, resolve_server_dir
-
+            
         d = resolve_server_dir()
         if not installed():
             self._json({"ok": False, "error": "未找到服务器，请先安装"})
@@ -54,9 +55,7 @@ class ServerRoutesMixin:
 
     @register_route("/api/server/stop")
     def _route_server_stop(self, data):
-        from ...server import get_server_proc
-        from ...state import console
-
+        
         try:
             p = get_server_proc()
             console.append("\n[系统] 正在发送 stop 指令，等待服务器保存退出...\n")
@@ -67,8 +66,7 @@ class ServerRoutesMixin:
 
     @register_route("/api/server/restart")
     def _route_server_restart(self, data):
-        from ...server import get_server_proc
-
+    
         try:
             p = get_server_proc()
             p.stop()

@@ -9,7 +9,7 @@ import os
 import sys
 from logging.handlers import RotatingFileHandler
 
-from .state import APP_DATA_DIR
+from .constants import APP_DATA_DIR
 
 # 日志级别映射
 LOG_LEVELS = {
@@ -139,6 +139,40 @@ def read_recent_logs(lines=100):
         return []
 
 
+def safe_log_exception(module_name, exception, level="debug"):
+    """
+    安全地记录异常信息，避免日志记录失败导致程序崩溃。
+
+    这是一个通用的异常日志记录辅助函数，用于替代重复的异常处理模板：
+        except Exception as e:
+            try:
+                get_app_logger().debug(f"xxx.py 异常: {e}")
+            except Exception:
+                pass
+
+    Args:
+        module_name: 模块名称（如 "utils.py"、"install.py"）
+        exception: 异常对象
+        level: 日志级别（debug / info / warning / error）
+    """
+    try:
+        logger = get_app_logger()
+        msg = f"{module_name} 异常: {exception}"
+        if level == "debug":
+            logger.debug(msg)
+        elif level == "info":
+            logger.info(msg)
+        elif level == "warning":
+            logger.warning(msg)
+        elif level == "error":
+            logger.error(msg)
+        else:
+            logger.debug(msg)
+    except Exception:
+        # 日志记录失败时静默处理，避免二次异常
+        pass
+
+
 # 初始化日志器（在模块导入时）
 with contextlib.suppress(Exception):
     get_app_logger()
@@ -153,6 +187,7 @@ __all__ = [
     "log_error",
     "log_critical",
     "log_exception",
+    "safe_log_exception",
     "get_log_file_path",
     "get_logs_dir",
     "read_recent_logs",

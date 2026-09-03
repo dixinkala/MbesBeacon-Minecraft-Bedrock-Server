@@ -3,7 +3,10 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger
+from .app_context import AppContext
+from .app_logger import get_app_logger, safe_log_exception
+from .server import get_server_proc
+from .utils import resolve_server_dir
 import os
 import shutil
 import time
@@ -11,20 +14,16 @@ import zipfile
 
 
 def _get_console():
-    """延迟导入 console 全局变量。"""
-    from .state import console
-
-    return console
+    """获取 console 全局变量（通过 AppContext）。"""
+    return AppContext.instance().console
 
 
 def _get_server_proc():
-    """延迟导入 get_server_proc 函数。"""
-    from .server import get_server_proc
-
+    """获取 get_server_proc 函数。"""
     return get_server_proc
 
 
-def backup_worlds_zip(dir_path, max_backups=5):
+def backup_worlds_zip(dir_path: str, max_backups: int = 5) -> str | None:
     """创建ZIP压缩备份，返回备份路径。"""
     try:
         worlds_dir = os.path.join(dir_path, "worlds")
@@ -61,15 +60,11 @@ def _cleanup_old_backups(backup_root, max_backups):
         for old in backups[max_backups:]:
             with contextlib.suppress(Exception):
                 os.remove(os.path.join(backup_root, old))
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"backup.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("backup", f"操作失败: {e}", "warning")
 
 
-def backup_worlds(dir_path, max_backups=5):
+def backup_worlds(dir_path: str, max_backups: int = 5) -> str:
     """自动备份服务器 worlds 文件夹到同级目录的 _worlds_backups 文件夹。
     返回备份路径，失败或无 worlds 时返回空字符串。只保留最近 max_backups 个备份。"""
     console = _get_console()
@@ -98,12 +93,8 @@ def backup_worlds(dir_path, max_backups=5):
             )
             for old in backups[max_backups:]:
                 shutil.rmtree(old, ignore_errors=True)
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"backup.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("backup", f"操作失败: {e}", "warning")
         console.append(f"\n[系统] 已自动备份世界存档到: {backup_dir}\n")
         return backup_dir
     except Exception as e:
@@ -111,14 +102,14 @@ def backup_worlds(dir_path, max_backups=5):
         return ""
 
 
-def get_backup_root(dir_path):
+def get_backup_root(dir_path: str) -> str:
     """获取服务器的备份根目录路径。"""
     if not dir_path:
         return ""
     return os.path.join(os.path.dirname(dir_path), "_worlds_backups")
 
 
-def list_backups(dir_path):
+def list_backups(dir_path: str) -> list[dict]:
     """列出指定服务器的所有世界备份，返回 [{name, path, size, time}, ...]，按时间倒序。"""
     if not dir_path or not os.path.isdir(dir_path):
         return []
@@ -133,21 +124,27 @@ def list_backups(dir_path):
             if not name.startswith(prefix):
                 continue
             full = os.path.join(backup_root, name)
-            if not os.path.isdir(full):
+            # 支持目录型备份和 ZIP 压缩备份
+            is_dir = os.path.isdir(full)
+            is_zip = name.endswith(".zip") and os.path.isfile(full)
+            if not (is_dir or is_zip):
                 continue
-            # 计算目录大小
+            # 计算大小
             total_size = 0
-            try:
-                for root, _dirs, files in os.walk(full):
-                    for f in files:
-                        with contextlib.suppress(Exception):
-                            total_size += os.path.getsize(os.path.join(root, f))
-            except Exception:  # 已添加异常记录
+            if is_dir:
                 try:
-                    import sys
-                    get_app_logger().debug(f"backup.py 异常: {e}")
-                except Exception:
-                    pass
+                    for root, _dirs, files in os.walk(full):
+                        for f in files:
+                            with contextlib.suppress(Exception):
+                                total_size += os.path.getsize(os.path.join(root, f))
+                except Exception as e:
+                    safe_log_exception("backup", f"操作失败: {e}", "warning")
+            else:
+                # ZIP 文件直接获取文件大小
+                try:
+                    total_size = os.path.getsize(full)
+                except Exception as e:
+                    safe_log_exception("backup", f"操作失败: {e}", "warning")
             mtime = os.path.getmtime(full)
             result.append(
                 {
@@ -157,19 +154,16 @@ def list_backups(dir_path):
                     "size_mb": round(total_size / (1024 * 1024), 2),
                     "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime)),
                     "timestamp": mtime,
+                    "type": "directory" if is_dir else "zip",
                 }
             )
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"backup.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("backup", f"操作失败: {e}", "warning")
     result.sort(key=lambda x: x["timestamp"], reverse=True)
     return result
 
 
-def restore_backup(backup_path, server_dir):
+def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
     """从备份恢复世界存档。会先停止服务器，备份当前 worlds（如果存在），然后恢复。
     返回 (ok, error_msg)。"""
     console = _get_console()
@@ -192,12 +186,8 @@ def restore_backup(backup_path, server_dir):
         p = get_server_proc()
         if p.running:
             p.stop(wait=10)
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"backup.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("backup", f"操作失败: {e}", "warning")
     worlds_dir = os.path.join(server_dir, "worlds")
     tmp_dir = None
     try:
@@ -225,16 +215,12 @@ def restore_backup(backup_path, server_dir):
                 tmp_dirs = [d for d in os.listdir(server_dir) if d.startswith("worlds_restore_tmp_")]
                 if tmp_dirs and not os.path.isdir(worlds_dir):
                     os.rename(os.path.join(server_dir, tmp_dirs[0]), worlds_dir)
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"backup.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("backup", f"操作失败: {e}", "warning")
         return False, f"恢复失败: {str(e)}"
 
 
-def delete_backup(backup_path, server_dir=None):
+def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool, str]:
     """删除指定备份目录。返回 (ok, error_msg)。
 
     安全校验：
@@ -250,8 +236,7 @@ def delete_backup(backup_path, server_dir=None):
     # 安全校验2：绝对路径边界检查（与 restore_backup 一致）
     try:
         if server_dir is None:
-            from .utils import resolve_server_dir
-
+        
             server_dir = resolve_server_dir()
         if server_dir:
             backup_root = get_backup_root(server_dir)
@@ -259,12 +244,8 @@ def delete_backup(backup_path, server_dir=None):
             root_abs = os.path.normpath(os.path.abspath(backup_root))
             if not (backup_abs == root_abs or backup_abs.startswith(root_abs + os.sep)):
                 return False, "非法路径，只能删除备份目录内的存档"
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"backup.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("backup", f"操作失败: {e}", "warning")
     try:
         shutil.rmtree(backup_path, ignore_errors=True)
         console.append(f"\n[系统] 已删除备份: {os.path.basename(backup_path)}\n")
@@ -316,12 +297,8 @@ def delete_server(dir_target, mode):
                     shutil.rmtree(full, ignore_errors=True)
                 else:
                     os.remove(full)
-            except Exception:  # 已添加异常记录
-                try:
-                    import sys
-                    get_app_logger().debug(f"backup.py 异常: {e}")
-                except Exception:
-                    pass
+            except Exception as e:
+                        safe_log_exception("backup", f"操作失败: {e}", "warning")
     else:
         shutil.rmtree(dir_target, ignore_errors=True)
     return True

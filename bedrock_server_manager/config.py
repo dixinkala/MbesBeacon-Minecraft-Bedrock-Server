@@ -3,7 +3,7 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger
+from .app_logger import get_app_logger, safe_log_exception
 import os
 import shutil
 import threading
@@ -33,7 +33,7 @@ AUDIT_LOG_NAME = "audit.log"
 CONFIG_HISTORY_DIR = ".config_history"
 VERSION_CACHE_FILE = ".versions_cache.json"
 VERSION_CACHE_TTL = 3600  # 1小时
-SCHEDULED_TASKS_FILE = ".scheduled_tasks.json"
+SCHEDULED_TASKS_FILE = "scheduled_tasks.json"
 PACKS_CONFIG = "valid_known_packs.json"
 PERMISSIONS_FILE = "permissions.json"
 ALLOWLIST_FILE = "allowlist.json"
@@ -90,14 +90,31 @@ _scheduler_stop = threading.Event()
 _CONFIG_RANGES = {
     "server-port": (1, 65535),
     "server-portv6": (1, 65535),
-    "max-players": (1, 100),
+    "max-players": (1, 99999),
     "view-distance": (3, 96),
     "tick-distance": (2, 12),
     "spawn-protection": (0, 100),
+    "compression-threshold": (0, 65535),
+    "player-movement-score-threshold": (0, 1000),
+    "player-movement-duration-threshold-in-ms": (0, 10000),
+    "overworld-height": (-512, 512),
+    "overworld-depth": (0, 1024),
+    "nether-height": (-512, 512),
+    "nether-depth": (0, 1024),
+    "the-end-height": (-512, 512),
+    "the-end-depth": (0, 1024),
+}
+
+# 文本类型配置项长度限制
+_CONFIG_TEXT_LENGTHS = {
+    "server-name": (1, 100),
+    "level-name": (1, 100),
+    "level-seed": (0, 100),
+    "language": (2, 10),
 }
 
 
-def detect_file_encoding(filepath):
+def detect_file_encoding(filepath: str) -> str:
     """检测文件编码，优先 UTF-8，失败则尝试 GBK。"""
     if not os.path.isfile(filepath):
         return "utf-8"
@@ -111,7 +128,7 @@ def detect_file_encoding(filepath):
     return "utf-8"
 
 
-def load_properties(filepath):
+def load_properties(filepath: str) -> list[tuple[str, str]]:
     """加载 server.properties 文件，返回 [(key, value), ...]。
     注释和空行会被跳过。"""
     if not os.path.isfile(filepath):
@@ -132,7 +149,7 @@ def load_properties(filepath):
     return items
 
 
-def save_properties(filepath, items):
+def save_properties(filepath: str, items: list[tuple[str, str]]) -> bool:
     """保存 server.properties 文件。
     items 格式为 [(key, value), ...]。
     会保留原文件中的注释和未在 items 中列出的项。"""
@@ -183,14 +200,31 @@ _RESERVED_PORTS = {80, 443, 3389, 22, 21, 25, 53, 110, 143, 3306, 5432, 6379, 27
 
 
 def _build_prop_meta_dict():
-    """从 PROP_META 和 FULL_PROP_META 构建配置项元数据字典。"""
+    """从 PROP_META 和 FULL_PROP_META 构建配置项元数据字典。
+
+    元组格式说明：
+    - 通用格式: (key, name, type, default)
+    - choice 类型: (key, name, "choice", choices) 或 (key, name, "choice", default, choices)
+    """
     meta_dict = {}
     for item in FULL_PROP_META:
         if len(item) >= 4:
-            key, name, ptype, default = item[0], item[1], item[2], item[3]
-            meta_dict[key] = {"name": name, "type": ptype, "default": default}
-            if ptype == "choice" and len(item) > 4:
-                meta_dict[key]["choices"] = item[4]
+            key, name, ptype = item[0], item[1], item[2]
+            meta_dict[key] = {"name": name, "type": ptype}
+
+            if ptype == "choice":
+                # choice 类型：第4个元素可能是 choices 列表或 default
+                if len(item) == 4:
+                    # 格式: (key, name, "choice", choices)
+                    meta_dict[key]["choices"] = item[3]
+                    meta_dict[key]["default"] = item[3][0] if item[3] else ""
+                elif len(item) >= 5:
+                    # 格式: (key, name, "choice", default, choices)
+                    meta_dict[key]["default"] = item[3]
+                    meta_dict[key]["choices"] = item[4]
+            else:
+                # 其他类型：第4个元素是 default
+                meta_dict[key]["default"] = item[3]
     return meta_dict
 
 
@@ -206,7 +240,7 @@ def _get_prop_meta_dict():
     return _PROP_META_DICT
 
 
-def validate_config_updates(updates):
+def validate_config_updates(updates: dict) -> tuple[bool, str, str]:
     """校验配置更新，返回 (ok, error_msg, field)。field 为出错的字段名。
 
     支持的校验类型：
@@ -269,10 +303,19 @@ def validate_config_updates(updates):
                 except (ValueError, TypeError):
                     return False, f"{key} 必须是数字", key
 
+            elif ptype == "text":
+                # 文本长度校验
+                if key in _CONFIG_TEXT_LENGTHS:
+                    min_len, max_len = _CONFIG_TEXT_LENGTHS[key]
+                    if len(value_str) < min_len:
+                        return False, f"{key} 长度不能少于 {min_len} 个字符", key
+                    if len(value_str) > max_len:
+                        return False, f"{key} 长度不能超过 {max_len} 个字符", key
+
     return True, "", ""
 
 
-def backup_config_history(server_dir):
+def backup_config_history(server_dir: str) -> str | None:
     """备份当前 server.properties 到历史目录。返回备份文件路径。"""
     props_path = os.path.join(server_dir, "server.properties")
     if not os.path.isfile(props_path):
@@ -296,7 +339,7 @@ def backup_config_history(server_dir):
         return None
 
 
-def list_config_history(server_dir):
+def list_config_history(server_dir: str) -> list[dict]:
     """列出配置历史备份。返回 [{name, path, time, size}, ...]"""
     history_dir = os.path.join(server_dir, CONFIG_HISTORY_DIR)
     if not os.path.isdir(history_dir):
@@ -314,12 +357,8 @@ def list_config_history(server_dir):
                         "size": os.path.getsize(full_path),
                     }
                 )
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"config.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("config", f"操作失败: {e}", "warning")
     return backups
 
 

@@ -3,16 +3,19 @@ worlds 相关路由处理方法
 """
 
 from ..route_decorator import register_route, register_get_route
+from ...worlds import get_active_world_name, list_worlds, set_active_world, rename_world, delete_world, duplicate_world
+from ...security import check_dangerous_operation
+from ...state import console
+from ...utils import resolve_server_dir
 
 
 class WorldsRoutesMixin:
     """worlds 相关路由处理方法 mixin。"""
 
+
     @register_get_route("/api/worlds/list")
     def _route_worlds_list(self, q):
-        from ...utils import resolve_server_dir
-        from ...worlds import get_active_world_name, list_worlds
-
+    
         d = resolve_server_dir()
         if not d:
             self._json({"ok": False, "error": "未设置服务器目录"})
@@ -22,10 +25,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/switch")
     def _route_worlds_switch(self, data):
-        from ...state import console
-        from ...utils import resolve_server_dir
-        from ...worlds import set_active_world
-
+    
         d = resolve_server_dir()
         world_name = (data.get("name") or "").strip()
         if not d:
@@ -43,10 +43,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/rename")
     def _route_worlds_rename(self, data):
-        from ...state import console
-        from ...utils import resolve_server_dir
-        from ...worlds import rename_world
-
+    
         d = resolve_server_dir()
         old_name = (data.get("old_name") or "").strip()
         new_name = (data.get("new_name") or "").strip()
@@ -62,11 +59,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/delete")
     def _route_worlds_delete(self, data):
-        from ...security import check_dangerous_operation
-        from ...state import console
-        from ...utils import resolve_server_dir
-        from ...worlds import delete_world
-
+    
         # 危险操作二次确认
         ok, err = check_dangerous_operation("/api/worlds/delete", data)
         if not ok:
@@ -94,10 +87,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/duplicate")
     def _route_worlds_duplicate(self, data):
-        from ...state import console
-        from ...utils import resolve_server_dir
-        from ...worlds import duplicate_world
-
+    
         d = resolve_server_dir()
         source_name = (data.get("source") or "").strip()
         new_name = (data.get("new_name") or "").strip()
@@ -120,8 +110,7 @@ class WorldsRoutesMixin:
         import time
         import zipfile
 
-        from ...utils import resolve_server_dir
-
+    
         d = resolve_server_dir()
         if not d:
             self._json({"ok": False, "error": "未设置服务器目录"})
@@ -171,10 +160,7 @@ class WorldsRoutesMixin:
         import tempfile
         import zipfile
 
-        from ...security import check_dangerous_operation
-        from ...state import console
-        from ...utils import resolve_server_dir
-
+    
         # 危险操作二次确认
         ok, err = check_dangerous_operation("/api/worlds/import", data)
         if not ok:

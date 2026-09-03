@@ -3,36 +3,75 @@
 """
 
 import contextlib
+from .app_context import AppContext
+from .config import load_properties
+from .app_logger import safe_log_exception
+from .constants import IS_WINDOWS, SERVER_EXE
 import os
 import subprocess
 import threading
 import time
+import socket
 
 
-# 延迟导入全局状态（避免循环导入）
+# 通过 AppContext 访问全局状态（消除延迟导入）
 def _get_settings():
-    from .state import settings
-
-    return settings
+    return AppContext.instance().settings
 
 
 def _get_console():
-    from .state import console
-
-    return console
+    return AppContext.instance().console
 
 
 def _get_server_proc_state():
-    from .state import server_lock, server_proc
-
-    return server_proc, server_lock
+    ctx = AppContext.instance()
+    return ctx.server_proc, ctx.server_lock
 
 
 def _get_constants():
     """获取服务器相关常量（仅 Windows 平台）。"""
-    from .state import IS_WINDOWS, SERVER_EXE
-
     return SERVER_EXE, IS_WINDOWS
+
+
+def check_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
+    """检测指定端口是否被占用。
+
+    Args:
+        port: 端口号
+        host: 主机地址（默认 127.0.0.1）
+
+    Returns:
+        bool: True 表示端口被占用，False 表示端口可用
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            result = s.connect_ex((host, port))
+            return result == 0
+    except (socket.error, OSError):
+        return False
+
+
+def get_server_port(server_dir: str) -> int:
+    """从 server.properties 读取服务器端口，默认 19132。
+
+    Args:
+        server_dir: 服务器目录
+
+    Returns:
+        int: 服务器端口号
+    """
+    try:
+        props = load_properties(os.path.join(server_dir, "server.properties"))
+        for key, value in props:
+            if key == "server-port":
+                try:
+                    return int(value)
+                except (ValueError, TypeError):
+                    return 19132
+    except Exception:
+        pass
+    return 19132
 
 
 class ServerProcess:
@@ -67,27 +106,41 @@ class ServerProcess:
         with self._lock:
             if self.running:
                 return
-            exe = os.path.join(self.server_dir, SERVER_EXE)
-            if not os.path.exists(exe):
-                raise FileNotFoundError(f"未找到 {SERVER_EXE}，请先安装服务器。")
-            flags = subprocess.CREATE_NO_WINDOW  # Windows 平台：不创建控制台窗口
-            self._user_stopped = False
-            self._exit_code = None
-            self._start_time = time.time()
-            # 如果距离上次崩溃超过 CRASH_RESET_SECONDS，重置崩溃计数器
-            if self._last_crash_time and (time.time() - self._last_crash_time) > self.CRASH_RESET_SECONDS:
-                self._crash_restart_count = 0
-            self.proc = subprocess.Popen(
-                [exe],
-                cwd=self.server_dir,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                creationflags=flags,
-            )
-            self.reader_thread = threading.Thread(target=self._reader, daemon=True)
-            self.reader_thread.start()
-            self.on_state(True)
+            try:
+                exe = os.path.join(self.server_dir, SERVER_EXE)
+                if not os.path.exists(exe):
+                    raise FileNotFoundError(f"未找到 {SERVER_EXE}，请先安装服务器。")
+                # 端口占用检测
+                server_port = get_server_port(self.server_dir)
+                if check_port_in_use(server_port):
+                    self._emit(f"\n[系统] ⚠ 警告：端口 {server_port} 已被占用，服务器可能无法正常启动。\n")
+                    self._emit(f"[系统] 请关闭占用端口 {server_port} 的程序，或在服务器配置中修改 server-port。\n")
+                flags = subprocess.CREATE_NO_WINDOW  # Windows 平台：不创建控制台窗口
+                self._user_stopped = False
+                self._exit_code = None
+                self._start_time = time.time()
+                # 如果距离上次崩溃超过 CRASH_RESET_SECONDS，重置崩溃计数器
+                if self._last_crash_time and (time.time() - self._last_crash_time) > self.CRASH_RESET_SECONDS:
+                    self._crash_restart_count = 0
+                self.proc = subprocess.Popen(
+                    [exe],
+                    cwd=self.server_dir,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    creationflags=flags,
+                )
+                self.reader_thread = threading.Thread(target=self._reader, daemon=True)
+                self.reader_thread.start()
+                self.on_state(True)
+            except FileNotFoundError:
+                raise
+            except (PermissionError, OSError) as e:
+                safe_log_exception("server.py", f"启动服务器失败: {e}", "error")
+                raise RuntimeError(f"启动服务器失败: {e}") from e
+            except Exception as e:
+                safe_log_exception("server.py", f"启动服务器时发生未知异常: {e}", "error")
+                raise
 
     def _reader(self):
         proc = self.proc
@@ -153,8 +206,14 @@ class ServerProcess:
             return buf.decode("gbk", errors="replace")
 
     def _emit(self, line):
-        with contextlib.suppress(Exception):
+        try:
             self.on_output(line)
+        except Exception as e:
+            try:
+                from .app_logger import get_app_logger
+                get_app_logger().warning(f"server.py on_output 异常: {e}")
+            except Exception:
+                pass
 
     def send(self, cmd):
         if not self.running:
@@ -166,8 +225,14 @@ class ServerProcess:
         if not self.running:
             return
         self._user_stopped = True
-        with contextlib.suppress(Exception):
+        try:
             self.send("stop")
+        except Exception as e:
+            try:
+                from .app_logger import get_app_logger
+                get_app_logger().warning(f"server.py 发送 stop 命令异常: {e}")
+            except Exception:
+                pass
         t0 = time.time()
         while self.running and time.time() - t0 < wait:
             time.sleep(0.2)
@@ -178,31 +243,45 @@ class ServerProcess:
         with self._lock:
             if self.proc and self.running:
                 self._user_stopped = True
-                with contextlib.suppress(Exception):
+                try:
                     self.proc.kill()
+                except Exception as e:
+                    try:
+                        from .app_logger import get_app_logger
+                        get_app_logger().warning(f"server.py 杀死进程异常: {e}")
+                    except Exception:
+                        pass
         self.on_state(False)
 
 
 def get_server_proc():
     """获取或创建 ServerProcess 单例。"""
-    from .state import console, server_lock, server_proc, settings
+    settings = _get_settings()
+
+    ctx = AppContext.instance()
+    settings = ctx.settings
+    console = ctx.console
+    server_proc = ctx.server_proc
+    server_lock = ctx.server_lock
 
     with server_lock:
         if server_proc is None:
 
             def on_out(line):
-                console.append(line)
+                if console:
+                    console.append(line)
 
             def on_state(running):
                 pass
 
             server_proc = ServerProcess(settings["server_dir"], on_output=on_out, on_state=on_state)
+            ctx.server_proc = server_proc
         return server_proc
 
 
-def server_running():
+def server_running() -> bool:
     """检查服务器进程是否正在运行。"""
-    from .state import server_lock, server_proc
 
+    server_proc, server_lock = _get_server_proc_state()
     with server_lock:
         return server_proc is not None and server_proc.running

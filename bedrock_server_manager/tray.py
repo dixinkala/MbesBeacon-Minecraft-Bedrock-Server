@@ -4,6 +4,8 @@
 
 import contextlib
 from .app_logger import get_app_logger
+from .constants import LOGS_DIR
+from .server import server_running
 import ctypes
 import ctypes.wintypes
 import os
@@ -19,9 +21,7 @@ def _log(msg):
         line = f"[Tray] {msg}\n"
         # 写入日志文件
         try:
-            import os
-
-            log_dir = os.path.join(os.path.expanduser("~"), ".bedrock_server_manager")
+            log_dir = LOGS_DIR
             os.makedirs(log_dir, exist_ok=True)
             log_file = os.path.join(log_dir, "tray.log")
             # 首次创建文件时添加 UTF-8 BOM，确保 Windows 记事本正确识别编码
@@ -35,14 +35,8 @@ def _log(msg):
         # 控制台输出（开发模式可见）
         with contextlib.suppress(Exception):
             print(line, end="")
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"tray.py 异常: {e}")
-        except Exception:
-            pass
-
-
+    except Exception as e:
+        safe_log_exception("tray", f"操作失败: {e}", "warning")
 class SystemTray:
     """Windows 系统托盘图标，使用 ctypes 调用 Win32 API 实现。
     托盘菜单：打开管理界面、启动/停止服务器、退出程序。"""
@@ -159,10 +153,26 @@ class SystemTray:
         """窗口过程函数，处理托盘消息和菜单命令。"""
         try:
             if msg == self.WM_TRAYICON:
+                _log(f"托盘消息: lparam=0x{lparam:08X}, wparam=0x{wparam:08X}")
+                # 处理各种鼠标消息
                 if lparam == 0x0205:  # WM_RBUTTONUP
+                    _log("检测到右键松开，显示菜单")
                     self._show_menu()
+                elif lparam == 0x0204:  # WM_RBUTTONDOWN
+                    _log("检测到右键按下")
                 elif lparam == 0x0202:  # WM_LBUTTONUP
+                    _log("检测到左键松开，打开管理界面")
                     self.on_open()
+                elif lparam == 0x0201:  # WM_LBUTTONDOWN
+                    _log("检测到左键按下")
+                elif lparam == 0x0203:  # WM_LBUTTONDBLCLK
+                    _log("检测到左键双击，打开管理界面")
+                    self.on_open()
+                elif lparam == 0x0206:  # WM_RBUTTONDBLCLK
+                    _log("检测到右键双击，显示菜单")
+                    self._show_menu()
+                else:
+                    _log(f"未处理的托盘鼠标消息: 0x{lparam:08X}")
                 return 0
             elif msg == self.WM_COMMAND:
                 cmd = wparam & 0xFFFF
@@ -184,24 +194,87 @@ class SystemTray:
     def _show_menu(self):
         """显示右键菜单。"""
         try:
-            from .server import server_running
-
             u = self._user32 if self._user32 else ctypes.windll.user32
+            
+            # 创建弹出菜单
             menu = u.CreatePopupMenu()
             if not menu:
                 _log("创建弹出菜单失败")
                 return
-            u.AppendMenuW(menu, 0x0000, self.ID_OPEN, "打开管理界面")
+            _log(f"创建弹出菜单成功, menu={menu}")
+            
+            # 添加菜单项
+            MFT_STRING = 0x0000
+            MFT_SEPARATOR = 0x00000800
+            
+            r1 = u.AppendMenuW(menu, MFT_STRING, self.ID_OPEN, "打开管理界面")
             toggle_text = "停止服务器" if server_running() else "启动服务器"
-            u.AppendMenuW(menu, 0x0000, self.ID_TOGGLE, toggle_text)
-            u.AppendMenuW(menu, 0x00000800, 0, "")  # MF_SEPARATOR
-            u.AppendMenuW(menu, 0x0000, self.ID_EXIT, "退出程序")
+            r2 = u.AppendMenuW(menu, MFT_STRING, self.ID_TOGGLE, toggle_text)
+            r3 = u.AppendMenuW(menu, MFT_SEPARATOR, 0, "")
+            r4 = u.AppendMenuW(menu, MFT_STRING, self.ID_EXIT, "退出程序")
+            _log(f"添加菜单项: open={r1}, toggle={r2}, sep={r3}, exit={r4}")
+            
+            # 获取光标位置
             pt = ctypes.wintypes.POINT()
             u.GetCursorPos(ctypes.byref(pt))
+            _log(f"光标位置: x={pt.x}, y={pt.y}")
+            
+            # 设置前台窗口（必须，否则菜单可能不显示）
             u.SetForegroundWindow(self._hwnd)
-            result = u.TrackPopupMenu(menu, 0x0002, pt.x, pt.y, 0, self._hwnd, None)
+            
+            # 显示菜单（使用 TPM_RIGHTBUTTON | TPM_RETURNCMD）
+            # TPM_RETURNCMD: 直接返回选中的菜单项 ID，而不是发送 WM_COMMAND
+            TPM_RIGHTBUTTON = 0x0002
+            TPM_RETURNCMD = 0x0100
+            TPM_BOTTOMALIGN = 0x0020
+            
+            flags = TPM_RIGHTBUTTON | TPM_RETURNCMD
+            cmd = u.TrackPopupMenu(menu, flags, pt.x, pt.y, 0, self._hwnd, None)
+            _log(f"TrackPopupMenu 返回: cmd={cmd}")
+            
+            # 处理菜单选择（使用 TPM_RETURNCMD 时，返回值是菜单项 ID）
+            _log(f"菜单选择处理: cmd={cmd}, ID_OPEN={self.ID_OPEN}, ID_TOGGLE={self.ID_TOGGLE}, ID_EXIT={self.ID_EXIT}")
+            if cmd > 0:
+                if cmd == self.ID_OPEN:
+                    _log("菜单选择: 打开管理界面")
+                    try:
+                        self.on_open()
+                        _log("打开管理界面完成")
+                    except Exception as e:
+                        _log(f"打开管理界面失败: {e}")
+                elif cmd == self.ID_TOGGLE:
+                    _log("菜单选择: 启动/停止服务器")
+                    try:
+                        if self.on_toggle:
+                            self.on_toggle()
+                            _log("启动/停止服务器完成")
+                        else:
+                            _log("on_toggle 回调未设置")
+                    except Exception as e:
+                        _log(f"启动/停止服务器失败: {e}")
+                elif cmd == self.ID_EXIT:
+                    _log("菜单选择: 退出程序")
+                    try:
+                        if self.on_exit:
+                            self.on_exit()
+                            _log("退出程序完成")
+                        else:
+                            _log("on_exit 回调未设置")
+                    except Exception as e:
+                        _log(f"退出程序失败: {e}")
+                else:
+                    _log(f"未知的菜单项 ID: {cmd}")
+            else:
+                _log(f"用户取消菜单选择或 TrackPopupMenu 失败: cmd={cmd}")
+            
+            # 销毁菜单
             u.DestroyMenu(menu)
-            _log(f"显示菜单完成, TrackPopupMenu 返回: {result}")
+            
+            # 发送 WM_NULL 消息（Windows 已知问题：菜单关闭后必须发送，否则下次可能不显示）
+            WM_NULL = 0x0000
+            u.PostMessageW(self._hwnd, WM_NULL, 0, 0)
+            
+            _log("显示菜单完成")
         except Exception as e:
             _log(f"显示菜单异常: {e}\n{traceback.format_exc()}")
 
@@ -295,7 +368,7 @@ class SystemTray:
                 ctypes.c_void_p,
                 ctypes.c_void_p,
             ]
-            user32.TrackPopupMenu.restype = ctypes.c_bool
+            user32.TrackPopupMenu.restype = ctypes.c_int  # 使用 TPM_RETURNCMD 时返回菜单项 ID
             user32.DestroyMenu.argtypes = [ctypes.c_void_p]
             user32.DestroyMenu.restype = ctypes.c_bool
             user32.GetCursorPos.argtypes = [ctypes.POINTER(ctypes.wintypes.POINT)]
