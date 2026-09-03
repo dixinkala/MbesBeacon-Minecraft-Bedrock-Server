@@ -11,7 +11,7 @@ import time
 
 # ---------------- 应用常量 ----------------
 APP_TITLE = "MbesBeacon"
-APP_VERSION = "2.0.0"
+APP_VERSION = "0.1.0"
 APP_MARKER = "mbesbeacon"
 DEFAULT_PORT = 19100
 
