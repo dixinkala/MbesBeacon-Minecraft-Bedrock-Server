@@ -346,7 +346,7 @@ MbesBeacon 内置多项安全机制，确保服务器和本地数据安全：
 ## 常见问题
 
 ### Q：首次运行弹出"Windows 已保护你的电脑"怎么办？
-A：这是 Windows SmartScreen 警告。点击「更多信息」->「仍要运行」即可启动。如需完全消除警告，可申请 SignPath Foundation 免费签名（详见 CODE_SIGNING.md）。
+A：这是 Windows SmartScreen 警告。点击「更多信息」->「仍要运行」即可启动。
 
 ### Q：关闭管理页面后服务器还在运行吗？
 A：在。关闭浏览器页面不影响服务器，再次双击 exe 或通过系统托盘可重新打开管理界面。
