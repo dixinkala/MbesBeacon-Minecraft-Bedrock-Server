@@ -1,0 +1,87 @@
+# Ruff 配置文件
+# 代码规范检查与格式化工具
+# 安装：pip install ruff
+# 使用：ruff check . / ruff format .
+
+[tool.ruff]
+# 目标 Python 版本
+target-version = "py310"
+
+# 检查的文件类型
+extend-include = ["*.py", "*.pyi"]
+
+# 排除的目录
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    "venv",
+    ".venv",
+    "node_modules",
+]
+
+# 行长度
+line-length = 120
+
+# 缩进
+indent-width = 4
+
+[tool.ruff.lint]
+# 启用的规则集
+# E/W: pycodestyle (风格错误)
+# F: pyflakes (逻辑错误)
+# I: isort (导入排序)
+# UP: pyupgrade (语法升级)
+# B: flake8-bugbear (常见bug)
+# A: flake8-builtins (内置函数遮蔽)
+# C4: flake8-comprehensions (推导式优化)
+# SIM: flake8-simplify (代码简化)
+select = [
+    "E", "W", "F", "I", "UP", "B", "A", "C4", "SIM"
+]
+
+# 忽略的规则
+ignore = [
+    "E501",  # 行长度（由 formatter 处理）
+    "E203",  # 切片前空格（与 black 不兼容）
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 特定文件忽略的规则
+"__init__.py" = ["F401"]  # 未使用的导入（__init__.py 中用于导出）
+"test_*.py" = ["N802"]  # 测试文件放宽要求
+"*_test.py" = ["N802"]
+
+[tool.ruff.lint.isort]
+# 导入排序配置
+known-first-party = ["bedrock_server_manager"]
+case-sensitive = true
+force-single-line = false
+force-wrap-aliases = true
+combine-as-imports = true
+
+[tool.ruff.format]
+# 格式化配置
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = 80
+
+[tool.ruff.lint.flake8-bugbear]
+# flake8-bugbear 配置
+extend-immutable-calls = ["lru_cache"]
+
+[tool.ruff.lint.flake8-builtins]
+# flake8-builtins 配置
+builtins-ignorelist = ["id", "type", "format", "filter", "map"]
+
+[tool.pytest.ini_options]
+# pytest 配置
+testpaths = ["."]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

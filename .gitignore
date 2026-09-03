@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# 本地设置与日志
+.bedrock_server_manager_settings.json
+.bedrock_server_manager_theme.json
+.bedrock_server_manager_crash.log
+.bedrock_server_hashes.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 证书（不提交）
+cert.pfx
+*.pfx
+*.cer
+*.p12

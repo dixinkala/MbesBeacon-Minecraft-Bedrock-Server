@@ -1,0 +1,83 @@
+# Pre-commit 配置文件
+# 安装：pip install pre-commit
+# 启用：pre-commit install
+# 手动运行：pre-commit run --all-files
+
+repos:
+  # Ruff: 代码规范检查与格式化
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        name: ruff (lint)
+        description: "Run ruff linter"
+        entry: ruff check
+        language: python
+        types_or: [python, pyi]
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        name: ruff (format)
+        description: "Run ruff formatter"
+        entry: ruff format
+        language: python
+        types_or: [python, pyi]
+
+  # 尾随空白检查
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        name: 移除尾随空白
+        description: "移除文件末尾的空白字符"
+      - id: end-of-file-fixer
+        name: 文件末尾换行
+        description: "确保文件以换行符结尾"
+      - id: check-yaml
+        name: YAML 语法检查
+        description: "检查 YAML 文件语法"
+      - id: check-json
+        name: JSON 语法检查
+        description: "检查 JSON 文件语法"
+      - id: check-toml
+        name: TOML 语法检查
+        description: "检查 TOML 文件语法"
+      - id: check-merge-conflict
+        name: 合并冲突检查
+        description: "检查是否存在未解决的合并冲突"
+      - id: check-added-large-files
+        name: 大文件检查
+        description: "检查是否添加了过大的文件"
+        args: ['--maxkb=1024']
+
+  # Python 代码语法检查
+  - repo: local
+    hooks:
+      - id: python-syntax-check
+        name: Python 语法检查
+        description: "检查 Python 文件语法"
+        entry: python -m py_compile
+        language: system
+        types: [python]
+        pass_filenames: true
+
+  # 测试运行（可选，提交前运行）
+  - repo: local
+    hooks:
+      - id: run-tests
+        name: 运行单元测试
+        description: "提交前运行单元测试"
+        entry: python -m pytest test_unit.py -q
+        language: system
+        pass_filenames: false
+        stages: [commit]
+        always_run: false
+
+# 配置
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] 自动修复
+
+  autoupdate_commit_msg: |
+    [pre-commit.ci] 预提交钩子更新
+
+  skip: []
