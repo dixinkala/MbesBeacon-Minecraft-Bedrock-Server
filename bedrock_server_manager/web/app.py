@@ -3,6 +3,14 @@
 """
 
 import os
+from ..config import load_properties, properties_to_dict
+from ..constants import DEFAULT_PORT
+from ..server import get_server_proc, server_running
+from ..app_context import AppContext as GlobalAppContext
+from ..utils import installed, props_path, resolve_server_dir
+from ..backup import backup_worlds, list_backups
+from ..config import load_properties, properties_to_dict, save_properties, validate_config_updates
+from ..security import validate_command
 import time
 
 
@@ -14,14 +22,14 @@ class AppContext:
     _instance = None
 
     def __init__(self):
-        from ..state import API_TOKEN, DEFAULT_PORT, console, install_state, settings
-
-        self.console = console
-        self.install_state = install_state
-        self.settings = settings
+        # 从全局 AppContext 获取状态，保持单一数据源
+        global_ctx = GlobalAppContext.instance()
+        self.console = global_ctx.console
+        self.install_state = global_ctx.install_state
+        self.settings = global_ctx.settings
         self._server_proc = None
         self.httpd = None
-        self.api_token = API_TOKEN
+        self.api_token = global_ctx.api_token
         self.port = DEFAULT_PORT
         self.tray = None
 
@@ -38,36 +46,27 @@ class AppContext:
 
     @property
     def server_dir(self):
-        from ..state import settings
-        from ..utils import resolve_server_dir
-
-        return settings.get("server_dir", "") or resolve_server_dir()
+        return GlobalAppContext.instance().settings.get("server_dir", "") or resolve_server_dir()
 
     @property
     def server_running(self):
-        from ..server import server_running
 
         return server_running()
 
     @property
     def installed(self):
-        from ..utils import installed
 
         return installed()
 
     @property
     def installed_version(self):
-        from ..state import settings
-
-        return settings.get("installed_version", "")
+        return GlobalAppContext.instance().settings.get("installed_version", "")
 
     def get_server_proc(self):
-        from ..server import get_server_proc
 
         return get_server_proc()
 
     def resolve_dir(self):
-        from ..utils import resolve_server_dir
 
         return resolve_server_dir()
 
@@ -103,20 +102,14 @@ class AppContext:
 
     def backup_worlds(self, max_backups=5):
         """备份世界存档，返回备份路径。"""
-        from ..backup import backup_worlds
-
         return backup_worlds(self.server_dir, max_backups=max_backups)
 
     def list_backups(self):
         """列出所有备份，返回列表。"""
-        from ..backup import list_backups
-
         return list_backups(self.server_dir)
 
     def load_config(self):
         """加载 server.properties，返回字典。"""
-        from ..config import load_properties, properties_to_dict
-        from ..utils import props_path
 
         p = props_path()
         if not p or not os.path.exists(p):
@@ -125,8 +118,6 @@ class AppContext:
 
     def save_config(self, updates):
         """保存配置更新，返回 (ok, error_msg, failed_field)。"""
-        from ..config import load_properties, properties_to_dict, save_properties, validate_config_updates
-        from ..utils import props_path
 
         ok, err, field = validate_config_updates(updates)
         if not ok:
@@ -152,7 +143,6 @@ class AppContext:
 
     def send_command(self, cmd):
         """发送服务器指令，返回 (ok, error_msg, is_dangerous)。"""
-        from ..security import validate_command
 
         ok, err, is_dangerous = validate_command(cmd)
         if not ok:

@@ -9,6 +9,10 @@ import secrets
 import time
 from urllib.parse import urlparse
 
+from .app_context import AppContext
+from .app_logger import safe_log_exception
+from .utils import resolve_server_dir
+
 # 安全指令白名单
 SAFE_COMMANDS = {
     "list",
@@ -55,13 +59,11 @@ def _is_dangerous_command(cmd_lower: str) -> bool:
 
 def validate_command(cmd: str) -> tuple:
     """校验服务器指令，返回 (ok, error_msg, is_dangerous)。"""
-    from .state import settings
-
     if not cmd or not cmd.strip():
         return False, "指令不能为空", False
     cmd_lower = cmd.strip().lower()
     main_cmd = cmd_lower.split()[0] if cmd_lower.split() else ""
-    if settings.get("command_whitelist", False) and main_cmd not in SAFE_COMMANDS:
+    if AppContext.instance().settings.get("command_whitelist", False) and main_cmd not in SAFE_COMMANDS:
         return False, f"指令 '{main_cmd}' 不在白名单中，已被拒绝", False
     is_dangerous = _is_dangerous_command(cmd_lower)
     return True, "", is_dangerous
@@ -85,15 +87,14 @@ def validate_custom_url(url: str) -> tuple:
         )
         is_official = any(u.netloc.endswith(d) for d in official)
         return True, "ok" if is_official else f"非官方来源: {u.netloc}，请确认可信", is_official
-    except Exception:
+    except (ValueError, TypeError, AttributeError) as e:
+        safe_log_exception("security.py", f"URL解析失败: {e}", "warning")
         return False, "URL 解析失败", False
 
 
 def audit_log(action, detail="", server_dir=None):
     """记录操作审计日志。"""
     try:
-        from .utils import resolve_server_dir
-
         d = server_dir or resolve_server_dir()
         if not d:
             return
@@ -117,8 +118,6 @@ def audit_log(action, detail="", server_dir=None):
 def read_audit_log(server_dir=None, limit=200):
     """读取审计日志。"""
     try:
-        from .utils import resolve_server_dir
-
         d = server_dir or resolve_server_dir()
         if not d:
             return []
@@ -132,7 +131,8 @@ def read_audit_log(server_dir=None, limit=200):
             with contextlib.suppress(Exception):
                 result.append(json.loads(line.strip()))
         return result
-    except Exception:
+    except (json.JSONDecodeError, FileNotFoundError, PermissionError, OSError) as e:
+        safe_log_exception("security.py", f"读取审计日志失败: {e}", "warning")
         return []
 
 

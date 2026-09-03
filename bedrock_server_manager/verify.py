@@ -4,7 +4,7 @@
 """
 
 import hashlib
-from .app_logger import get_app_logger
+from .app_logger import get_app_logger, safe_log_exception
 import json
 import os
 import zipfile
@@ -77,9 +77,9 @@ def fetch_official_hashes(timeout: int = 10) -> dict[str, str]:
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, OSError):
         # 网络请求失败或解析失败，静默返回空字典
         pass
-    except Exception:
-        # 其他未知错误，静默返回空字典
-        pass
+    except Exception as e:
+        # 其他未知错误，记录日志后返回空字典
+        safe_log_exception("verify.py", f"获取官方哈希失败: {e}", "warning")
 
     return hashes
 
@@ -116,12 +116,8 @@ def _load_hash_cache() -> dict[str, str]:
         if os.path.isfile(_HASH_CACHE_FILE):
             with open(_HASH_CACHE_FILE, encoding="utf-8") as f:
                 return json.load(f)
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"verify.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("verify", f"操作失败: {e}", "warning")
     return {}
 
 
@@ -131,12 +127,8 @@ def _save_hash_cache(cache: dict[str, str]) -> None:
         os.makedirs(os.path.dirname(_HASH_CACHE_FILE), exist_ok=True)
         with open(_HASH_CACHE_FILE, "w", encoding="utf-8") as f:
             json.dump(cache, f, indent=2)
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"verify.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("verify", f"操作失败: {e}", "warning")
 
 
 def register_known_hash(version: str, sha256_hash: str) -> None:
@@ -195,7 +187,8 @@ def calculate_sha256(file_path: str, chunk_size: int = 8192) -> str | None:
                     break
                 sha256.update(chunk)
         return sha256.hexdigest()
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError, ValueError) as e:
+        safe_log_exception("verify.py", f"计算SHA256失败: {e}", "warning")
         return None
 
 

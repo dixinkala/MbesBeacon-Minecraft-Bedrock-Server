@@ -3,7 +3,11 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger
+from .app_context import AppContext
+from .security import audit_log
+from .app_logger import get_app_logger, safe_log_exception
+from .server import get_server_proc, server_running
+from .utils import resolve_server_dir
 import json
 import os
 import re
@@ -29,8 +33,6 @@ def send_command_capture(cmd, timeout=2.5):
     """发送服务器命令并捕获接下来的控制台输出，返回输出文本；服务器未运行返回 None。
     使用 ConsoleBuffer.wait_for_new 等待输出，服务器响应快时立即返回，
     不再固定 sleep 满 timeout，显著降低 /api/players 等接口的响应延迟。"""
-    from .server import get_server_proc, server_running
-    from .state import console
 
     if not server_running():
         return None
@@ -38,7 +40,8 @@ def send_command_capture(cmd, timeout=2.5):
     p = get_server_proc()
     try:
         p.send(cmd)
-    except Exception:
+    except (OSError, ValueError, AttributeError) as e:
+        safe_log_exception("players.py", f"发送命令失败: {e}", "warning")
         return None
     # 等待第一行输出到达（最多 timeout 秒），有输出则提前返回
     text, new_count = console.wait_for_new(before, timeout=timeout)
@@ -75,7 +78,7 @@ def parse_online_players(text: str) -> list:
     return players
 
 
-def read_permissions(server_dir):
+def read_permissions(server_dir: str) -> list[dict]:
     """读取 permissions.json，返回 {name: level}。"""
     result = {}
     if not server_dir:
@@ -92,16 +95,12 @@ def read_permissions(server_dir):
                 level = item.get("permission", "member")
                 if name:
                     result[name] = level
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"players.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("players", f"操作失败: {e}", "warning")
     return result
 
 
-def read_banlist(server_dir):
+def read_banlist(server_dir: str) -> list[dict]:
     """读取 banned-players.json，返回 [{"name":..., "reason":...}]。"""
     result = []
     if not server_dir:
@@ -117,16 +116,12 @@ def read_banlist(server_dir):
                 name = item.get("name", "")
                 if name:
                     result.append({"name": name, "reason": item.get("reason", "")})
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"players.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("players", f"操作失败: {e}", "warning")
     return result
 
 
-def read_allowlist(server_dir):
+def read_allowlist(server_dir: str) -> list[dict]:
     """读取 allowlist.json，返回 [{"name":...}]。"""
     result = []
     if not server_dir:
@@ -142,18 +137,13 @@ def read_allowlist(server_dir):
                 name = item.get("name", "") if isinstance(item, dict) else str(item)
                 if name:
                     result.append({"name": name})
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"players.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("players", f"操作失败: {e}", "warning")
     return result
 
 
-def add_allowlist(server_dir, name):
+def add_allowlist(server_dir: str, name: str) -> bool:
     """添加玩家到白名单。服务器运行时通过命令，否则直接修改文件。"""
-    from .server import get_server_proc, server_running
 
     name = (name or "").strip()
     if not name:
@@ -178,9 +168,8 @@ def add_allowlist(server_dir, name):
         return False
 
 
-def remove_allowlist(server_dir, name):
+def remove_allowlist(server_dir: str, name: str) -> bool:
     """从白名单移除玩家。服务器运行时通过命令，否则直接修改文件。"""
-    from .server import get_server_proc, server_running
 
     name = (name or "").strip()
     if not name:
@@ -206,8 +195,7 @@ def remove_allowlist(server_dir, name):
 BANNED_IPS_FILE = "banned-ips.json"
 
 
-def load_banned_ips(server_dir=None):
-    from .utils import resolve_server_dir
+def load_banned_ips(server_dir: str | None = None) -> list[dict]:
 
     try:
         d = server_dir or resolve_server_dir()
@@ -218,11 +206,12 @@ def load_banned_ips(server_dir=None):
             return []
         with open(p, encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except (json.JSONDecodeError, FileNotFoundError, PermissionError, OSError) as e:
+        safe_log_exception("players.py", f"读取JSON文件失败: {e}", "warning")
         return []
 
 
-def validate_ip(ip):
+def validate_ip(ip: str) -> tuple[bool, str]:
     """校验 IP 地址格式（IPv4 或 IPv6）。返回 (ok, error_msg)。"""
     import ipaddress
 
@@ -238,9 +227,6 @@ def validate_ip(ip):
 
 
 def ban_ip(ip, reason="", server_dir=None):
-    from .security import audit_log
-    from .server import get_server_proc, server_running
-    from .utils import resolve_server_dir
 
     try:
         # 校验 IP 格式
@@ -260,8 +246,14 @@ def ban_ip(ip, reason="", server_dir=None):
         with open(p, "w", encoding="utf-8") as f:
             json.dump(banned, f, indent=2, ensure_ascii=False)
         if server_running():
-            with contextlib.suppress(Exception):
+            try:
                 get_server_proc().send(f"ban-ip {ip} {reason}")
+            except Exception as e:
+                try:
+                    from .app_logger import get_app_logger
+                    get_app_logger().warning(f"players.py 发送 ban-ip 命令异常: {e}")
+                except Exception:
+                    pass
         audit_log("BAN_IP", f"{ip} {reason}", d)
         return True, ""
     except Exception as e:
@@ -269,9 +261,6 @@ def ban_ip(ip, reason="", server_dir=None):
 
 
 def pardon_ip(ip, server_dir=None):
-    from .security import audit_log
-    from .server import get_server_proc, server_running
-    from .utils import resolve_server_dir
 
     try:
         d = server_dir or resolve_server_dir()
@@ -285,8 +274,14 @@ def pardon_ip(ip, server_dir=None):
         with open(p, "w", encoding="utf-8") as f:
             json.dump(new_banned, f, indent=2, ensure_ascii=False)
         if server_running():
-            with contextlib.suppress(Exception):
+            try:
                 get_server_proc().send(f"pardon-ip {ip}")
+            except Exception as e:
+                try:
+                    from .app_logger import get_app_logger
+                    get_app_logger().warning(f"players.py 发送 pardon-ip 命令异常: {e}")
+                except Exception:
+                    pass
         audit_log("PARDON_IP", ip, d)
         return True, ""
     except Exception as e:
@@ -294,7 +289,6 @@ def pardon_ip(ip, server_dir=None):
 
 
 def list_installed_packs(server_dir=None):
-    from .utils import resolve_server_dir
 
     try:
         d = server_dir or resolve_server_dir()
@@ -310,12 +304,12 @@ def list_installed_packs(server_dir=None):
                         pack_info = {"name": name, "path": full, "enabled": False}
                         result[pack_type].append(pack_info)
         return result
-    except Exception:
+    except (json.JSONDecodeError, FileNotFoundError, PermissionError, OSError) as e:
+        safe_log_exception("players.py", f"读取包信息失败: {e}", "warning")
         return {"resource_packs": [], "behavior_packs": [], "valid_known": []}
 
 
 def get_all_player_status(server_dir=None):
-    from .utils import resolve_server_dir
 
     try:
         d = server_dir or resolve_server_dir()
@@ -342,14 +336,13 @@ def get_all_player_status(server_dir=None):
                 else:
                     players[name]["banned"] = True
         return list(players.values())
-    except Exception:
+    except (json.JSONDecodeError, FileNotFoundError, PermissionError, OSError) as e:
+        safe_log_exception("players.py", f"读取玩家状态失败: {e}", "warning")
         return []
 
 
 def _player_action(name, command_template, log_msg, server_dir=None):
     """通用玩家操作：校验玩家名 → 检查服务器运行 → 发送命令 → 写日志 → 返回。"""
-    from .security import audit_log
-    from .server import get_server_proc, server_running
 
     ok, err = validate_player_name(name)
     if not ok:

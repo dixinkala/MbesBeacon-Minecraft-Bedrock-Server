@@ -4,10 +4,19 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger
 import ctypes
 import io
 import json
+
+from .app_context import AppContext
+from .app_logger import get_app_logger, safe_log_exception
+from .app_update import check_app_update_async
+from .constants import APP_MARKER, APP_TITLE, APP_VERSION, DEFAULT_PORT, LOGS_DIR
+from .server import get_server_proc, server_running
+from .state import migrate_legacy_data, sync_to_app_context
+from .tray import SystemTray
+from .utils import installed, resolve_server_dir
+from .web.handler import Handler
 import os
 import sys
 import threading
@@ -21,14 +30,19 @@ from .utils import open_browser_with_retry
 
 def _main():
     """程序主入口：单实例检测、启动HTTP服务器、系统托盘、浏览器打开。"""
-    from .server import get_server_proc
-    from .state import (
-        APP_MARKER,
-        DEFAULT_PORT,
-    )
-    from .tray import SystemTray
-    from .utils import resolve_server_dir
-    from .web.handler import Handler
+    # 迁移旧版本分散的数据到统一目录（仅首次启动执行）
+    try:
+        migrated = migrate_legacy_data()
+        if migrated:
+            get_app_logger().info(f"已迁移旧数据: {', '.join(migrated)}")
+    except Exception:
+        pass
+
+    # 同步模块级全局变量到 AppContext（确保全局状态一致）
+    try:
+        sync_to_app_context()
+    except Exception:
+        pass
 
     # windowed(exe无控制台)模式下 stdout/stderr 为 None，需重定向
     if sys.stdout is None:
@@ -90,11 +104,8 @@ def _main():
                     get_app_logger().debug(f"main.py 异常: {e}")
                 except Exception:
                     pass
-    except Exception:  # 已添加异常记录
-        try:
-            get_app_logger().debug(f"main.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("main", f"操作失败: {e}", "warning")
 
     # 回退方案：探测默认端口
     try:
@@ -103,11 +114,8 @@ def _main():
         if data.get("app") == APP_MARKER:
             open_browser_with_retry("http://127.0.0.1:%d/" % DEFAULT_PORT)
             return
-    except Exception:  # 已添加异常记录
-        try:
-            get_app_logger().debug(f"main.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("main", f"操作失败: {e}", "warning")
 
     # 绑定端口
     httpd = None
@@ -123,9 +131,14 @@ def _main():
         return
 
     # 保存到全局状态
-    from . import state
 
-    state.httpd = httpd
+    AppContext.instance().httpd = httpd
+
+    # 异步检查软件更新（不阻塞启动，结果缓存供前端使用）
+    try:
+            check_app_update_async(force=False, ignore_ssl=AppContext.instance().settings.get("ignore_ssl", False))
+    except Exception:
+        pass
 
     url = "http://127.0.0.1:%d/" % port
     print(f"管理界面: {url}")
@@ -142,21 +155,43 @@ def _main():
                 else:
                     p.server_dir = resolve_server_dir()
                     p.start()
-            except Exception:  # 已添加异常记录
-                try:
-                    get_app_logger().debug(f"main.py 异常: {e}")
-                except Exception:
-                    pass
+            except Exception as e:
+                        safe_log_exception("main", f"操作失败: {e}", "warning")
 
         def _tray_exit():
+            """系统托盘退出：停止服务器、停止托盘、关闭 HTTP 服务器、退出程序。"""
+            import os
             try:
-                if httpd:
-                    httpd.shutdown()
-            except Exception:  # 已添加异常记录
+                # 1. 停止服务器进程
                 try:
-                    get_app_logger().debug(f"main.py 异常: {e}")
-                except Exception:
-                    pass
+                    from .server import get_server_proc, server_running
+                    if server_running():
+                        p = get_server_proc()
+                        if p:
+                            p.stop(wait=8)
+                except Exception as e:
+                    print(f"停止服务器进程失败: {e}")
+                
+                # 2. 停止系统托盘
+                try:
+                    if tray:
+                        tray.stop()
+                except Exception as e:
+                    print(f"停止系统托盘失败: {e}")
+                
+                # 3. 关闭 HTTP 服务器
+                try:
+                    if httpd:
+                        httpd.shutdown()
+                except Exception as e:
+                    print(f"关闭 HTTP 服务器失败: {e}")
+                
+                # 4. 强制退出程序
+                os._exit(0)
+                
+            except Exception as e:
+                safe_log_exception("main", f"关闭程序失败: {e}", "error")
+                os._exit(1)
 
         tray = SystemTray(url, on_open=lambda: webbrowser.open(url), on_toggle=_tray_toggle, on_exit=_tray_exit)
         tray.start()
@@ -180,52 +215,40 @@ def _main():
             p = get_server_proc()
             if p.running:
                 p.stop(wait=8)
-        except Exception:  # 已添加异常记录
-            try:
-                get_app_logger().debug(f"main.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("main", f"操作失败: {e}", "warning")
         # 释放单实例互斥量
         if mutex:
             try:
                 kernel32 = ctypes.windll.kernel32
                 kernel32.ReleaseMutex(mutex)
                 kernel32.CloseHandle(mutex)
-            except Exception:  # 已添加异常记录
-                try:
-                    get_app_logger().debug(f"main.py 异常: {e}")
-                except Exception:
-                    pass
+            except Exception as e:
+                        safe_log_exception("main", f"操作失败: {e}", "warning")
 
 
 def main():
     """程序入口，带崩溃日志和错误提示。"""
-    from .server import server_running
-    from .state import APP_TITLE, APP_VERSION, settings
-    from .utils import installed
 
     try:
         _main()
     except Exception as e:
         import traceback
 
-        log_path = os.path.join(os.path.expanduser("~"), ".bedrock_server_manager_crash.log")
+        log_path = os.path.join(LOGS_DIR, "crash.log")
         try:
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write("\n===== {} =====\n".format(time.strftime("%Y-%m-%d %H:%M:%S")))
                 f.write(f"App: {APP_TITLE} v{APP_VERSION}\n")
                 f.write("Python: {}\n".format(sys.version.replace("\n", " ")))
                 f.write("OS: Windows (win32 / nt)\n")  # 仅支持 Windows 平台
-                f.write("Server dir: %s\n" % (settings.get("server_dir", "") or "(未设置)"))
+                f.write("Server dir: %s\n" % (AppContext.instance().settings.get("server_dir", "") or "(未设置)"))
                 f.write(f"Installed: {installed()}\n")
                 f.write(f"Server running: {server_running()}\n")
                 f.write("---- Traceback ----\n")
                 f.write(traceback.format_exc())
-        except Exception:  # 已添加异常记录
-            try:
-                get_app_logger().debug(f"main.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("main", f"操作失败: {e}", "warning")
         try:
             err_msg = traceback.format_exc()
             err_lines = [l for l in err_msg.strip().split("\n") if l.strip()]
@@ -236,11 +259,8 @@ def main():
                 "Minecraft 基岩版服务器管理器 - 启动失败",
                 0x10,
             )
-        except Exception:  # 已添加异常记录
-            try:
-                get_app_logger().debug(f"main.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("main", f"操作失败: {e}", "warning")
         raise
 
 

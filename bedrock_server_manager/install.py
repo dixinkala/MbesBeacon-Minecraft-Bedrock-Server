@@ -3,7 +3,12 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger
+from .app_context import AppContext
+from .verify import verify_download_full, load_official_hashes
+from .app_logger import get_app_logger, safe_log_exception
+from .constants import CDN_TEMPLATE, IS_WINDOWS, LINKS_API, SERVER_EXE
+from .server import get_server_proc, server_running
+from .utils import add_server_dir_history, detect_servers, save_settings
 import json
 import os
 import re
@@ -15,28 +20,20 @@ import urllib.request
 import zipfile
 
 
-# 延迟导入全局状态（避免循环导入）
+# 通过 AppContext 访问全局状态（消除延迟导入）
 def _get_settings():
-    from .state import settings
-
-    return settings
+    return AppContext.instance().settings
 
 
 def _get_console():
-    from .state import console
-
-    return console
+    return AppContext.instance().console
 
 
 def _get_install_state():
-    from .state import install_state
-
-    return install_state
+    return AppContext.instance().install_state
 
 
 def _get_constants():
-    from .state import CDN_TEMPLATE, IS_WINDOWS, LINKS_API, SERVER_EXE
-
     return SERVER_EXE, IS_WINDOWS, LINKS_API, CDN_TEMPLATE
 
 
@@ -183,6 +180,7 @@ def _http_get(url, timeout=30, ignore_ssl=False):
 
 def get_latest_server_info(ignore_ssl=False):
     """从官方 API 获取最新版服务器下载信息（仅 Windows 版本）。"""
+    settings = _get_settings()
     SERVER_EXE, IS_WINDOWS, LINKS_API, CDN_TEMPLATE = _get_constants()
     data = json.loads(_http_get(LINKS_API, timeout=30, ignore_ssl=ignore_ssl).decode("utf-8", "ignore"))
     links = data.get("result", {}).get("links", [])
@@ -202,7 +200,6 @@ def get_latest_server_info(ignore_ssl=False):
 
 def make_download_url(version, source_index=0):
     """根据版本号生成下载 URL（仅 Windows 版本）。"""
-    from .state import CDN_TEMPLATE
 
     if source_index < len(DOWNLOAD_SOURCES):
         template = DOWNLOAD_SOURCES[source_index]["template"]
@@ -347,9 +344,6 @@ def extract_zip(zip_path, dest_dir, progress_cb=None, cancel_flag=None):
 
 def select_server_dir(d: str) -> tuple:
     """校验并切换当前管理的服务器目录，返回 (ok, error_msg, info_dict)。"""
-    from .server import get_server_proc, server_running
-    from .state import SERVER_EXE, settings
-    from .utils import add_server_dir_history, detect_servers, save_settings
 
     d = (d or "").strip()
     if not d or not os.path.isdir(d):
@@ -359,8 +353,14 @@ def select_server_dir(d: str) -> tuple:
     if server_running():
         p = get_server_proc()
         if os.path.normcase(os.path.abspath(p.server_dir)) != os.path.normcase(os.path.abspath(d)):
-            with contextlib.suppress(Exception):
+            try:
                 p.stop(wait=8)
+            except Exception as e:
+                try:
+                    from .app_logger import get_app_logger
+                    get_app_logger().warning(f"install.py 停止服务器异常: {e}")
+                except Exception:
+                    pass
     settings["server_dir"] = d
     add_server_dir_history(d)
     detected_ver = detect_server_version(d)
@@ -456,7 +456,6 @@ def get_bedrock_versions(ignore_ssl=False, include_preview=False):
     所有版本均可通过官方 CDN 下载:
     https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-{version}.zip
     """
-    from .state import LINKS_API
 
     all_versions = []
 
@@ -482,12 +481,8 @@ def get_bedrock_versions(ignore_ssl=False, include_preview=False):
                 is_preview = "preview" in dt.lower() or "beta" in dt.lower()
                 if (include_preview or not is_preview) and ver not in all_versions:
                     all_versions.append(ver)
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"install.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("install", f"操作失败: {e}", "warning")
 
     # 3. 如果网络获取失败，使用硬编码后备列表
     if not all_versions:
@@ -516,8 +511,6 @@ def get_bedrock_versions(ignore_ssl=False, include_preview=False):
 def detect_server_version(dir_path):
     """检测服务器已安装版本。优先从 settings 的目录->版本映射读取，
     后备方案：从 bedrock_server.exe 的 Windows 文件版本属性读取。"""
-    from .state import SERVER_EXE, settings
-    from .utils import save_settings
 
     if not dir_path or not os.path.isdir(dir_path):
         return ""
@@ -572,12 +565,8 @@ def detect_server_version(dir_path):
                                         return ver
                             except Exception:
                                 continue
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"install.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("install", f"操作失败: {e}", "warning")
     # 2.5 检查版本标识文件
     for vfile in ["release_notes.txt", "version.txt", "VERSION", "bedrock_server_version.txt"]:
         vpath = os.path.join(dir_path, vfile)
@@ -594,20 +583,14 @@ def detect_server_version(dir_path):
                     settings["server_versions"] = versions_map
                     save_settings()
                     return ver
-            except Exception:  # 已添加异常记录
-                try:
-                    import sys
-                    get_app_logger().debug(f"install.py 异常: {e}")
-                except Exception:
-                    pass
+            except Exception as e:
+                        safe_log_exception("install", f"操作失败: {e}", "warning")
     return ""
 
 
 def do_install(dir_target, version, autostart, custom_url="", source_index=0):
     """执行服务器安装：下载 -> 解压 -> 配置 -> 可选启动。"""
-    from .server import get_server_proc
-    from .state import SERVER_EXE, install_state, settings
-    from .utils import add_server_dir_history, get_latest_server_info, save_settings
+    settings = _get_settings()
 
     install_state.cancel.clear()
     install_state.busy = True
@@ -668,8 +651,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                 )
                 # 下载完整性校验
                 try:
-                    from .verify import verify_download_full, load_official_hashes
-
+            
                     # 尝试从 Bedrock-OSS/BDS-Versions 获取官方哈希（用于对比验证）
                     official_loaded = False
                     try:
@@ -684,7 +666,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                         install_state.log_line("提示: 无法获取官方哈希，本次下载将记录SHA256供后续对比（首次信任机制）")
                         install_state.log_line("建议: 如网络环境特殊，可在设置中检查网络连接或稍后重试")
 
-                    verify_result = verify_download_full(zip_path, version=version, check_pe=False)
+                    verify_result = verify_download_full(zip_path, version=version, check_pe=True)
                     if verify_result["ok"]:
                         install_state.log_line(
                             "下载完整性校验通过（文件大小: {:.1f} MB, SHA256: {}...）".format(

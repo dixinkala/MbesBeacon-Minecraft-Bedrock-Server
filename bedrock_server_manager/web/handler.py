@@ -3,7 +3,14 @@ HTTP 请求处理模块：Handler 类、路由注册、认证校验。
 """
 
 import contextlib
-from ..app_logger import get_app_logger
+from .. import console as _console_mod
+from .. import install as _install_mod
+from .. import state
+from .. import utils
+from ..ratelimit import check_rate_limit
+from ..server import server_running
+from ..app_context import AppContext
+from ..app_logger import get_app_logger, safe_log_exception
 import json
 import os
 import threading
@@ -29,19 +36,15 @@ from .routes import (
 # 延迟导入全局状态（避免循环导入）
 def _g(name):
     """从各模块延迟导入全局变量。"""
-    from .. import state
 
     if hasattr(state, name):
         return getattr(state, name)
-    from .. import utils
 
     if hasattr(utils, name):
         return getattr(utils, name)
-    from .. import console as _console_mod
 
     if hasattr(_console_mod, name):
         return getattr(_console_mod, name)
-    from .. import install as _install_mod
 
     if hasattr(_install_mod, name):
         return getattr(_install_mod, name)
@@ -94,7 +97,6 @@ class Handler(
     # ---- 路由处理方法 ----
     def do_GET(self):
         """GET 请求处理：使用路由表分发，保留静态文件和 SSE 流的特殊处理。"""
-        from ..state import API_TOKEN
         from urllib.parse import parse_qs, urlparse
 
         parsed = urlparse(self.path)
@@ -125,8 +127,6 @@ class Handler(
         import json as _json
         import time as _time
 
-        from ..server import server_running
-        from ..state import console
 
         since = int(q.get("since", ["0"])[0])
         self.send_response(200)
@@ -138,13 +138,13 @@ class Handler(
         idx = since if since > 0 else 0
         client_closed = False
         try:
-            text, idx = console.read_since(idx)
+            text, idx = AppContext.instance().console.read_since(idx)
             if text or idx > 0:
                 payload = _json.dumps({"lines": text, "count": idx, "running": server_running()}, ensure_ascii=False)
                 self.wfile.write(("id: %d\ndata: %s\n\n" % (idx, payload)).encode("utf-8"))
                 self.wfile.flush()
             while not client_closed:
-                text, new_idx = console.wait_for_new(idx, timeout=1.0)
+                text, new_idx = AppContext.instance().console.wait_for_new(idx, timeout=1.0)
                 if text or new_idx != idx:
                     idx = new_idx
                     payload = _json.dumps(
@@ -160,17 +160,50 @@ class Handler(
         except Exception:
             client_closed = True
     def _shutdown_later(self):
+        """延迟关闭程序：停止服务器、停止托盘、关闭 HTTP 服务器、退出程序。"""
+        import os
+        import sys
         time.sleep(0.5)
         try:
-            httpd = _g("httpd")
-            if httpd:
-                httpd.shutdown()
-        except Exception:  # 已添加异常记录
+            from ..app_context import AppContext
+            ctx = AppContext.instance()
+            
+            # 1. 停止服务器进程
             try:
-                import sys
-                get_app_logger().debug(f"handler.py 异常: {e}")
-            except Exception:
-                pass
+                server_proc = ctx.server_proc
+                if server_proc and server_proc.running:
+                    _log("正在停止服务器进程...")
+                    server_proc.stop(wait=8)
+            except Exception as e:
+                _log(f"停止服务器进程失败: {e}")
+            
+            # 2. 停止系统托盘
+            try:
+                tray = ctx.tray
+                if tray:
+                    _log("正在停止系统托盘...")
+                    tray.stop()
+            except Exception as e:
+                _log(f"停止系统托盘失败: {e}")
+            
+            # 3. 关闭 HTTP 服务器
+            try:
+                httpd = ctx.httpd
+                if httpd:
+                    _log("正在关闭 HTTP 服务器...")
+                    httpd.shutdown()
+            except Exception as e:
+                _log(f"关闭 HTTP 服务器失败: {e}")
+            
+            _log("程序退出完成")
+            
+            # 4. 强制退出程序（确保所有线程都被终止）
+            os._exit(0)
+            
+        except Exception as e:
+            safe_log_exception("handler", f"关闭程序失败: {e}", "error")
+            # 即使出错也要强制退出
+            os._exit(1)
 
     def _check_auth(self):
         """校验请求来源：API token 或 Origin/Referer 必须匹配本地地址和端口。
@@ -182,10 +215,9 @@ class Handler(
         """
         from urllib.parse import urlparse
 
-        from ..state import API_TOKEN
 
         token = self.headers.get("X-API-Token", "")
-        if token and token == API_TOKEN:
+        if token and token == AppContext.instance().api_token:
             return True
         # 获取本程序实际监听的端口
         try:
@@ -200,12 +232,8 @@ class Handler(
                 if parsed.hostname in ("127.0.0.1", "localhost"):
                     if server_port is None or parsed.port == server_port:
                         return True
-            except Exception:  # 已添加异常记录
-                try:
-                    import sys
-                    get_app_logger().debug(f"handler.py 异常: {e}")
-                except Exception:
-                    pass
+            except Exception as e:
+                        safe_log_exception("handler", f"操作失败: {e}", "warning")
         # 校验 Referer
         referer = self.headers.get("Referer", "")
         if referer:
@@ -214,17 +242,12 @@ class Handler(
                 if parsed.hostname in ("127.0.0.1", "localhost"):
                     if server_port is None or parsed.port == server_port:
                         return True
-            except Exception:  # 已添加异常记录
-                try:
-                    import sys
-                    get_app_logger().debug(f"handler.py 异常: {e}")
-                except Exception:
-                    pass
+            except Exception as e:
+                        safe_log_exception("handler", f"操作失败: {e}", "warning")
         return False
 
     def do_POST(self):
         """POST 请求处理：使用路由表分发。"""
-        from ..ratelimit import check_rate_limit
         from urllib.parse import urlparse
 
         parsed = urlparse(self.path)
@@ -276,12 +299,8 @@ def get_index_html():
         if os.path.exists(html_path):
             with open(html_path, encoding="utf-8") as f:
                 return f.read()
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"handler.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("handler", f"操作失败: {e}", "warning")
     # 回退到最小错误页
     return """<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Bedrock Server Manager</title></head>

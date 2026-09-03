@@ -3,7 +3,7 @@
 """
 
 import os
-from .app_logger import get_app_logger
+from .app_logger import get_app_logger, safe_log_exception
 import threading
 
 
@@ -47,12 +47,8 @@ class ConsoleBuffer:
                     if os.path.exists(dst):
                         os.remove(dst)
                     os.rename(src, dst)
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"console.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("console", f"操作失败: {e}", "warning")
 
     def append(self, text):
         with self._cond:
@@ -65,12 +61,8 @@ class ConsoleBuffer:
                         self._rotate_log_file(self.log_file)
                     with open(self.log_file, "a", encoding="utf-8") as f:
                         f.write(text)
-                except Exception:  # 已添加异常记录
-                    try:
-                        import sys
-                        get_app_logger().debug(f"console.py 异常: {e}")
-                    except Exception:
-                        pass
+                except Exception as e:
+                                safe_log_exception("console", f"操作失败: {e}", "warning")
             self._cond.notify_all()
 
     def read_since(self, idx):

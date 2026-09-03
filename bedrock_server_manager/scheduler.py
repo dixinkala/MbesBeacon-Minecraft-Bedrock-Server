@@ -3,7 +3,11 @@
 """
 
 import json
-from .app_logger import get_app_logger
+from .backup import backup_worlds_zip
+from .security import audit_log
+from .app_logger import get_app_logger, safe_log_exception
+from .server import get_server_proc, server_running
+from .utils import resolve_server_dir
 import os
 import threading
 import time
@@ -18,8 +22,6 @@ def load_scheduled_tasks():
     """加载定时任务配置。"""
     global _scheduled_tasks
     try:
-        from .utils import resolve_server_dir
-
         d = resolve_server_dir()
         if not d:
             return []
@@ -28,7 +30,11 @@ def load_scheduled_tasks():
             with open(p, encoding="utf-8") as f:
                 _scheduled_tasks = json.load(f)
         return _scheduled_tasks
-    except Exception:
+    except (json.JSONDecodeError, PermissionError, OSError) as e:
+        safe_log_exception("scheduler.py", f"加载定时任务失败: {e}", "warning")
+        return []
+    except Exception as e:
+        safe_log_exception("scheduler.py", f"加载定时任务时发生未知异常: {e}", "error")
         return []
 
 
@@ -95,8 +101,6 @@ def save_scheduled_tasks(tasks):
     if not ok:
         return False, err
     try:
-        from .utils import resolve_server_dir
-
         d = resolve_server_dir()
         if not d:
             return False, "未找到服务器目录"
@@ -105,7 +109,11 @@ def save_scheduled_tasks(tasks):
             json.dump(valid_tasks, f, indent=2, ensure_ascii=False)
         _scheduled_tasks = valid_tasks
         return True, ""
+    except (PermissionError, OSError, TypeError) as e:
+        safe_log_exception("scheduler.py", f"保存定时任务失败: {e}", "warning")
+        return False, f"保存失败（文件操作错误）: {str(e)}"
     except Exception as e:
+        safe_log_exception("scheduler.py", f"保存定时任务时发生未知异常: {e}", "error")
         return False, f"保存失败: {str(e)}"
 
 
@@ -120,9 +128,6 @@ def _scheduler_loop():
             now = time.time()
             now_hm = time.strftime("%H:%M")
             today = time.strftime("%Y-%m-%d")
-            from .server import server_running
-            from .utils import resolve_server_dir
-
             d = resolve_server_dir()
             if d and server_running():
                 tasks = load_scheduled_tasks()
@@ -157,22 +162,27 @@ def _scheduler_loop():
                         if now - last_run >= interval_hours * 3600:
                             last_check[tid] = now
                             _execute_scheduled_task(task, d)
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"scheduler.py 异常: {e}")
-            except Exception:
-                pass
+        except (OSError, ValueError, AttributeError) as e:
+                safe_log_exception("scheduler.py", f"调度循环异常: {e}", "warning")
         time.sleep(30)
 
 
-def _execute_scheduled_task(task, server_dir):
-    """执行定时任务。"""
-    from .backup import backup_worlds_zip
-    from .security import audit_log
-    from .server import get_server_proc, server_running
+def _execute_scheduled_task(task, server_dir, note=None):
+    """执行定时任务。
 
+    Args:
+        task: 任务配置字典
+        server_dir: 服务器目录路径
+        note: 可选的执行备注（如"补执行"），用于日志记录
+    """
     task_type = task.get("type", "")
+    # 如果有备注，记录到日志
+    if note:
+        try:
+            from .app_logger import get_app_logger
+            get_app_logger().info(f"定时任务[{note}]: {task_type} - {server_dir}")
+        except Exception:
+            pass
     try:
         if task_type == "restart":
             if server_running():
@@ -189,7 +199,11 @@ def _execute_scheduled_task(task, server_dir):
             if server_running():
                 get_server_proc().send(f"say {msg}")
                 audit_log("SCHEDULED_ANNOUNCE", msg, server_dir)
+    except (PermissionError, OSError, RuntimeError) as e:
+        safe_log_exception("scheduler.py", f"执行定时任务失败: {e}", "warning")
+        audit_log("SCHEDULED_TASK_ERROR", f"{task_type}: {str(e)}", server_dir)
     except Exception as e:
+        safe_log_exception("scheduler.py", f"执行定时任务时发生未知异常: {e}", "error")
         audit_log("SCHEDULED_TASK_ERROR", f"{task_type}: {str(e)}", server_dir)
 
 

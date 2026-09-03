@@ -3,6 +3,48 @@ GET 路由处理方法 mixin。
 包含所有 GET 请求的路由处理方法，从 handler.py 的 do_GET 中迁移而来。
 """
 import contextlib
+from ...backup import get_backup_root, list_backups
+from ...config import (
+    FULL_PROP_META,
+    PROP_META,
+    load_properties,
+    properties_to_dict,
+)
+from ...install import (
+    DOWNLOAD_SOURCES,
+    FALLBACK_VERSIONS,
+    detect_server_version,
+    get_cached_versions,
+    get_latest_server_info,
+)
+from ...performance import get_server_performance_full
+from ...players import (
+    parse_online_players,
+    read_allowlist,
+    read_banlist,
+    read_permissions,
+    send_command_capture,
+)
+from ...app_context import AppContext
+from ...server import get_server_proc, server_running
+from ...state import (
+    APP_MARKER,
+    APP_TITLE,
+    APP_VERSION,
+    SERVER_EXE,
+    app_start_time,
+)
+from ...utils import (
+    browse_directory,
+    detect_servers,
+    get_lan_ip,
+    installed,
+    load_theme,
+    props_path,
+    resolve_server_dir,
+    save_settings,
+    sync_log_file,
+)
 import json
 import os
 import time
@@ -14,19 +56,16 @@ from ..route_decorator import register_get_route
 class GetRoutesMixin:
     """GET 路由处理方法 mixin。"""
 
+
     @register_get_route("/")
     def _get_index(self, q):
-        from ...state import API_TOKEN
-        from ..handler import get_index_html
+        from ..handler import get_index_html  # 必要的延迟导入，避免循环依赖
 
-        html = get_index_html().replace("__API_TOKEN__", API_TOKEN)
+        html = get_index_html().replace("__API_TOKEN__", AppContext.instance().api_token)
         self._send(200, html, "text/html; charset=utf-8")
 
     @register_get_route("/api/health")
     def _get_health(self, q):
-        from ...server import server_running
-        from ...state import APP_MARKER, APP_VERSION, app_start_time
-        from ...utils import installed
 
         mem_mb = 0
         cpu_percent = 0
@@ -41,7 +80,6 @@ class GetRoutesMixin:
         except Exception:
             pass
         uptime = time.time() - app_start_time
-        from ...state import settings
 
         self._json(
             {
@@ -55,7 +93,7 @@ class GetRoutesMixin:
                 "memory_mb": round(mem_mb, 2),
                 "cpu_percent": round(cpu_percent, 2),
                 "server_running": server_running(),
-                "server_dir": settings.get("server_dir", ""),
+                "server_dir": AppContext.instance().settings.get("server_dir", ""),
                 "installed": installed(),
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             }
@@ -63,18 +101,14 @@ class GetRoutesMixin:
 
     @register_get_route("/api/status")
     def _get_status(self, q):
-        from ...install import detect_server_version
-        from ...server import server_running
-        from ...state import APP_MARKER, APP_TITLE, APP_VERSION, install_state, settings
-        from ...utils import detect_servers, installed, resolve_server_dir, save_settings, sync_log_file
 
         d = resolve_server_dir()
         sync_log_file()
-        inst_ver = settings.get("installed_version", "")
+        inst_ver = AppContext.instance().settings.get("installed_version", "")
         if not inst_ver and d and installed():
             inst_ver = detect_server_version(d)
             if inst_ver:
-                settings["installed_version"] = inst_ver
+                AppContext.instance().settings["installed_version"] = inst_ver
                 save_settings()
         self._json(
             {
@@ -85,22 +119,20 @@ class GetRoutesMixin:
                 "installed": installed(),
                 "installed_version": inst_ver,
                 "server_running": server_running(),
-                "install": install_state.snapshot(),
-                "latest": settings.get("_latest"),
+                "install": AppContext.instance().install_state.snapshot(),
+                "latest": AppContext.instance().settings.get("_latest"),
                 "detected_servers": detect_servers(),
             }
         )
 
     @register_get_route("/api/servers/detect")
     def _get_servers_detect(self, q):
-        from ...utils import detect_servers
 
         servers = detect_servers()
         self._json({"ok": True, "servers": servers, "count": len(servers)})
 
     @register_get_route("/api/browse-dir")
     def _get_browse_dir(self, q):
-        from ...utils import browse_directory
 
         initial = q.get("initial", [""])[0]
         selected = browse_directory(initial)
@@ -111,26 +143,21 @@ class GetRoutesMixin:
 
     @register_get_route("/api/theme")
     def _get_theme(self, q):
-        from ...state import settings
-        from ...utils import load_theme
 
-        self._json({"ok": True, "theme": settings.get("theme") or load_theme()})
+        self._json({"ok": True, "theme": AppContext.instance().settings.get("theme") or load_theme()})
 
     @register_get_route("/api/latest")
     def _get_latest(self, q):
-        from ...install import get_latest_server_info
-        from ...state import settings
 
         try:
-            info = get_latest_server_info(ignore_ssl=settings.get("ignore_ssl", False))
-            settings["_latest"] = info
+            info = get_latest_server_info(ignore_ssl=AppContext.instance().settings.get("ignore_ssl", False))
+            AppContext.instance().settings["_latest"] = info
             self._json({"ok": True, "info": info})
         except Exception as e:
             self._json({"ok": False, "error": str(e)})
 
     @register_get_route("/api/versions")
     def _get_versions(self, q):
-        from ...install import FALLBACK_VERSIONS, get_cached_versions
 
         try:
             include_preview = q.get("preview", ["0"])[0] in ("1", "true", "yes")
@@ -149,7 +176,6 @@ class GetRoutesMixin:
 
     @register_get_route("/api/sources")
     def _get_sources(self, q):
-        from ...install import DOWNLOAD_SOURCES
 
         self._json(
             {
@@ -162,24 +188,20 @@ class GetRoutesMixin:
 
     @register_get_route("/api/progress")
     def _get_progress(self, q):
-        from ...state import install_state
 
-        self._json(install_state.snapshot())
+        self._json(AppContext.instance().install_state.snapshot())
 
     @register_get_route("/api/console")
     def _get_console(self, q):
-        from ...server import server_running
-        from ...state import console
 
         since = int(q.get("since", ["0"])[0])
-        text, count = console.read_since(since)
+        text, count = AppContext.instance().console.read_since(since)
         self._json({"lines": text, "count": count, "running": server_running()})
 
     @register_get_route("/api/console/export")
     def _get_console_export(self, q):
-        from ...state import console
 
-        text, _ = console.read_since(0)
+        text, _ = AppContext.instance().console.read_since(0)
         filename = "bedrock_console_{}.txt".format(time.strftime("%Y%m%d_%H%M%S"))
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -190,18 +212,13 @@ class GetRoutesMixin:
 
     @register_get_route("/api/performance")
     def _get_performance(self, q):
-        from ...performance import get_server_performance_full
-        from ...server import get_server_proc
-        from ...state import console
 
         p = get_server_proc()
-        perf = get_server_performance_full(server_proc=p, console=console)
+        perf = get_server_performance_full(server_proc=p, console=AppContext.instance().console)
         self._json(perf)
 
     @register_get_route("/api/backups")
     def _get_backups(self, q):
-        from ...backup import get_backup_root, list_backups
-        from ...utils import resolve_server_dir
 
         d = resolve_server_dir()
         if not d:
@@ -213,8 +230,6 @@ class GetRoutesMixin:
     @register_get_route("/api/laninfo")
     def _get_laninfo(self, q):
         """获取服务器局域网连接信息（IP + 端口）。"""
-        from ...config import load_properties, properties_to_dict
-        from ...utils import get_lan_ip, props_path
 
         lan_ip = get_lan_ip()
         port = 19132
@@ -235,8 +250,6 @@ class GetRoutesMixin:
 
     @register_get_route("/api/config")
     def _get_config(self, q):
-        from ...config import PROP_META, load_properties, properties_to_dict
-        from ...utils import get_lan_ip, props_path, resolve_server_dir
 
         p = props_path()
         if not p or not os.path.exists(p):
@@ -264,8 +277,6 @@ class GetRoutesMixin:
 
     @register_get_route("/api/config/full")
     def _get_config_full(self, q):
-        from ...config import FULL_PROP_META, load_properties, properties_to_dict
-        from ...utils import props_path
 
         p = props_path()
         if not p or not os.path.exists(p):
@@ -280,7 +291,6 @@ class GetRoutesMixin:
 
     @register_get_route("/api/listdir")
     def _get_listdir(self, q):
-        from ...state import SERVER_EXE
 
         base = q.get("path", [""])[0]
         if not base:
@@ -356,9 +366,6 @@ class GetRoutesMixin:
 
     @register_get_route("/api/players")
     def _get_players(self, q):
-        from ...players import parse_online_players, read_permissions, send_command_capture
-        from ...server import server_running
-        from ...utils import resolve_server_dir
 
         d = resolve_server_dir()
         if not server_running():
@@ -372,16 +379,12 @@ class GetRoutesMixin:
 
     @register_get_route("/api/players/banlist")
     def _get_players_banlist(self, q):
-        from ...players import read_banlist
-        from ...utils import resolve_server_dir
 
         d = resolve_server_dir()
         self._json({"ok": True, "banned": read_banlist(d)})
 
     @register_get_route("/api/players/allowlist")
     def _get_players_allowlist(self, q):
-        from ...players import read_allowlist
-        from ...utils import resolve_server_dir
 
         d = resolve_server_dir()
         self._json({"ok": True, "allowed": read_allowlist(d)})

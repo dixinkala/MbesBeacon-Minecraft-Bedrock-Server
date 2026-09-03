@@ -8,11 +8,11 @@ from ..route_decorator import register_route
 class ConfigRoutesMixin:
     """config 相关路由处理方法 mixin。"""
 
+    from ...config import list_config_history, rollback_config
+    from ...utils import resolve_server_dir
+
     @register_route("/api/config/history")
     def _route_config_history(self, data):
-        from ...config import list_config_history
-        from ...utils import resolve_server_dir
-
         d = resolve_server_dir()
         if not d:
             self._json({"ok": False, "error": "未找到服务器"})
@@ -23,9 +23,6 @@ class ConfigRoutesMixin:
     @register_route("/api/config/rollback")
     def _route_config_rollback(self, data):
         import os
-
-        from ...config import rollback_config
-        from ...utils import resolve_server_dir
 
         d = resolve_server_dir()
         if not d:

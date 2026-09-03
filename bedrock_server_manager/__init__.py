@@ -22,6 +22,7 @@ Minecraft 基岩版（Bedrock）服务器自动搭建管理工具
 from http.server import ThreadingHTTPServer  # noqa: F401
 
 # 初始化全局单例状态
+from . import constants
 from . import state as _state
 from .app_logger import (  # noqa: F401
     get_app_logger,
@@ -33,7 +34,12 @@ from .app_logger import (  # noqa: F401
     log_info,
     log_warning,
     read_recent_logs,
+    safe_log_exception,
     set_log_level,
+)
+from .app_update import (  # noqa: F401
+    check_app_update,
+    check_app_update_async,
 )
 
 # 从 assets.py 导入前端资源
@@ -140,8 +146,8 @@ from .security import (  # noqa: F401
     validate_custom_url,
 )
 from .server import ServerProcess, get_server_proc, server_running  # noqa: F401
-from .state import (  # noqa: F401
-    API_TOKEN,
+# 常量从 constants.py 导入（推荐）
+from .constants import (  # noqa: F401
     APP_DATA_DIR,
     APP_MARKER,
     APP_TITLE,
@@ -151,6 +157,11 @@ from .state import (  # noqa: F401
     IS_WINDOWS,
     LINKS_API,
     SERVER_EXE,
+)
+# 全局状态通过 AppContext 访问（推荐）
+# 以下模块级全局变量保留用于向后兼容，新代码请使用 AppContext.instance()
+from .state import (  # noqa: F401  # 向后兼容
+    API_TOKEN,
     app_start_time,
     httpd,
     server_lock,
@@ -201,11 +212,49 @@ from .worlds import (  # noqa: F401
     set_active_world,
 )
 
-if _state.console is None:
-    _state.console = _ConsoleBuffer()
-if _state.install_state is None:
-    _state.install_state = _InstallState()
-console = _state.console
-install_state = _state.install_state
+# 初始化全局单例状态（通过 AppContext 管理）
+from .app_context import AppContext as _GlobalAppContext
+_global_ctx = _GlobalAppContext.instance()
+
+if _global_ctx.console is None:
+    _global_ctx.console = _ConsoleBuffer()
+if _global_ctx.install_state is None:
+    _global_ctx.install_state = _InstallState()
+
+# 同步到 state.py（保持向后兼容）
+_state.console = _global_ctx.console
+_state.install_state = _global_ctx.install_state
+
+# 模块级全局变量（向后兼容，新代码请使用 AppContext.instance()）
+console = _global_ctx.console
+install_state = _global_ctx.install_state
 
 __version__ = "2.0.0"
+
+
+def get_app_context():
+    """获取全局 AppContext 实例（推荐使用此函数访问全局状态）。
+
+    Returns:
+        AppContext: 全局应用上下文实例
+
+    示例:
+        >>> from bedrock_server_manager import get_app_context
+        >>> ctx = get_app_context()
+        >>> ctx.log("服务器启动")
+        >>> server_dir = ctx.server_dir
+    """
+    from .app_context import AppContext
+    return AppContext.instance()
+
+
+# 弃用说明：以下模块级全局变量保留用于向后兼容
+# 新代码请使用 get_app_context() 或 AppContext.instance() 访问全局状态
+# - settings → AppContext.instance().settings
+# - console → AppContext.instance().console
+# - install_state → AppContext.instance().install_state
+# - server_proc → AppContext.instance().server_proc
+# - httpd → AppContext.instance().httpd
+# - API_TOKEN → AppContext.instance().api_token
+# - app_start_time → AppContext.instance().app_start_time
+# - server_lock → AppContext.instance().server_lock

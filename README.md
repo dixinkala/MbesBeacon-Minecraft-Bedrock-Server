@@ -57,7 +57,8 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 - **系统托盘集成**：后台运行，托盘图标显示运行状态，右键菜单快速操作
 - **多主题支持**：10 套预设主题（Minecraft 暗色、草方块绿、红石红、钻石蓝等）+ 自定义强调色
 - **多服务器管理**：自动扫描已安装服务器，支持多服务器切换管理
-- **版本更新检测**：自动检测服务器新版本，一键更新（自动备份存档）
+- **服务器版本更新检测**：自动检测服务器新版本，一键更新（自动备份存档）
+- **应用程序更新检测**：自动检测 MbesBeacon 软件新版本，支持手动检查更新，与服务器更新区分
 - **下载完整性校验**：ZIP 完整性 + SHA256 哈希（首次信任机制）+ PE 签名校验 + 文件大小校验
 - **断点续传下载**：支持 HTTP Range 请求，大文件中断后可续传
 - **崩溃自动重启**：服务器意外崩溃时自动重启，指数退避 + 最大重试次数
@@ -259,7 +260,7 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 {
   "ok": true,
   "app": "mbesbeacon",
-  "version": "2.0.0",
+  "version": "0.1.0",
   "installed": true,
   "server_dir": "D:\\MinecraftServer",
   "installed_version": "1.21.0.03",
@@ -279,6 +280,10 @@ bedrock_server_builder/
 ├── bedrock_server_manager/     # 主源码包
 │   ├── __init__.py
 │   ├── main.py                 # 程序入口，单实例检测，HTTP 服务器启动
+│   ├── app_context.py          # AppContext 应用上下文（全局状态管理）
+│   ├── di.py                   # 依赖注入容器
+│   ├── app_update.py           # 应用程序更新检测
+│   ├── constants.py            # 常量定义
 │   ├── server.py               # ServerProcess，服务器进程管理
 │   ├── console.py              # ConsoleBuffer，控制台日志缓冲
 │   ├── install.py              # 下载、安装、版本检测
@@ -293,31 +298,52 @@ bedrock_server_builder/
 │   ├── tray.py                 # 系统托盘图标
 │   ├── ratelimit.py            # API 速率限制
 │   ├── commands.py             # 命令自动补全
-│   ├── state.py                # 全局状态管理
+│   ├── state.py                # 全局状态管理（向后兼容）
 │   ├── utils.py                # 通用工具函数
 │   ├── app_logger.py           # 应用日志
 │   ├── assets.py               # 资源管理
 │   └── web/
+│       ├── __init__.py
 │       ├── handler.py          # HTTP 请求处理
-│       ├── app.py              # AppContext 应用上下文
+│       ├── app.py              # AppContext 应用上下文（Web 层）
+│       ├── route_decorator.py  # 路由装饰器
 │       ├── index.html          # 前端单页面（HTML/CSS/JS）
 │       └── routes/             # 路由模块
+│           ├── __init__.py
+│           ├── get_routes.py   # GET 路由
+│           ├── post_extra.py   # POST 路由（扩展）
+│           ├── misc.py         # 杂项路由（退出、主题等）
+│           ├── console.py      # 控制台路由
+│           ├── server.py       # 服务器路由
+│           ├── worlds.py       # 世界管理路由
+│           ├── backups.py      # 备份管理路由
+│           ├── commands.py     # 命令路由
+│           ├── players.py      # 玩家管理路由
+│           └── config.py       # 配置管理路由
 ├── tests/                      # 测试套件
+│   ├── __init__.py
 │   ├── test_unit.py            # 单元测试
 │   ├── test_integration.py     # 集成测试
 │   ├── test_e2e.py             # 端到端测试
 │   ├── test_routes.py          # 路由测试
 │   ├── test_scheduler_tray.py  # 计划任务/托盘测试
-│   └── test_crash_restart.py   # 崩溃重启测试
+│   ├── test_crash_restart.py   # 崩溃重启测试
+│   ├── test_app_context.py     # AppContext 测试
+│   ├── test_console.py         # 控制台测试
+│   └── test_ratelimit.py       # 速率限制测试
 ├── dist/                       # 构建产物（MbesBeacon.exe）
 ├── BedrockServerManager.spec   # PyInstaller 打包配置
 ├── build.bat                   # 构建脚本（含自动签名）
 ├── create_cert.bat             # 自签名证书生成脚本
+├── create_cert.ps1             # 自签名证书生成脚本（PowerShell）
 ├── sign_exe.bat                # EXE 数字签名工具
+├── sign_exe.ps1                # EXE 数字签名工具（PowerShell）
+├── version_info.txt            # 版本信息文件
+├── run.py                      # 开发环境运行入口
 ├── requirements.txt            # Python 依赖
 ├── pyproject.toml              # 项目配置（pytest/ruff）
-├── CHANGELOG.md                # 版本变更日志
-├── CODE_SIGNING.md             # 代码签名指南
+├── .pre-commit-config.yaml     # pre-commit 配置
+├── .gitignore                  # Git 忽略文件
 ├── LICENSE                     # MIT 许可证
 └── README.md                   # 本文档
 ```
@@ -380,7 +406,10 @@ A：在服务器目录的 worlds 文件夹。删除/更新服务器前程序会�
 A：在「② 服务器配置」修改 server-port 为其他端口（如 19133），保存后重启。启动前程序会自动检测端口占用情况。
 
 ### Q：如何更新服务器到最新版本？
-A：选择服务器后自动检测更新，或点标题栏「检查更新」手动检测。发现新版本后点「立即更新」，程序自动停服、清理旧程序（保留世界存档和配置）、下载安装新版本。
+A：选择服务器后自动检测更新，或点标题栏「服务器更新」手动检测。发现新版本后点「立即更新」，程序自动停服、清理旧程序（保留世界存档和配置）、下载安装新版本。
+
+### Q：如何更新 MbesBeacon 软件到最新版本？
+A：点标题栏「软件更新」手动检测 MbesBeacon 软件新版本。注意：软件更新与服务器更新是两个独立的功能，软件更新不会影响已安装的服务器。
 
 ### Q：系统托盘图标不显示怎么办？
 A：检查 Windows 托盘隐藏区域（任务栏右下角箭头），可将 MbesBeacon 图标拖到任务栏固定显示。

@@ -3,7 +3,8 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger
+from .config import backup_config_history
+from .app_logger import get_app_logger, safe_log_exception
 import os
 import shutil
 import time
@@ -56,12 +57,8 @@ def list_worlds(server_dir: str) -> list[dict[str, any]]:
                     "is_active": name == active_world,
                 }
             )
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"worlds.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("worlds", f"操作失败: {e}", "warning")
 
     # 按修改时间排序，最新的在前
     worlds.sort(key=lambda w: w["modified"], reverse=True)
@@ -88,12 +85,8 @@ def get_active_world_name(server_dir: str) -> str:
                 line = line.strip()
                 if line.startswith("level-name="):
                     return line.split("=", 1)[1].strip()
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"worlds.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("worlds", f"操作失败: {e}", "warning")
     return "Bedrock level"
 
 
@@ -124,7 +117,6 @@ def set_active_world(server_dir: str, world_name: str) -> tuple[bool, str]:
 
     try:
         # 备份配置
-        from .config import backup_config_history
 
         backup_config_history(server_dir)
 

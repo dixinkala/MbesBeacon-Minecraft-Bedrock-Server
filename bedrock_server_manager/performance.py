@@ -4,7 +4,7 @@
 """
 
 import re
-from .app_logger import get_app_logger
+from .app_logger import get_app_logger, safe_log_exception
 import threading
 import time
 from collections import deque
@@ -39,7 +39,6 @@ class PerformanceMonitor:
         Returns:
             dict: 性能数据
         """
-        from .players import parse_online_players
 
         data = {
             "timestamp": time.time(),
@@ -72,12 +71,8 @@ class PerformanceMonitor:
             try:
                 create_time = proc.create_time() if hasattr(proc, "create_time") else time.time()
                 data["uptime_seconds"] = int(time.time() - create_time)
-            except Exception:  # 已添加异常记录
-                try:
-                    import sys
-                    get_app_logger().debug(f"performance.py 异常: {e}")
-                except Exception:
-                    pass
+            except (OSError, ValueError, AttributeError) as e:
+                        safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
             # 获取 CPU 和内存使用情况
             try:
@@ -91,12 +86,8 @@ class PerformanceMonitor:
                 try:
                     total_mem = psutil.virtual_memory().total
                     data["memory_percent"] = round(mem_info.rss / total_mem * 100, 1)
-                except Exception:  # 已添加异常记录
-                    try:
-                        import sys
-                        get_app_logger().debug(f"performance.py 异常: {e}")
-                    except Exception:
-                        pass
+                except (OSError, ValueError, AttributeError) as e:
+                                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
             except ImportError:
                 # psutil 不可用，使用 tasklist 作为后备（Windows）
                 try:
@@ -113,12 +104,8 @@ class PerformanceMonitor:
                         if len(parts) >= 5:
                             mem_str = parts[4].strip('"').replace(" K", "").replace(",", "")
                             data["memory_mb"] = round(int(mem_str) / 1024, 1)
-                except Exception:  # 已添加异常记录
-                    try:
-                        import sys
-                        get_app_logger().debug(f"performance.py 异常: {e}")
-                    except Exception:
-                        pass
+                except (OSError, ValueError, AttributeError) as e:
+                                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
             # 获取在线玩家数
             try:
@@ -132,22 +119,14 @@ class PerformanceMonitor:
                         recent_text, _ = console.read_since(0)
                         online = parse_online_players(recent_text)
                         data["players"] = len(online) if online else 0
-            except Exception:  # 已添加异常记录
-                try:
-                    import sys
-                    get_app_logger().debug(f"performance.py 异常: {e}")
-                except Exception:
-                    pass
+            except (OSError, ValueError, AttributeError) as e:
+                        safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
             # 解析 TPS（从控制台日志）
             data["tps"] = self._parse_tps(console)
 
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"performance.py 异常: {e}")
-            except Exception:
-                pass
+        except (OSError, ValueError, AttributeError) as e:
+                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
         with self._lock:
             self._history.append(data)
@@ -184,12 +163,8 @@ class PerformanceMonitor:
                         return self._current_tps
                     except (ValueError, ZeroDivisionError):
                         continue
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"performance.py 异常: {e}")
-            except Exception:
-                pass
+        except (OSError, ValueError, AttributeError) as e:
+                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
         # BDS 默认不输出 TPS，返回 0（前端应显示"暂不支持"或"--"）
         return 0.0

@@ -3,29 +3,28 @@
 """
 
 import json
-from .app_logger import get_app_logger
+from .app_context import AppContext
+from .di import inject, initialize_container
+from .app_logger import get_app_logger, safe_log_exception
+from .constants import SERVER_EXE
+from .state import DEFAULT_THEME, THEME_FILE
 import os
 import time
 import webbrowser
 
 
-# 延迟导入全局状态（避免循环导入）
+# 通过 AppContext 访问全局状态（消除延迟导入）
 def _get_settings():
-    from .state import settings
-
-    return settings
+    return AppContext.instance().settings
 
 
 def _get_console():
-    from .state import console
-
-    return console
+    return AppContext.instance().console
 
 
 def _get_server_proc():
-    from .state import server_lock, server_proc
-
-    return server_proc, server_lock
+    ctx = AppContext.instance()
+    return ctx.server_proc, ctx.server_lock
 
 
 # 设置文件路径
@@ -36,9 +35,14 @@ _detect_cache = {"result": None, "time": 0}
 DETECT_CACHE_TTL = 30  # 缓存有效期 30 秒
 
 
-def load_settings():
-    """从磁盘加载设置，合并到全局 settings 字典。"""
-    settings = _get_settings()
+@inject("settings")
+def load_settings(settings=None) -> dict:
+    """从磁盘加载设置，合并到全局 settings 字典。
+
+    使用依赖注入获取 settings，保持向后兼容。
+    """
+    if settings is None:
+        settings = _get_settings()
     try:
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, encoding="utf-8") as f:
@@ -46,38 +50,45 @@ def load_settings():
             if isinstance(d, dict):
                 for k, v in d.items():
                     settings[k] = v
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"utils.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("utils", f"操作失败: {e}", "warning")
 
 
-def save_settings():
-    """将全局 settings 字典保存到磁盘。"""
-    settings = _get_settings()
+@inject("settings")
+def save_settings(settings=None) -> bool:
+    """将全局 settings 字典保存到磁盘。
+
+    使用依赖注入获取 settings，保持向后兼容。
+    """
+    if settings is None:
+        settings = _get_settings()
     try:
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump(settings, f, ensure_ascii=False, indent=2)
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"utils.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("utils", f"操作失败: {e}", "warning")
 
 
-def resolve_server_dir():
-    """获取当前管理的服务器目录。"""
-    settings = _get_settings()
+@inject("settings")
+def resolve_server_dir(settings=None):
+    """获取当前管理的服务器目录。
+
+    使用依赖注入获取 settings，保持向后兼容。
+    """
+    if settings is None:
+        settings = _get_settings()
     d = settings.get("server_dir", "").strip()
     return d
 
 
-def sync_log_file():
-    """根据当前服务器目录同步控制台日志文件路径。"""
-    console = _get_console()
+@inject("console")
+def sync_log_file(console=None):
+    """根据当前服务器目录同步控制台日志文件路径。
+
+    使用依赖注入获取 console，保持向后兼容。
+    """
+    if console is None:
+        console = _get_console()
     d = resolve_server_dir()
     if d and os.path.isdir(d):
         console.set_log_file(os.path.join(d, "server_console.log"))
@@ -91,19 +102,16 @@ def props_path():
     return os.path.join(d, "server.properties") if d else ""
 
 
-def installed():
+def installed() -> bool:
     """检查当前目录是否已安装服务器（包含 bedrock_server.exe）。"""
-    from .state import SERVER_EXE
-
     d = resolve_server_dir()
     return bool(d) and os.path.isfile(os.path.join(d, SERVER_EXE))
 
 
-def detect_servers(force_refresh=False):
+def detect_servers(force_refresh: bool = False) -> list[dict]:
     """自动扫描常见目录，查找所有已安装的 Minecraft 基岩版服务器（包含 bedrock_server.exe 的目录）。
     返回服务器目录列表（绝对路径，去重）。
     force_refresh=True 时绕过缓存重新扫描。"""
-    from .state import SERVER_EXE
 
     global _detect_cache
     now = time.time()
@@ -123,12 +131,8 @@ def detect_servers(force_refresh=False):
                 if abs_d not in seen:
                     seen.add(abs_d)
                     found.append(os.path.abspath(d))
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"utils.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("utils", f"操作失败: {e}", "warning")
 
     def _scan_subdirs(parent, max_depth=2):
         """扫描父目录下的子目录（最多 max_depth 层），查找服务器。"""
@@ -144,12 +148,8 @@ def detect_servers(force_refresh=False):
                     _check_dir(full)
                     if max_depth > 1:
                         _scan_subdirs(full, max_depth - 1)
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"utils.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("utils", f"操作失败: {e}", "warning")
 
     # 1. 当前管理的服务器目录
     cur = resolve_server_dir()
@@ -200,12 +200,8 @@ def open_browser_with_retry(url, max_attempts=3):
         try:
             if webbrowser.open(url):
                 return True
-        except Exception:  # 已添加异常记录
-            try:
-                import sys
-                get_app_logger().debug(f"utils.py 异常: {e}")
-            except Exception:
-                pass
+        except Exception as e:
+                safe_log_exception("utils", f"操作失败: {e}", "warning")
         if attempt < max_attempts - 1:
             time.sleep(1.2)
     # 所有尝试失败，弹出通知
@@ -224,12 +220,8 @@ def open_browser_with_retry(url, max_attempts=3):
         )
         encoded = base64.b64encode(ps_script.encode("utf-16-le")).decode("ascii")
         subprocess.run(["powershell", "-EncodedCommand", encoded], capture_output=True, timeout=5)
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"utils.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("utils", f"操作失败: {e}", "warning")
     return False
 
 
@@ -253,7 +245,7 @@ def browse_directory(initial_dir=""):
         return ""
 
 
-def get_lan_ip():
+def get_lan_ip() -> str:
     """获取本机局域网IP。"""
     import socket
 
@@ -272,7 +264,7 @@ def get_lan_ip():
             return "127.0.0.1"
 
 
-def check_disk_space(target_dir, required_mb=300):
+def check_disk_space(target_dir: str, required_mb: int = 300) -> tuple[bool, int]:
     """检查目标目录所在磁盘剩余空间。"""
     import shutil
 
@@ -284,11 +276,9 @@ def check_disk_space(target_dir, required_mb=300):
         return True, -1, required_mb
 
 
-def load_theme():
+def load_theme() -> str:
     """加载主题设置。"""
     import json
-
-    from .state import DEFAULT_THEME, THEME_FILE
 
     theme = dict(DEFAULT_THEME)
     try:
@@ -298,20 +288,14 @@ def load_theme():
             for k in ("preset", "accent", "mode"):
                 if k in d:
                     theme[k] = d[k]
-    except Exception:  # 已添加异常记录
-        try:
-            import sys
-            get_app_logger().debug(f"utils.py 异常: {e}")
-        except Exception:
-            pass
+    except Exception as e:
+        safe_log_exception("utils", f"操作失败: {e}", "warning")
     return theme
 
 
-def save_theme(theme):
+def save_theme(theme: str) -> bool:
     """保存主题设置。"""
     import json
-
-    from .state import THEME_FILE
 
     try:
         with open(THEME_FILE, "w", encoding="utf-8") as f:
@@ -319,3 +303,7 @@ def save_theme(theme):
         return True
     except Exception:
         return False
+
+
+# 初始化依赖注入容器（确保在模块加载时完成）
+initialize_container()
