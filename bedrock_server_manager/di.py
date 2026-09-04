@@ -26,7 +26,8 @@
 import functools
 import inspect
 import threading
-from typing import Any, Callable, Dict, Optional, Type
+from collections.abc import Callable
+from typing import Any
 
 
 class DIContainer:
@@ -38,8 +39,8 @@ class DIContainer:
 
     def __init__(self) -> None:
         """初始化依赖注入容器。"""
-        self._singletons: Dict[str, Any] = {}
-        self._factories: Dict[str, Callable[[], Any]] = {}
+        self._singletons: dict[str, Any] = {}
+        self._factories: dict[str, Callable[[], Any]] = {}
         self._lock = threading.Lock()
 
     def register_singleton(self, name: str, factory: Callable[[], Any]) -> None:

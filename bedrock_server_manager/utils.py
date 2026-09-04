@@ -3,14 +3,15 @@
 """
 
 import json
-from .app_context import AppContext
-from .di import inject, initialize_container
-from .app_logger import get_app_logger, safe_log_exception
-from .constants import SERVER_EXE
-from .state import DEFAULT_THEME, THEME_FILE
 import os
 import time
 import webbrowser
+
+from .app_context import AppContext
+from .app_logger import safe_log_exception
+from .constants import SERVER_EXE
+from .di import initialize_container, inject
+from .state import DEFAULT_THEME, THEME_FILE
 
 
 # 通过 AppContext 访问全局状态（消除延迟导入）
@@ -132,7 +133,7 @@ def detect_servers(force_refresh: bool = False) -> list[dict]:
                     seen.add(abs_d)
                     found.append(os.path.abspath(d))
         except Exception as e:
-                safe_log_exception("utils", f"操作失败: {e}", "warning")
+            safe_log_exception("utils", f"操作失败: {e}", "warning")
 
     def _scan_subdirs(parent, max_depth=2):
         """扫描父目录下的子目录（最多 max_depth 层），查找服务器。"""
@@ -149,7 +150,7 @@ def detect_servers(force_refresh: bool = False) -> list[dict]:
                     if max_depth > 1:
                         _scan_subdirs(full, max_depth - 1)
         except Exception as e:
-                safe_log_exception("utils", f"操作失败: {e}", "warning")
+            safe_log_exception("utils", f"操作失败: {e}", "warning")
 
     # 1. 当前管理的服务器目录
     cur = resolve_server_dir()
@@ -201,7 +202,7 @@ def open_browser_with_retry(url, max_attempts=3):
             if webbrowser.open(url):
                 return True
         except Exception as e:
-                safe_log_exception("utils", f"操作失败: {e}", "warning")
+            safe_log_exception("utils", f"操作失败: {e}", "warning")
         if attempt < max_attempts - 1:
             time.sleep(1.2)
     # 所有尝试失败，弹出通知

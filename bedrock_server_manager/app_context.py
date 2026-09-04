@@ -12,7 +12,7 @@
 
 import threading
 import time
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional
 
 
 class AppContext:
@@ -40,9 +40,11 @@ class AppContext:
         # 延迟导入避免循环依赖，直接从 state 模块获取 API_TOKEN
         try:
             from .state import API_TOKEN as _state_api_token
+
             self._api_token: str = _state_api_token
         except (ImportError, AttributeError):
             import secrets
+
             self._api_token: str = secrets.token_hex(16)
         self._app_start_time: float = time.time()
         self._mutex_handle: Any = None
@@ -53,9 +55,10 @@ class AppContext:
         # 直接引用 state.settings，确保两者是同一个对象
         try:
             from .state import settings as _state_settings
-            self._settings: Dict[str, Any] = _state_settings
+
+            self._settings: dict[str, Any] = _state_settings
         except (ImportError, AttributeError):
-            self._settings: Dict[str, Any] = {
+            self._settings: dict[str, Any] = {
                 "server_dir": "",
                 "ignore_ssl": False,
                 "installed_version": "",
@@ -152,9 +155,79 @@ class AppContext:
 
     # ---------------- 全局单例状态 ----------------
 
+    class _NullConsole:
+        """空控制台对象：当 console 未初始化时使用，避免 NoneType 错误。"""
+
+        def append(self, *args, **kwargs):
+            pass
+
+        def clear(self, *args, **kwargs):
+            pass
+
+        def read_since(self, *args, **kwargs):
+            return "", 0
+
+        def wait_for_new(self, *args, **kwargs):
+            return "", 0
+
+        def set_log_file(self, *args, **kwargs):
+            pass
+
+        @property
+        def lock(self):
+            import threading
+
+            return threading.Lock()
+
+        def __len__(self):
+            return 0
+
+        def __iter__(self):
+            return iter([])
+
+    class _NullInstallState:
+        """空安装状态对象：当 install_state 未初始化时使用，避免 NoneType 错误。"""
+
+        def snapshot(self):
+            return {
+                "busy": False,
+                "done": False,
+                "error": "",
+                "phase": "idle",
+                "percent": 0,
+                "text": "",
+                "log": [],
+            }
+
+        def set(self, **kwargs):
+            pass
+
+        def log_line(self, *args, **kwargs):
+            pass
+
+        @property
+        def busy(self):
+            return False
+
+        @property
+        def done(self):
+            return False
+
+        @property
+        def error(self):
+            return ""
+
+        @property
+        def cancel(self):
+            import threading
+
+            return threading.Event()
+
     @property
     def console(self) -> Any:
-        """控制台缓冲区实例。"""
+        """控制台缓冲区实例。如果未初始化，返回空对象以避免 NoneType 错误。"""
+        if self._console is None:
+            return self._NullConsole()
         return self._console
 
     @console.setter
@@ -168,7 +241,9 @@ class AppContext:
 
     @property
     def install_state(self) -> Any:
-        """安装状态实例。"""
+        """安装状态实例。如果未初始化，返回空对象以避免 NoneType 错误。"""
+        if self._install_state is None:
+            return self._NullInstallState()
         return self._install_state
 
     @install_state.setter
@@ -188,12 +263,12 @@ class AppContext:
         return getattr(self._install_state, "busy", False)
 
     @property
-    def settings(self) -> Dict[str, Any]:
+    def settings(self) -> dict[str, Any]:
         """全局设置字典。"""
         return self._settings
 
     @settings.setter
-    def settings(self, value: Dict[str, Any]) -> None:
+    def settings(self, value: dict[str, Any]) -> None:
         self._settings = value
 
     def get_setting(self, key: str, default: Any = None) -> Any:
@@ -217,7 +292,7 @@ class AppContext:
         """
         self._settings[key] = value
 
-    def update_settings(self, updates: Dict[str, Any]) -> None:
+    def update_settings(self, updates: dict[str, Any]) -> None:
         """批量更新设置。
 
         Args:
@@ -328,7 +403,7 @@ class AppContext:
         self._settings["ignore_ssl"] = value
 
     @property
-    def server_dir_history(self) -> List[str]:
+    def server_dir_history(self) -> list[str]:
         """服务器目录历史记录。"""
         return self._settings.get("server_dir_history", [])
 
@@ -392,7 +467,7 @@ class AppContext:
         with self._init_lock:
             self._initialized = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """将状态转换为字典（用于健康检查和调试）。
 
         Returns:

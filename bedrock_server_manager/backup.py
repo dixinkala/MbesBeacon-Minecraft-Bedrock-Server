@@ -3,14 +3,15 @@
 """
 
 import contextlib
-from .app_context import AppContext
-from .app_logger import get_app_logger, safe_log_exception
-from .server import get_server_proc
-from .utils import resolve_server_dir
 import os
 import shutil
 import time
 import zipfile
+
+from .app_context import AppContext
+from .app_logger import safe_log_exception
+from .server import get_server_proc
+from .utils import resolve_server_dir
 
 
 def _get_console():
@@ -94,7 +95,7 @@ def backup_worlds(dir_path: str, max_backups: int = 5) -> str:
             for old in backups[max_backups:]:
                 shutil.rmtree(old, ignore_errors=True)
         except Exception as e:
-                safe_log_exception("backup", f"操作失败: {e}", "warning")
+            safe_log_exception("backup", f"操作失败: {e}", "warning")
         console.append(f"\n[系统] 已自动备份世界存档到: {backup_dir}\n")
         return backup_dir
     except Exception as e:
@@ -216,7 +217,7 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
                 if tmp_dirs and not os.path.isdir(worlds_dir):
                     os.rename(os.path.join(server_dir, tmp_dirs[0]), worlds_dir)
         except Exception as e:
-                safe_log_exception("backup", f"操作失败: {e}", "warning")
+            safe_log_exception("backup", f"操作失败: {e}", "warning")
         return False, f"恢复失败: {str(e)}"
 
 
@@ -236,7 +237,6 @@ def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool
     # 安全校验2：绝对路径边界检查（与 restore_backup 一致）
     try:
         if server_dir is None:
-        
             server_dir = resolve_server_dir()
         if server_dir:
             backup_root = get_backup_root(server_dir)
@@ -298,7 +298,7 @@ def delete_server(dir_target, mode):
                 else:
                     os.remove(full)
             except Exception as e:
-                        safe_log_exception("backup", f"操作失败: {e}", "warning")
+                safe_log_exception("backup", f"操作失败: {e}", "warning")
     else:
         shutil.rmtree(dir_target, ignore_errors=True)
     return True

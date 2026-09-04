@@ -12,7 +12,7 @@ import os
 import sys
 import time
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -23,6 +23,7 @@ class TestCrashRestartLogic(unittest.TestCase):
     def setUp(self):
         """创建 ServerProcess 实例（mock subprocess）"""
         from bedrock_server_manager.server import ServerProcess
+
         self.server_dir = os.path.join(os.path.dirname(__file__), "test_server_crash")
         os.makedirs(self.server_dir, exist_ok=True)
         # 创建模拟的 bedrock_server.exe
@@ -37,6 +38,7 @@ class TestCrashRestartLogic(unittest.TestCase):
     def tearDown(self):
         """清理测试文件"""
         import shutil
+
         if os.path.exists(self.server_dir):
             shutil.rmtree(self.server_dir, ignore_errors=True)
 
@@ -55,27 +57,27 @@ class TestCrashRestartLogic(unittest.TestCase):
         """测试指数退避时间计算"""
         # 第1次: 2^1 = 2秒
         self.proc._crash_restart_count = 1
-        backoff = min(self.proc.CRASH_BACKOFF_BASE ** self.proc._crash_restart_count, 60)
+        backoff = min(self.proc.CRASH_BACKOFF_BASE**self.proc._crash_restart_count, 60)
         self.assertEqual(backoff, 2)
 
         # 第2次: 2^2 = 4秒
         self.proc._crash_restart_count = 2
-        backoff = min(self.proc.CRASH_BACKOFF_BASE ** self.proc._crash_restart_count, 60)
+        backoff = min(self.proc.CRASH_BACKOFF_BASE**self.proc._crash_restart_count, 60)
         self.assertEqual(backoff, 4)
 
         # 第3次: 2^3 = 8秒
         self.proc._crash_restart_count = 3
-        backoff = min(self.proc.CRASH_BACKOFF_BASE ** self.proc._crash_restart_count, 60)
+        backoff = min(self.proc.CRASH_BACKOFF_BASE**self.proc._crash_restart_count, 60)
         self.assertEqual(backoff, 8)
 
         # 第5次: 2^5 = 32秒
         self.proc._crash_restart_count = 5
-        backoff = min(self.proc.CRASH_BACKOFF_BASE ** self.proc._crash_restart_count, 60)
+        backoff = min(self.proc.CRASH_BACKOFF_BASE**self.proc._crash_restart_count, 60)
         self.assertEqual(backoff, 32)
 
         # 第6次: 2^6 = 64秒，但上限是60秒
         self.proc._crash_restart_count = 6
-        backoff = min(self.proc.CRASH_BACKOFF_BASE ** self.proc._crash_restart_count, 60)
+        backoff = min(self.proc.CRASH_BACKOFF_BASE**self.proc._crash_restart_count, 60)
         self.assertEqual(backoff, 60)
 
     def test_crash_count_increment(self):

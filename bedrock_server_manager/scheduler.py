@@ -3,14 +3,15 @@
 """
 
 import json
-from .backup import backup_worlds_zip
-from .security import audit_log
-from .app_logger import get_app_logger, safe_log_exception
-from .server import get_server_proc, server_running
-from .utils import resolve_server_dir
 import os
 import threading
 import time
+
+from .app_logger import safe_log_exception
+from .backup import backup_worlds_zip
+from .security import audit_log
+from .server import get_server_proc, server_running
+from .utils import resolve_server_dir
 
 _scheduled_tasks = []
 _scheduler_stop = threading.Event()
@@ -74,9 +75,10 @@ def validate_scheduled_task(task):
         except (ValueError, TypeError):
             return False, "interval_hours 必须是数字"
     # 校验公告消息
-    if task["type"] == "announce":
-        if "message" not in task or not isinstance(task["message"], str) or not task["message"].strip():
-            return False, "announce 类型需要 message 字段"
+    if task["type"] == "announce" and (
+        "message" not in task or not isinstance(task["message"], str) or not task["message"].strip()
+    ):
+        return False, "announce 类型需要 message 字段"
     return True, ""
 
 
@@ -88,7 +90,7 @@ def validate_scheduled_tasks(tasks):
     for i, task in enumerate(tasks):
         ok, err = validate_scheduled_task(task)
         if not ok:
-            return False, "第 %d 个任务: %s" % (i + 1, err), []
+            return False, f"第 {i + 1} 个任务: {err}", []
         valid_tasks.append(task)
     return True, "", valid_tasks
 
@@ -163,7 +165,7 @@ def _scheduler_loop():
                             last_check[tid] = now
                             _execute_scheduled_task(task, d)
         except (OSError, ValueError, AttributeError) as e:
-                safe_log_exception("scheduler.py", f"调度循环异常: {e}", "warning")
+            safe_log_exception("scheduler.py", f"调度循环异常: {e}", "warning")
         time.sleep(30)
 
 
@@ -180,6 +182,7 @@ def _execute_scheduled_task(task, server_dir, note=None):
     if note:
         try:
             from .app_logger import get_app_logger
+
             get_app_logger().info(f"定时任务[{note}]: {task_type} - {server_dir}")
         except Exception:
             pass

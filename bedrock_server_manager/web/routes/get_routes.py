@@ -2,7 +2,12 @@
 GET 路由处理方法 mixin。
 包含所有 GET 请求的路由处理方法，从 handler.py 的 do_GET 中迁移而来。
 """
+
 import contextlib
+import os
+import time
+
+from ...app_context import AppContext
 from ...backup import get_backup_root, list_backups
 from ...config import (
     FULL_PROP_META,
@@ -10,6 +15,7 @@ from ...config import (
     load_properties,
     properties_to_dict,
 )
+from ...constants import APP_MARKER, APP_TITLE, APP_VERSION, SERVER_EXE
 from ...install import (
     DOWNLOAD_SOURCES,
     FALLBACK_VERSIONS,
@@ -25,15 +31,8 @@ from ...players import (
     read_permissions,
     send_command_capture,
 )
-from ...app_context import AppContext
 from ...server import get_server_proc, server_running
-from ...state import (
-    APP_MARKER,
-    APP_TITLE,
-    APP_VERSION,
-    SERVER_EXE,
-    app_start_time,
-)
+from ...state import app_start_time
 from ...utils import (
     browse_directory,
     detect_servers,
@@ -45,17 +44,11 @@ from ...utils import (
     save_settings,
     sync_log_file,
 )
-import json
-import os
-import time
-from urllib.parse import parse_qs, urlparse
-
 from ..route_decorator import register_get_route
 
 
 class GetRoutesMixin:
     """GET 路由处理方法 mixin。"""
-
 
     @register_get_route("/")
     def _get_index(self, q):
@@ -88,8 +81,7 @@ class GetRoutesMixin:
                 "app": APP_MARKER,
                 "version": APP_VERSION,
                 "uptime_seconds": round(uptime, 2),
-                "uptime_human": "%d:%02d:%02d"
-                % (int(uptime // 3600), int((uptime % 3600) // 60), int(uptime % 60)),
+                "uptime_human": f"{int(uptime // 3600)}:{int((uptime % 3600) // 60):02d}:{int(uptime % 60):02d}",
                 "memory_mb": round(mem_mb, 2),
                 "cpu_percent": round(cpu_percent, 2),
                 "server_running": server_running(),
@@ -180,9 +172,7 @@ class GetRoutesMixin:
         self._json(
             {
                 "ok": True,
-                "sources": [
-                    {"index": i, "name": s["name"], "type": s["type"]} for i, s in enumerate(DOWNLOAD_SOURCES)
-                ],
+                "sources": [{"index": i, "name": s["name"], "type": s["type"]} for i, s in enumerate(DOWNLOAD_SOURCES)],
             }
         )
 
@@ -244,7 +234,7 @@ class GetRoutesMixin:
                 "ok": True,
                 "lan_ip": lan_ip,
                 "port": port,
-                "address": "%s:%d" % (lan_ip, port),
+                "address": f"{lan_ip}:{port}",
             }
         )
 
@@ -271,7 +261,7 @@ class GetRoutesMixin:
                 "meta": PROP_META,
                 "lan_ip": lan_ip,
                 "port": port,
-                "address": "%s:%d" % (lan_ip, port),
+                "address": f"{lan_ip}:{port}",
             }
         )
 

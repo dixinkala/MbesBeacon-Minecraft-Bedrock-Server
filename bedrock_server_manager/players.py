@@ -2,16 +2,16 @@
 玩家管理模块：玩家名校验、在线玩家解析、权限/封禁/白名单管理。
 """
 
-import contextlib
-from .app_context import AppContext
-from .security import audit_log
-from .app_logger import get_app_logger, safe_log_exception
-from .server import get_server_proc, server_running
-from .utils import resolve_server_dir
 import json
 import os
 import re
 import time
+
+from .app_context import AppContext
+from .app_logger import safe_log_exception
+from .security import audit_log
+from .server import get_server_proc, server_running
+from .utils import resolve_server_dir
 
 # 玩家名校验正则
 _PLAYER_NAME_RE = re.compile(r"^[A-Za-z0-9_.]+$")
@@ -33,6 +33,7 @@ def send_command_capture(cmd, timeout=2.5):
     """发送服务器命令并捕获接下来的控制台输出，返回输出文本；服务器未运行返回 None。
     使用 ConsoleBuffer.wait_for_new 等待输出，服务器响应快时立即返回，
     不再固定 sleep 满 timeout，显著降低 /api/players 等接口的响应延迟。"""
+    console = AppContext.instance().console
 
     if not server_running():
         return None
@@ -251,6 +252,7 @@ def ban_ip(ip, reason="", server_dir=None):
             except Exception as e:
                 try:
                     from .app_logger import get_app_logger
+
                     get_app_logger().warning(f"players.py 发送 ban-ip 命令异常: {e}")
                 except Exception:
                     pass
@@ -279,6 +281,7 @@ def pardon_ip(ip, server_dir=None):
             except Exception as e:
                 try:
                     from .app_logger import get_app_logger
+
                     get_app_logger().warning(f"players.py 发送 pardon-ip 命令异常: {e}")
                 except Exception:
                     pass

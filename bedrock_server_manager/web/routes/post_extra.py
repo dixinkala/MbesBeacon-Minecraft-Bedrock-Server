@@ -2,7 +2,12 @@
 额外 POST 路由处理方法 mixin。
 包含从 handler.py 的 do_POST 中迁移的硬编码 POST 路由。
 """
+
 import contextlib
+import os
+import threading
+
+from ...app_context import AppContext
 from ...app_update import check_app_update
 from ...backup import backup_worlds, delete_server
 from ...config import (
@@ -16,22 +21,17 @@ from ...install import do_install, get_latest_server_info, select_server_dir
 from ...players import add_allowlist, remove_allowlist, validate_player_name
 from ...security import audit_log, check_dangerous_operation, validate_custom_url
 from ...server import get_server_proc, server_running
-from ...app_context import AppContext
 from ...utils import (
     installed,
     props_path,
     resolve_server_dir,
     save_settings,
 )
-import os
-import threading
-
 from ..route_decorator import register_post_route
 
 
 class PostExtraRoutesMixin:
     """额外 POST 路由处理方法 mixin。"""
-
 
     @register_post_route("/api/latest")
     def _post_latest(self, data):
@@ -69,7 +69,7 @@ class PostExtraRoutesMixin:
                 self._json({"ok": False, "error": f"自定义下载地址无效：{msg}"})
                 return
         AppContext.instance().settings["server_dir"] = d
-        ignore_ssl = AppContext.instance().settings.get("ignore_ssl", False)
+        AppContext.instance().settings.get("ignore_ssl", False)
         threading.Thread(
             target=do_install,
             args=(
@@ -117,7 +117,9 @@ class PostExtraRoutesMixin:
         except Exception as e:
             self._json({"ok": False, "error": f"清理旧版本失败：{e}"})
             return
-        AppContext.instance().console.append("\n[系统] 正在更新服务器：{} → {}\n".format(cur_ver or "（未知）", target_ver))
+        AppContext.instance().console.append(
+            "\n[系统] 正在更新服务器：{} → {}\n".format(cur_ver or "（未知）", target_ver)
+        )
         threading.Thread(target=do_install, args=(d, target_ver, False), daemon=True).start()
         self._json(
             {
@@ -349,7 +351,6 @@ class PostExtraRoutesMixin:
             self._json({"ok": False, "error": err})
             return
         self._json({"ok": True, **info})
-
 
     @register_post_route("/api/app/update/check")
     def _post_app_update_check(self, data):

@@ -110,6 +110,7 @@ def audit_log(action, detail="", server_dir=None):
         # 审计日志写入失败时输出到控制台，便于排查
         try:
             import sys
+
             print(f"[警告] 审计日志写入失败: {e}", file=sys.stderr)
         except Exception:
             pass

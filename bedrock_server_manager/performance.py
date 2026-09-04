@@ -4,10 +4,11 @@
 """
 
 import re
-from .app_logger import get_app_logger, safe_log_exception
 import threading
 import time
 from collections import deque
+
+from .players import parse_online_players, safe_log_exception
 
 
 class PerformanceMonitor:
@@ -53,7 +54,7 @@ class PerformanceMonitor:
         }
 
         try:
-            if server_proc is None or not server_proc.running():
+            if server_proc is None or not server_proc.running:
                 with self._lock:
                     self._history.append(data)
                 return data
@@ -72,14 +73,16 @@ class PerformanceMonitor:
                 create_time = proc.create_time() if hasattr(proc, "create_time") else time.time()
                 data["uptime_seconds"] = int(time.time() - create_time)
             except (OSError, ValueError, AttributeError) as e:
-                        safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
+                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
             # 获取 CPU 和内存使用情况
             try:
                 import psutil
 
                 p = psutil.Process(pid)
-                data["cpu_percent"] = round(p.cpu_percent(interval=None), 1)  # 非阻塞模式，首次调用返回0，后续返回自上次调用以来的CPU使用率
+                data["cpu_percent"] = round(
+                    p.cpu_percent(interval=None), 1
+                )  # 非阻塞模式，首次调用返回0，后续返回自上次调用以来的CPU使用率
                 mem_info = p.memory_info()
                 data["memory_mb"] = round(mem_info.rss / (1024 * 1024), 1)
                 # 计算内存占用百分比
@@ -87,14 +90,14 @@ class PerformanceMonitor:
                     total_mem = psutil.virtual_memory().total
                     data["memory_percent"] = round(mem_info.rss / total_mem * 100, 1)
                 except (OSError, ValueError, AttributeError) as e:
-                                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
+                    safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
             except ImportError:
                 # psutil 不可用，使用 tasklist 作为后备（Windows）
                 try:
                     import subprocess
 
                     result = subprocess.run(
-                        ["tasklist", "/FI", "PID eq %d" % pid, "/FO", "CSV", "/NH"],
+                        ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
                         capture_output=True,
                         text=True,
                         timeout=5,
@@ -105,7 +108,7 @@ class PerformanceMonitor:
                             mem_str = parts[4].strip('"').replace(" K", "").replace(",", "")
                             data["memory_mb"] = round(int(mem_str) / 1024, 1)
                 except (OSError, ValueError, AttributeError) as e:
-                                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
+                    safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
             # 获取在线玩家数
             try:
@@ -120,13 +123,13 @@ class PerformanceMonitor:
                         online = parse_online_players(recent_text)
                         data["players"] = len(online) if online else 0
             except (OSError, ValueError, AttributeError) as e:
-                        safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
+                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
             # 解析 TPS（从控制台日志）
             data["tps"] = self._parse_tps(console)
 
         except (OSError, ValueError, AttributeError) as e:
-                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
+            safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
         with self._lock:
             self._history.append(data)
@@ -164,7 +167,7 @@ class PerformanceMonitor:
                     except (ValueError, ZeroDivisionError):
                         continue
         except (OSError, ValueError, AttributeError) as e:
-                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
+            safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
         # BDS 默认不输出 TPS，返回 0（前端应显示"暂不支持"或"--"）
         return 0.0

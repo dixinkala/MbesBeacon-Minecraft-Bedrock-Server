@@ -260,7 +260,7 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 {
   "ok": true,
   "app": "mbesbeacon",
-  "version": "0.1.0",
+  "version": "1.0.21",
   "installed": true,
   "server_dir": "D:\\MinecraftServer",
   "installed_version": "1.21.0.03",
@@ -320,23 +320,25 @@ bedrock_server_builder/
 │           ├── commands.py     # 命令路由
 │           ├── players.py      # 玩家管理路由
 │           └── config.py       # 配置管理路由
-├── tests/                      # 测试套件
+├── tests/                      # 测试套件（13个测试文件，293个测试用例）
 │   ├── __init__.py
-│   ├── test_unit.py            # 单元测试
-│   ├── test_integration.py     # 集成测试
-│   ├── test_e2e.py             # 端到端测试
-│   ├── test_routes.py          # 路由测试
+│   ├── test_unit.py            # 单元测试（配置/玩家/备份/安装/工具函数）
+│   ├── test_integration.py     # 集成测试（模块间协作、状态同步）
+│   ├── test_e2e.py             # 端到端测试（完整流程模拟）
+│   ├── test_routes.py          # 路由测试（路由注册、认证、404、危险端点）
 │   ├── test_scheduler_tray.py  # 计划任务/托盘测试
-│   ├── test_crash_restart.py   # 崩溃重启测试
-│   ├── test_app_context.py     # AppContext 测试
-│   ├── test_console.py         # 控制台测试
-│   └── test_ratelimit.py       # 速率限制测试
+│   ├── test_crash_restart.py   # 崩溃重启测试（指数退避、最大重试）
+│   ├── test_app_context.py     # AppContext 测试（单例、状态管理）
+│   ├── test_console.py         # 控制台测试（日志缓冲、SSE流）
+│   ├── test_ratelimit.py       # 速率限制测试（令牌桶算法）
+│   ├── test_verify.py          # 验证测试（SHA256计算、文件大小、ZIP完整性）
+│   ├── test_security.py        # 安全测试（命令校验、API Token生成）
+│   └── test_modules.py         # 模块测试（世界管理、命令模块、应用日志）
 ├── dist/                       # 构建产物（MbesBeacon.exe）
 ├── BedrockServerManager.spec   # PyInstaller 打包配置
-├── build.bat                   # 构建脚本（含自动签名）
-├── create_cert.bat             # 自签名证书生成脚本
+├── build.bat                   # 构建启动器（调用 build.ps1）
+├── build.ps1                   # PowerShell 构建脚本（含自动签名）
 ├── create_cert.ps1             # 自签名证书生成脚本（PowerShell）
-├── sign_exe.bat                # EXE 数字签名工具
 ├── sign_exe.ps1                # EXE 数字签名工具（PowerShell）
 ├── version_info.txt            # 版本信息文件
 ├── run.py                      # 开发环境运行入口

@@ -102,7 +102,7 @@ class TestConsoleBufferClear(unittest.TestCase):
 
     def test_clear_does_not_delete_file(self):
         """测试清空不删除日志文件"""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.log', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as f:
             f.write("existing log\n")
             log_path = f.name
 
@@ -207,6 +207,7 @@ class TestConsoleBufferLogFile(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
@@ -221,7 +222,7 @@ class TestConsoleBufferLogFile(unittest.TestCase):
         self.buf.append("test log line\n")
 
         self.assertTrue(os.path.exists(self.log_path))
-        with open(self.log_path, 'r', encoding='utf-8') as f:
+        with open(self.log_path, encoding="utf-8") as f:
             content = f.read()
         self.assertIn("test log line", content)
 
@@ -229,7 +230,7 @@ class TestConsoleBufferLogFile(unittest.TestCase):
         """测试日志文件滚动"""
         # 创建一个超过最大大小的文件
         large_content = "x" * (ConsoleBuffer.MAX_FILE_SIZE + 100)
-        with open(self.log_path, 'w', encoding='utf-8') as f:
+        with open(self.log_path, "w", encoding="utf-8") as f:
             f.write(large_content)
 
         self.buf.set_log_file(self.log_path)
@@ -240,7 +241,7 @@ class TestConsoleBufferLogFile(unittest.TestCase):
         rotated_path = f"{base}.1{ext}"
         self.assertTrue(os.path.exists(rotated_path))
         # 新文件应该包含新内容
-        with open(self.log_path, 'r', encoding='utf-8') as f:
+        with open(self.log_path, encoding="utf-8") as f:
             content = f.read()
         self.assertIn("new content after rotation", content)
 
@@ -250,11 +251,11 @@ class TestConsoleBufferLogFile(unittest.TestCase):
         # 创建多个滚动文件（注意：os.path.splitext 会生成 test.1.log 而不是 test.log.1）
         for i in range(ConsoleBuffer.MAX_LOG_FILES):
             path = self.log_path if i == 0 else f"{base}.{i}{ext}"
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(f"content {i}\n")
 
         # 使主文件超过最大大小
-        with open(self.log_path, 'w', encoding='utf-8') as f:
+        with open(self.log_path, "w", encoding="utf-8") as f:
             f.write("x" * (ConsoleBuffer.MAX_FILE_SIZE + 100))
 
         self.buf.set_log_file(self.log_path)
@@ -264,7 +265,7 @@ class TestConsoleBufferLogFile(unittest.TestCase):
         log_files = [f for f in os.listdir(self.temp_dir) if f.startswith("test") and f.endswith(".log")]
         self.assertEqual(len(log_files), ConsoleBuffer.MAX_LOG_FILES)
         # 主文件应该包含新内容
-        with open(self.log_path, 'r', encoding='utf-8') as f:
+        with open(self.log_path, encoding="utf-8") as f:
             content = f.read()
         self.assertIn("new content", content)
 

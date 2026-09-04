@@ -3,15 +3,15 @@
 """
 
 import os
-from ..config import load_properties, properties_to_dict
-from ..constants import DEFAULT_PORT
-from ..server import get_server_proc, server_running
+import time
+
 from ..app_context import AppContext as GlobalAppContext
-from ..utils import installed, props_path, resolve_server_dir
 from ..backup import backup_worlds, list_backups
 from ..config import load_properties, properties_to_dict, save_properties, validate_config_updates
+from ..constants import DEFAULT_PORT
 from ..security import validate_command
-import time
+from ..server import get_server_proc, server_running
+from ..utils import installed, props_path, resolve_server_dir
 
 
 class AppContext:

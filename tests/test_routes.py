@@ -13,7 +13,6 @@
 - 404 未知路由处理
 """
 
-import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -175,18 +174,14 @@ class TestRouteHandlerMethods(unittest.TestCase):
         from bedrock_server_manager.web.handler import Handler
 
         for route, method_name in Handler._get_routes.items():
-            self.assertIsInstance(
-                method_name, str, f"GET 路由 {route} 的方法名不是字符串"
-            )
+            self.assertIsInstance(method_name, str, f"GET 路由 {route} 的方法名不是字符串")
 
     def test_post_route_method_names_are_strings(self):
         """测试 POST 路由表中的方法名都是字符串。"""
         from bedrock_server_manager.web.handler import Handler
 
         for route, method_name in Handler._post_routes.items():
-            self.assertIsInstance(
-                method_name, str, f"POST 路由 {route} 的方法名不是字符串"
-            )
+            self.assertIsInstance(method_name, str, f"POST 路由 {route} 的方法名不是字符串")
 
 
 class TestRouteDecorator(unittest.TestCase):
@@ -229,7 +224,7 @@ class TestRouteDecorator(unittest.TestCase):
 
     def test_init_routes_function(self):
         """测试 init_routes 函数是否正确扫描和注册路由。"""
-        from bedrock_server_manager.web.route_decorator import register_route, init_routes
+        from bedrock_server_manager.web.route_decorator import init_routes, register_route
 
         class TestClass:
             _get_routes = {}
@@ -252,7 +247,7 @@ class TestRouteDecorator(unittest.TestCase):
 
     def test_init_routes_ignores_non_decorated_methods(self):
         """测试 init_routes 函数是否忽略未装饰的方法。"""
-        from bedrock_server_manager.web.route_decorator import register_route, init_routes
+        from bedrock_server_manager.web.route_decorator import init_routes, register_route
 
         class TestClass:
             _get_routes = {}
@@ -350,6 +345,7 @@ class TestHandlerMixinInheritance(unittest.TestCase):
     def test_handler_inherits_base_http_handler(self):
         """测试 Handler 是否继承了 BaseHTTPRequestHandler。"""
         from http.server import BaseHTTPRequestHandler
+
         from bedrock_server_manager.web.handler import Handler
 
         self.assertTrue(issubclass(Handler, BaseHTTPRequestHandler))
@@ -407,8 +403,7 @@ class TestRouteDistribution(unittest.TestCase):
 
         handler = self._create_mock_handler()
         mock_urlparse.return_value = ParseResult(
-            scheme="http", netloc="127.0.0.1:19100",
-            path="/api/unknown_route", params="", query="", fragment=""
+            scheme="http", netloc="127.0.0.1:19100", path="/api/unknown_route", params="", query="", fragment=""
         )
         handler.path = "/api/unknown_route"
 
@@ -423,8 +418,7 @@ class TestRouteDistribution(unittest.TestCase):
 
         handler = self._create_mock_handler()
         mock_urlparse.return_value = ParseResult(
-            scheme="http", netloc="127.0.0.1:19100",
-            path="/api/unknown_route", params="", query="", fragment=""
+            scheme="http", netloc="127.0.0.1:19100", path="/api/unknown_route", params="", query="", fragment=""
         )
         handler.path = "/api/unknown_route"
 
@@ -440,8 +434,7 @@ class TestRouteDistribution(unittest.TestCase):
         handler = self._create_mock_handler()
         handler._check_auth = MagicMock(return_value=False)
         mock_urlparse.return_value = ParseResult(
-            scheme="http", netloc="127.0.0.1:19100",
-            path="/api/cmd", params="", query="", fragment=""
+            scheme="http", netloc="127.0.0.1:19100", path="/api/cmd", params="", query="", fragment=""
         )
         handler.path = "/api/cmd"
 
@@ -463,13 +456,13 @@ class TestRouteDistribution(unittest.TestCase):
     def test_get_health_route_no_auth_required(self, mock_urlparse):
         """测试 /api/health 路由不需要认证（健康检查端点）。"""
         from urllib.parse import ParseResult
+
         from bedrock_server_manager.web.handler import Handler
 
         handler = self._create_mock_handler()
         handler._check_auth = MagicMock(return_value=False)  # 认证失败
         mock_urlparse.return_value = ParseResult(
-            scheme="http", netloc="127.0.0.1:19100",
-            path="/api/health", params="", query="", fragment=""
+            scheme="http", netloc="127.0.0.1:19100", path="/api/health", params="", query="", fragment=""
         )
         handler.path = "/api/health"
 
@@ -508,8 +501,9 @@ class TestRouteSecurity(unittest.TestCase):
 
     def test_all_post_routes_go_through_auth_check(self):
         """测试所有 POST 路由都经过认证检查（代码结构验证）。"""
-        from bedrock_server_manager.web.handler import Handler
         import inspect
+
+        from bedrock_server_manager.web.handler import Handler
 
         source = inspect.getsource(Handler.do_POST)
         # do_POST 方法中应该调用 _check_auth
@@ -570,7 +564,7 @@ class TestRouteCompleteness(unittest.TestCase):
             if not in_get and not in_post:
                 missing.append(f"{feature}: {api}")
 
-        self.assertEqual(len(missing), 0, f"以下前端 API 缺失:\n" + "\n".join(missing))
+        self.assertEqual(len(missing), 0, "以下前端 API 缺失:\n" + "\n".join(missing))
 
 
 if __name__ == "__main__":

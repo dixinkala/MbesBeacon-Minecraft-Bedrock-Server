@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 
 from .app_logger import get_app_logger
-from .constants import APP_VERSION, APP_DATA_DIR
+from .constants import APP_DATA_DIR, APP_VERSION
 
 # GitHub 仓库信息
 GITHUB_REPO = "dixinkala/MbesBeacon-Bedrock-Server"
@@ -152,6 +152,7 @@ def check_app_update(force=False, ignore_ssl=False, timeout=10):
         ctx = None
         if ignore_ssl:
             import ssl
+
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
@@ -188,8 +189,7 @@ def check_app_update(force=False, ignore_ssl=False, timeout=10):
         result["ok"] = True
 
         get_app_logger().info(
-            f"软件更新检查完成: 当前={current_version}, 最新={latest_version}, "
-            f"有更新={result['has_update']}"
+            f"软件更新检查完成: 当前={current_version}, 最新={latest_version}, 有更新={result['has_update']}"
         )
 
         # 保存缓存

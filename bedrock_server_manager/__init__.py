@@ -22,8 +22,13 @@ Minecraft 基岩版（Bedrock）服务器自动搭建管理工具
 from http.server import ThreadingHTTPServer  # noqa: F401
 
 # 初始化全局单例状态
-from . import constants
-from . import state as _state
+from . import (
+    constants,
+    state as _state,
+)
+
+# 初始化全局单例状态（通过 AppContext 管理）
+from .app_context import AppContext as _GlobalAppContext
 from .app_logger import (  # noqa: F401
     get_app_logger,
     get_log_file_path,
@@ -82,6 +87,19 @@ from .config import (  # noqa: F401
 from .console import (
     ConsoleBuffer,  # noqa: F401
     ConsoleBuffer as _ConsoleBuffer,
+)
+
+# 常量从 constants.py 导入（推荐）
+from .constants import (  # noqa: F401
+    APP_DATA_DIR,
+    APP_MARKER,
+    APP_TITLE,
+    APP_VERSION,
+    CDN_TEMPLATE,
+    DEFAULT_PORT,
+    IS_WINDOWS,
+    LINKS_API,
+    SERVER_EXE,
 )
 from .install import (  # noqa: F401
     DOWNLOAD_SOURCES,
@@ -146,18 +164,7 @@ from .security import (  # noqa: F401
     validate_custom_url,
 )
 from .server import ServerProcess, get_server_proc, server_running  # noqa: F401
-# 常量从 constants.py 导入（推荐）
-from .constants import (  # noqa: F401
-    APP_DATA_DIR,
-    APP_MARKER,
-    APP_TITLE,
-    APP_VERSION,
-    CDN_TEMPLATE,
-    DEFAULT_PORT,
-    IS_WINDOWS,
-    LINKS_API,
-    SERVER_EXE,
-)
+
 # 全局状态通过 AppContext 访问（推荐）
 # 以下模块级全局变量保留用于向后兼容，新代码请使用 AppContext.instance()
 from .state import (  # noqa: F401  # 向后兼容
@@ -199,7 +206,7 @@ from .verify import (  # noqa: F401
     verify_sha256,
     verify_zip_integrity,
 )
-from .web.app import AppContext  # noqa: F401
+from .web.app import AppContext as WebAppContext  # noqa: F401
 from .web.handler import Handler, get_index_html
 from .web.route_decorator import register_route  # noqa: F401
 from .worlds import (  # noqa: F401
@@ -212,8 +219,6 @@ from .worlds import (  # noqa: F401
     set_active_world,
 )
 
-# 初始化全局单例状态（通过 AppContext 管理）
-from .app_context import AppContext as _GlobalAppContext
 _global_ctx = _GlobalAppContext.instance()
 
 if _global_ctx.console is None:
@@ -245,6 +250,7 @@ def get_app_context():
         >>> server_dir = ctx.server_dir
     """
     from .app_context import AppContext
+
     return AppContext.instance()
 
 

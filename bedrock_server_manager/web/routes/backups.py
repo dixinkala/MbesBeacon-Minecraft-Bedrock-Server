@@ -2,19 +2,18 @@
 backups 相关路由处理方法
 """
 
-from ..route_decorator import register_route
-from ...backup import backup_worlds, list_backups, restore_backup, delete_backup, backup_worlds_zip
+from ...backup import backup_worlds, backup_worlds_zip, delete_backup, list_backups, restore_backup
 from ...security import check_dangerous_operation
 from ...utils import installed, resolve_server_dir
+from ..route_decorator import register_route
 
 
 class BackupsRoutesMixin:
     """backups 相关路由处理方法 mixin。"""
 
-
     @register_route("/api/backups/create")
     def _route_backup_create(self, data):
-    
+
         d = resolve_server_dir()
         if not d or not installed():
             self._json({"ok": False, "error": "未找到服务器"})
@@ -72,7 +71,7 @@ class BackupsRoutesMixin:
 
     @register_route("/api/backup/zip")
     def _route_backup_zip(self, data):
-    
+
         d = resolve_server_dir()
         if not d or not installed():
             self._json({"ok": False, "error": "未找到服务器"})
