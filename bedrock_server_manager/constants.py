@@ -4,11 +4,12 @@
 此模块不依赖任何其他业务模块，是最底层的模块。
 """
 
+import contextlib
 import os
 
 # ---------------- 应用常量 ----------------
 APP_TITLE = "MbesBeacon"
-APP_VERSION = "0.1.0"
+APP_VERSION = "1.0.21"
 APP_MARKER = "mbesbeacon"
 DEFAULT_PORT = 19100
 
@@ -29,10 +30,8 @@ CACHE_DIR = os.path.join(APP_DATA_DIR, "cache")
 
 # 确保目录存在
 for _d in (APP_DATA_DIR, LOGS_DIR, CACHE_DIR):
-    try:
+    with contextlib.suppress(Exception):
         os.makedirs(_d, exist_ok=True)
-    except Exception:
-        pass
 
 __all__ = [
     "APP_TITLE",

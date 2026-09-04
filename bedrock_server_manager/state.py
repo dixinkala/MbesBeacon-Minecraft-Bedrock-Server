@@ -5,25 +5,19 @@
 """
 
 import os
-from .app_logger import safe_log_exception
 import re
 import secrets as _secrets
 import threading
 import time
 
+from .app_logger import safe_log_exception
+
 # 从 constants.py 导入常量（保持向后兼容）
 from .constants import (
-    APP_TITLE,
-    APP_VERSION,
-    APP_MARKER,
-    DEFAULT_PORT,
-    SERVER_EXE,
-    IS_WINDOWS,
-    LINKS_API,
-    CDN_TEMPLATE,
     APP_DATA_DIR,
-    LOGS_DIR,
     CACHE_DIR,
+    DEFAULT_PORT,
+    LOGS_DIR,
 )
 
 # API 安全 token：启动时随机生成，用于 CSRF 防护
@@ -69,20 +63,15 @@ def migrate_legacy_data():
     # 旧路径 → 新路径 的映射
     legacy_files = [
         # 设置文件
-        (os.path.join(home, ".bedrock_server_manager_settings.json"),
-         os.path.join(APP_DATA_DIR, "settings.json")),
+        (os.path.join(home, ".bedrock_server_manager_settings.json"), os.path.join(APP_DATA_DIR, "settings.json")),
         # 主题文件
-        (os.path.join(home, ".bedrock_server_manager_theme.json"),
-         os.path.join(APP_DATA_DIR, "theme.json")),
+        (os.path.join(home, ".bedrock_server_manager_theme.json"), os.path.join(APP_DATA_DIR, "theme.json")),
         # 崩溃日志
-        (os.path.join(home, ".bedrock_server_manager_crash.log"),
-         os.path.join(LOGS_DIR, "crash.log")),
+        (os.path.join(home, ".bedrock_server_manager_crash.log"), os.path.join(LOGS_DIR, "crash.log")),
         # 哈希缓存
-        (os.path.join(home, ".bedrock_server_hashes.json"),
-         os.path.join(CACHE_DIR, "hashes.json")),
+        (os.path.join(home, ".bedrock_server_hashes.json"), os.path.join(CACHE_DIR, "hashes.json")),
         # 托盘日志
-        (os.path.join(home, ".bedrock_server_manager", "tray.log"),
-         os.path.join(LOGS_DIR, "tray.log")),
+        (os.path.join(home, ".bedrock_server_manager", "tray.log"), os.path.join(LOGS_DIR, "tray.log")),
     ]
 
     # 旧 AppData 目录的应用日志
@@ -95,15 +84,16 @@ def migrate_legacy_data():
             if os.path.isfile(old_path) and not os.path.isfile(new_path):
                 os.makedirs(os.path.dirname(new_path), exist_ok=True)
                 import shutil
+
                 shutil.copy2(old_path, new_path)
                 migrated.append(os.path.basename(old_path))
                 # 迁移成功后删除旧文件
                 try:
                     os.remove(old_path)
                 except (PermissionError, OSError) as e:
-                                safe_log_exception("state.py", f"删除旧文件失败: {e}", "debug")
+                    safe_log_exception("state.py", f"删除旧文件失败: {e}", "debug")
         except (PermissionError, OSError) as e:
-                safe_log_exception("state.py", f"迁移文件失败: {e}", "debug")
+            safe_log_exception("state.py", f"迁移文件失败: {e}", "debug")
 
     # 清理旧的空目录
     old_dirs = [
@@ -115,7 +105,7 @@ def migrate_legacy_data():
             if os.path.isdir(old_dir) and not os.listdir(old_dir):
                 os.rmdir(old_dir)
         except (PermissionError, OSError) as e:
-                safe_log_exception("state.py", f"删除空目录失败: {e}", "debug")
+            safe_log_exception("state.py", f"删除空目录失败: {e}", "debug")
 
     return migrated
 

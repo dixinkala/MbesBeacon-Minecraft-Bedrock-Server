@@ -4,11 +4,12 @@
 """
 
 import hashlib
-from .app_logger import get_app_logger, safe_log_exception
 import json
 import os
 import zipfile
 from typing import Any
+
+from .app_logger import safe_log_exception
 
 # BDS 服务端文件大小合理范围（字节）
 # 注意：BDS 版本持续更新，文件大小可能增长，上限设置较宽松以避免误判
@@ -36,15 +37,12 @@ def fetch_official_hashes(timeout: int = 10) -> dict[str, str]:
     Returns:
         dict: 版本号 -> SHA256 哈希的字典
     """
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     hashes = {}
     try:
-        req = urllib.request.Request(
-            BDS_VERSIONS_API,
-            headers={"User-Agent": "Mozilla/5.0 MbesBeacon"}
-        )
+        req = urllib.request.Request(BDS_VERSIONS_API, headers={"User-Agent": "Mozilla/5.0 MbesBeacon"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8", "ignore"))
 
@@ -105,6 +103,7 @@ def load_official_hashes(force: bool = False) -> int:
 
     _official_hashes_loaded = True
     return len(official_hashes)
+
 
 # 本地哈希缓存文件路径（首次下载时记录，后续下载对比）
 _HASH_CACHE_FILE = os.path.join(os.path.expanduser("~"), ".bedrock_server_hashes.json")

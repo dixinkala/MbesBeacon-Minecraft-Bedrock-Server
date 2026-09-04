@@ -2,14 +2,13 @@
 config 相关路由处理方法
 """
 
+from ...config import list_config_history, rollback_config
+from ...utils import resolve_server_dir
 from ..route_decorator import register_route
 
 
 class ConfigRoutesMixin:
     """config 相关路由处理方法 mixin。"""
-
-    from ...config import list_config_history, rollback_config
-    from ...utils import resolve_server_dir
 
     @register_route("/api/config/history")
     def _route_config_history(self, data):

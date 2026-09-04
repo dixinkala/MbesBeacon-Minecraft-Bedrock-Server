@@ -5,8 +5,8 @@ RateLimiter 单元测试 - Minecraft 基岩版服务器管理器
 
 import os
 import sys
-import time
 import threading
+import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -68,12 +68,12 @@ class TestRateLimiterAllow(unittest.TestCase):
         """测试多个请求在限制内应该被允许"""
         for i in range(3):
             allowed, _ = self.limiter.allow("/api/test")
-            self.assertTrue(allowed, f"第 {i+1} 个请求应该被允许")
+            self.assertTrue(allowed, f"第 {i + 1} 个请求应该被允许")
 
     def test_deny_when_exceeded(self):
         """测试超过限制后应该被拒绝"""
         # 消耗所有令牌
-        for i in range(3):
+        for _i in range(3):
             self.limiter.allow("/api/test")
         # 第4个请求应该被拒绝
         allowed, retry_after = self.limiter.allow("/api/test")
@@ -83,7 +83,7 @@ class TestRateLimiterAllow(unittest.TestCase):
     def test_refill_after_period(self):
         """测试周期过后令牌应该被补充"""
         # 消耗所有令牌
-        for i in range(3):
+        for _i in range(3):
             self.limiter.allow("/api/test")
         # 等待周期结束
         time.sleep(1.1)
@@ -94,7 +94,7 @@ class TestRateLimiterAllow(unittest.TestCase):
     def test_different_endpoints_independent(self):
         """测试不同端点的速率限制相互独立"""
         # 消耗 /api/test1 的所有令牌
-        for i in range(3):
+        for _i in range(3):
             self.limiter.allow("/api/test1")
         # /api/test2 应该仍然可以请求
         allowed, _ = self.limiter.allow("/api/test2")
@@ -103,7 +103,7 @@ class TestRateLimiterAllow(unittest.TestCase):
     def test_different_clients_independent(self):
         """测试不同客户端的速率限制相互独立"""
         # 消耗 client1 的所有令牌
-        for i in range(3):
+        for _i in range(3):
             self.limiter.allow("/api/test", client_ip="192.168.1.1")
         # client2 应该仍然可以请求
         allowed, _ = self.limiter.allow("/api/test", client_ip="192.168.1.2")
@@ -116,7 +116,7 @@ class TestRateLimiterAllow(unittest.TestCase):
         # 注意：初始令牌使用 default_rate (5)，需要先消耗完
         for i in range(5):
             allowed, _ = limiter.allow("/api/install")
-            self.assertTrue(allowed, f"第 {i+1} 个初始请求应该被允许")
+            self.assertTrue(allowed, f"第 {i + 1} 个初始请求应该被允许")
         # 第6个请求应该被拒绝
         allowed, retry_after = limiter.allow("/api/install")
         self.assertFalse(allowed)
@@ -129,7 +129,7 @@ class TestRateLimiterReset(unittest.TestCase):
     def setUp(self):
         self.limiter = RateLimiter(default_rate=3, default_period=1.0)
         # 消耗所有令牌
-        for i in range(3):
+        for _i in range(3):
             self.limiter.allow("/api/test")
 
     def test_reset_specific_endpoint(self):
@@ -146,7 +146,7 @@ class TestRateLimiterReset(unittest.TestCase):
     def test_reset_all(self):
         """测试重置所有端点"""
         # 消耗另一个端点的令牌
-        for i in range(3):
+        for _i in range(3):
             self.limiter.allow("/api/test2")
         # 重置所有
         self.limiter.reset()
@@ -205,7 +205,7 @@ class TestRateLimiterThreadSafety(unittest.TestCase):
 
         def make_requests():
             try:
-                for i in range(5):
+                for _i in range(5):
                     allowed, _ = limiter.allow("/api/test")
                     results.append(allowed)
             except Exception as e:
@@ -229,7 +229,7 @@ class TestRateLimiterThreadSafety(unittest.TestCase):
 
         def reset_loop():
             try:
-                for i in range(10):
+                for _i in range(10):
                     limiter.reset()
                     time.sleep(0.001)
             except Exception as e:
@@ -237,7 +237,7 @@ class TestRateLimiterThreadSafety(unittest.TestCase):
 
         def request_loop():
             try:
-                for i in range(10):
+                for _i in range(10):
                     limiter.allow("/api/test")
                     time.sleep(0.001)
             except Exception as e:

@@ -2,13 +2,30 @@
 commands 相关路由处理方法
 """
 
+from ...commands import (
+    autocomplete_command,
+    get_all_commands,
+    get_categories,
+    get_command_help,
+    get_command_info,
+    get_command_suggestions,
+    get_commands_by_category,
+)
 from ..route_decorator import register_route
 
 
 class CommandsRoutesMixin:
     """commands 相关路由处理方法 mixin。"""
 
-    from ...commands import get_all_commands, get_categories, get_command_info, get_commands_by_category, autocomplete_command, get_command_suggestions, get_command_help
+    from ...commands import (
+        autocomplete_command,
+        get_all_commands,
+        get_categories,
+        get_command_help,
+        get_command_info,
+        get_command_suggestions,
+        get_commands_by_category,
+    )
 
     @register_route("/api/commands/list")
     def _route_commands_list(self, data):

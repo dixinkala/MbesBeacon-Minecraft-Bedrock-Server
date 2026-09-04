@@ -3,12 +3,6 @@
 """
 
 import contextlib
-from .app_context import AppContext
-from .verify import verify_download_full, load_official_hashes
-from .app_logger import get_app_logger, safe_log_exception
-from .constants import CDN_TEMPLATE, IS_WINDOWS, LINKS_API, SERVER_EXE
-from .server import get_server_proc, server_running
-from .utils import add_server_dir_history, detect_servers, save_settings
 import json
 import os
 import re
@@ -18,6 +12,13 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
+
+from .app_context import AppContext
+from .app_logger import safe_log_exception
+from .constants import CDN_TEMPLATE, IS_WINDOWS, LINKS_API, SERVER_EXE
+from .server import get_server_proc, server_running
+from .utils import add_server_dir_history, detect_servers, save_settings
+from .verify import load_official_hashes, verify_download_full
 
 
 # 通过 AppContext 访问全局状态（消除延迟导入）
@@ -180,7 +181,6 @@ def _http_get(url, timeout=30, ignore_ssl=False):
 
 def get_latest_server_info(ignore_ssl=False):
     """从官方 API 获取最新版服务器下载信息（仅 Windows 版本）。"""
-    settings = _get_settings()
     SERVER_EXE, IS_WINDOWS, LINKS_API, CDN_TEMPLATE = _get_constants()
     data = json.loads(_http_get(LINKS_API, timeout=30, ignore_ssl=ignore_ssl).decode("utf-8", "ignore"))
     links = data.get("result", {}).get("links", [])
@@ -266,7 +266,7 @@ def download_file(url, dest, progress_cb=None, cancel_flag=None, ignore_ssl=Fals
         # 构建请求头
         headers = {"User-Agent": "Mozilla/5.0 MbesBeacon"}
         if resume_pos > 0:
-            headers["Range"] = "bytes=%d-" % resume_pos
+            headers["Range"] = f"bytes={resume_pos}-"
 
         req = urllib.request.Request(url, headers=headers)
 
@@ -344,6 +344,7 @@ def extract_zip(zip_path, dest_dir, progress_cb=None, cancel_flag=None):
 
 def select_server_dir(d: str) -> tuple:
     """校验并切换当前管理的服务器目录，返回 (ok, error_msg, info_dict)。"""
+    settings = AppContext.instance().settings
 
     d = (d or "").strip()
     if not d or not os.path.isdir(d):
@@ -358,6 +359,7 @@ def select_server_dir(d: str) -> tuple:
             except Exception as e:
                 try:
                     from .app_logger import get_app_logger
+
                     get_app_logger().warning(f"install.py 停止服务器异常: {e}")
                 except Exception:
                     pass
@@ -511,6 +513,7 @@ def get_bedrock_versions(ignore_ssl=False, include_preview=False):
 def detect_server_version(dir_path):
     """检测服务器已安装版本。优先从 settings 的目录->版本映射读取，
     后备方案：从 bedrock_server.exe 的 Windows 文件版本属性读取。"""
+    settings = AppContext.instance().settings
 
     if not dir_path or not os.path.isdir(dir_path):
         return ""
@@ -566,7 +569,7 @@ def detect_server_version(dir_path):
                             except Exception:
                                 continue
         except Exception as e:
-                safe_log_exception("install", f"操作失败: {e}", "warning")
+            safe_log_exception("install", f"操作失败: {e}", "warning")
     # 2.5 检查版本标识文件
     for vfile in ["release_notes.txt", "version.txt", "VERSION", "bedrock_server_version.txt"]:
         vpath = os.path.join(dir_path, vfile)
@@ -584,13 +587,14 @@ def detect_server_version(dir_path):
                     save_settings()
                     return ver
             except Exception as e:
-                        safe_log_exception("install", f"操作失败: {e}", "warning")
+                safe_log_exception("install", f"操作失败: {e}", "warning")
     return ""
 
 
 def do_install(dir_target, version, autostart, custom_url="", source_index=0):
     """执行服务器安装：下载 -> 解压 -> 配置 -> 可选启动。"""
-    settings = _get_settings()
+    install_state = AppContext.instance().install_state
+    settings = AppContext.instance().settings
 
     install_state.cancel.clear()
     install_state.busy = True
@@ -639,10 +643,10 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                         pct = 3 + int(done / total * 77)
                         install_state.set(
                             percent=pct,
-                            text="下载中 %d%%  (%d / %d KB)" % (int(done / total * 100), done // 1024, total // 1024),
+                            text=f"下载中 {int(done / total * 100)}%  ({done // 1024} / {total // 1024} KB)",
                         )
                     else:
-                        install_state.set(percent=3, text="下载中... %d KB" % (done // 1024))
+                        install_state.set(percent=3, text=f"下载中... {done // 1024} KB")
 
                 download_file(url, zip_path, progress_cb=cb, cancel_flag=install_state.cancel, ignore_ssl=ignore_ssl)
                 download_ok = True
@@ -651,7 +655,6 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                 )
                 # 下载完整性校验
                 try:
-            
                     # 尝试从 Bedrock-OSS/BDS-Versions 获取官方哈希（用于对比验证）
                     official_loaded = False
                     try:
@@ -661,7 +664,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                             official_loaded = True
                     except Exception as e:
                         install_state.log_line(f"警告: 官方哈希加载失败 ({str(e)[:60]})，将使用首次信任机制(TOFU)")
-                    
+
                     if not official_loaded:
                         install_state.log_line("提示: 无法获取官方哈希，本次下载将记录SHA256供后续对比（首次信任机制）")
                         install_state.log_line("建议: 如网络环境特殊，可在设置中检查网络连接或稍后重试")
@@ -708,7 +711,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
         install_state.log_line(f"正在解压到: {dir_target}")
 
         def cb2(i, total):
-            install_state.set(percent=82 + int(i / total * 15), text="解压中 %d/%d" % (i, total))
+            install_state.set(percent=82 + int(i / total * 15), text=f"解压中 {i}/{total}")
 
         extract_zip(zip_path, dir_target, progress_cb=cb2, cancel_flag=install_state.cancel)
         install_state.log_line("解压完成")

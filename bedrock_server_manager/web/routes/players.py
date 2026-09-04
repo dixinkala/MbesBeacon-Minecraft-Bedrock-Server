@@ -2,13 +2,12 @@
 players 相关路由处理方法
 """
 
+from ...players import ban_ip, get_all_player_status, load_banned_ips, pardon_ip
 from ..route_decorator import register_route
 
 
 class PlayersRoutesMixin:
     """players 相关路由处理方法 mixin。"""
-
-    from ...players import load_banned_ips, ban_ip, pardon_ip, get_all_player_status
 
     @register_route("/api/ipban/list")
     def _route_ipban_list(self, data):

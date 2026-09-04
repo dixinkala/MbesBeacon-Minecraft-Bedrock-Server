@@ -2,16 +2,16 @@
 服务器进程管理模块：ServerProcess、进程启停、状态检测。
 """
 
-import contextlib
-from .app_context import AppContext
-from .config import load_properties
-from .app_logger import safe_log_exception
-from .constants import IS_WINDOWS, SERVER_EXE
 import os
+import socket
 import subprocess
 import threading
 import time
-import socket
+
+from .app_context import AppContext
+from .app_logger import safe_log_exception
+from .config import load_properties
+from .constants import IS_WINDOWS, SERVER_EXE
 
 
 # 通过 AppContext 访问全局状态（消除延迟导入）
@@ -48,7 +48,7 @@ def check_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
             s.settimeout(1)
             result = s.connect_ex((host, port))
             return result == 0
-    except (socket.error, OSError):
+    except OSError:
         return False
 
 
@@ -174,16 +174,14 @@ class ServerProcess:
                     self._last_crash_time = time.time()
                     if self._crash_restart_count > self.MAX_CRASH_RESTARTS:
                         self._emit(
-                            "[系统] ⚠ 连续崩溃 %d 次，已达到最大重启次数限制，停止自动重启。\n"
-                            % self._crash_restart_count
+                            f"[系统] ⚠ 连续崩溃 {self._crash_restart_count} 次，已达到最大重启次数限制，停止自动重启。\n"
                         )
                         self._emit("[系统] 请检查服务器配置、端口占用或世界存档是否损坏。\n")
                     else:
                         # 指数退避：第n次重启等待 2^n 秒
                         backoff = min(self.CRASH_BACKOFF_BASE**self._crash_restart_count, 60)
                         self._emit(
-                            "[系统] 第 %d/%d 次自动重启，%d 秒后重试...\n"
-                            % (self._crash_restart_count, self.MAX_CRASH_RESTARTS, backoff)
+                            f"[系统] 第 {self._crash_restart_count}/{self.MAX_CRASH_RESTARTS} 次自动重启，{backoff} 秒后重试...\n"
                         )
 
                         # 在单独线程中执行延迟重启，避免阻塞 _reader 线程
@@ -211,6 +209,7 @@ class ServerProcess:
         except Exception as e:
             try:
                 from .app_logger import get_app_logger
+
                 get_app_logger().warning(f"server.py on_output 异常: {e}")
             except Exception:
                 pass
@@ -230,6 +229,7 @@ class ServerProcess:
         except Exception as e:
             try:
                 from .app_logger import get_app_logger
+
                 get_app_logger().warning(f"server.py 发送 stop 命令异常: {e}")
             except Exception:
                 pass
@@ -248,6 +248,7 @@ class ServerProcess:
                 except Exception as e:
                     try:
                         from .app_logger import get_app_logger
+
                         get_app_logger().warning(f"server.py 杀死进程异常: {e}")
                     except Exception:
                         pass

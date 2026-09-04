@@ -2,20 +2,21 @@
 worlds 相关路由处理方法
 """
 
-from ..route_decorator import register_route, register_get_route
-from ...worlds import get_active_world_name, list_worlds, set_active_world, rename_world, delete_world, duplicate_world
+import time
+
 from ...security import check_dangerous_operation
 from ...state import console
 from ...utils import resolve_server_dir
+from ...worlds import delete_world, duplicate_world, get_active_world_name, list_worlds, rename_world, set_active_world
+from ..route_decorator import register_get_route, register_route
 
 
 class WorldsRoutesMixin:
     """worlds 相关路由处理方法 mixin。"""
 
-
     @register_get_route("/api/worlds/list")
     def _route_worlds_list(self, q):
-    
+
         d = resolve_server_dir()
         if not d:
             self._json({"ok": False, "error": "未设置服务器目录"})
@@ -25,7 +26,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/switch")
     def _route_worlds_switch(self, data):
-    
+
         d = resolve_server_dir()
         world_name = (data.get("name") or "").strip()
         if not d:
@@ -43,7 +44,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/rename")
     def _route_worlds_rename(self, data):
-    
+
         d = resolve_server_dir()
         old_name = (data.get("old_name") or "").strip()
         new_name = (data.get("new_name") or "").strip()
@@ -59,7 +60,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/delete")
     def _route_worlds_delete(self, data):
-    
+
         # 危险操作二次确认
         ok, err = check_dangerous_operation("/api/worlds/delete", data)
         if not ok:
@@ -87,7 +88,7 @@ class WorldsRoutesMixin:
 
     @register_route("/api/worlds/duplicate")
     def _route_worlds_duplicate(self, data):
-    
+
         d = resolve_server_dir()
         source_name = (data.get("source") or "").strip()
         new_name = (data.get("new_name") or "").strip()
@@ -110,7 +111,6 @@ class WorldsRoutesMixin:
         import time
         import zipfile
 
-    
         d = resolve_server_dir()
         if not d:
             self._json({"ok": False, "error": "未设置服务器目录"})
@@ -122,6 +122,7 @@ class WorldsRoutesMixin:
 
         # 创建 ZIP 文件到临时目录
         import tempfile
+
         server_name = os.path.basename(d)
         ts = time.strftime("%Y%m%d_%H%M%S")
         filename = f"{server_name}_worlds_{ts}.zip"
@@ -147,6 +148,7 @@ class WorldsRoutesMixin:
 
             # 清理临时文件
             import contextlib
+
             with contextlib.suppress(Exception):
                 os.remove(temp_path)
         except Exception as e:
@@ -160,7 +162,6 @@ class WorldsRoutesMixin:
         import tempfile
         import zipfile
 
-    
         # 危险操作二次确认
         ok, err = check_dangerous_operation("/api/worlds/import", data)
         if not ok:
@@ -205,6 +206,7 @@ class WorldsRoutesMixin:
             worlds_dir = os.path.join(d, "worlds")
             if os.path.isdir(worlds_dir):
                 import shutil
+
                 backup_dir = os.path.join(d, f"worlds_backup_{int(time.time())}")
                 shutil.copytree(worlds_dir, backup_dir)
                 console.append(f"\n[系统] 导入存档前已备份当前 worlds 到: {backup_dir}\n")
@@ -221,6 +223,7 @@ class WorldsRoutesMixin:
 
             # 清理临时文件
             import contextlib
+
             with contextlib.suppress(Exception):
                 os.remove(temp_path)
 

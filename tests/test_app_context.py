@@ -39,6 +39,7 @@ class TestAppContextSingleton(unittest.TestCase):
     def test_thread_safe_singleton(self):
         """测试线程安全的单例创建"""
         import threading
+
         results = []
         barrier = threading.Barrier(10)
 
@@ -69,9 +70,17 @@ class TestAppContextRuntimeState(unittest.TestCase):
 
     def test_api_token(self):
         """测试 API token 属性"""
+        # api_token 初始值从 state 模块获取或随机生成，应为非空字符串
+        self.assertIsInstance(self.ctx.api_token, str)
+        self.assertTrue(len(self.ctx.api_token) > 0)
+        self.assertTrue(self.ctx.has_api_token)
+
+        # 测试设置为空字符串
+        self.ctx.api_token = ""
         self.assertEqual(self.ctx.api_token, "")
         self.assertFalse(self.ctx.has_api_token)
 
+        # 测试设置为自定义 token
         self.ctx.api_token = "test_token_123"
         self.assertEqual(self.ctx.api_token, "test_token_123")
         self.assertTrue(self.ctx.has_api_token)
@@ -109,21 +118,28 @@ class TestAppContextGlobalState(unittest.TestCase):
 
     def test_console(self):
         """测试控制台缓冲区"""
-        self.assertIsNone(self.ctx.console)
+        # console 未初始化时，has_console 应为 False
         self.assertFalse(self.ctx.has_console)
+        # console 属性返回 _NullConsole 空对象（不是 None），避免 NoneType 错误
+        self.assertIsNotNone(self.ctx.console)
+        # 空对象应具有 append 方法
+        self.assertTrue(hasattr(self.ctx.console, "append"))
 
-        mock_console = type('MockConsole', (), {'append': lambda self, text: None})()
+        mock_console = type("MockConsole", (), {"append": lambda self, text: None})()
         self.ctx.console = mock_console
         self.assertIs(self.ctx.console, mock_console)
         self.assertTrue(self.ctx.has_console)
 
     def test_install_state(self):
         """测试安装状态"""
-        self.assertIsNone(self.ctx.install_state)
+        # install_state 未初始化时，has_install_state 应为 False
         self.assertFalse(self.ctx.has_install_state)
         self.assertFalse(self.ctx.is_installing)
+        # install_state 属性返回 _NullInstallState 空对象（不是 None），避免 NoneType 错误
+        self.assertIsNotNone(self.ctx.install_state)
+        self.assertFalse(self.ctx.install_state.busy)
 
-        mock_install = type('MockInstall', (), {'busy': True})()
+        mock_install = type("MockInstall", (), {"busy": True})()
         self.ctx.install_state = mock_install
         self.assertTrue(self.ctx.has_install_state)
         self.assertTrue(self.ctx.is_installing)
@@ -134,7 +150,7 @@ class TestAppContextGlobalState(unittest.TestCase):
         self.assertFalse(self.ctx.has_server_proc)
         self.assertFalse(self.ctx.is_server_running)
 
-        mock_server = type('MockServer', (), {'running': True})()
+        mock_server = type("MockServer", (), {"running": True})()
         self.ctx.server_proc = mock_server
         self.assertTrue(self.ctx.has_server_proc)
         self.assertTrue(self.ctx.is_server_running)
@@ -142,6 +158,7 @@ class TestAppContextGlobalState(unittest.TestCase):
     def test_server_lock(self):
         """测试服务器进程锁"""
         import threading
+
         self.assertIsInstance(self.ctx.server_lock, type(threading.Lock()))
 
     def test_httpd(self):
@@ -171,6 +188,8 @@ class TestAppContextSettings(unittest.TestCase):
     def setUp(self):
         AppContext.reset()
         self.ctx = AppContext.instance()
+        # 重置 server_dir_history，避免测试之间的状态污染
+        self.ctx.settings["server_dir_history"] = []
 
     def tearDown(self):
         AppContext.reset()
@@ -262,7 +281,7 @@ class TestAppContextConvenienceMethods(unittest.TestCase):
     def test_log_with_console(self):
         """测试有控制台时 log() 调用 append"""
         appended = []
-        mock_console = type('MockConsole', (), {'append': lambda self, text: appended.append(text)})()
+        mock_console = type("MockConsole", (), {"append": lambda self, text: appended.append(text)})()
         self.ctx.console = mock_console
 
         self.ctx.log("test message")
@@ -272,7 +291,7 @@ class TestAppContextConvenienceMethods(unittest.TestCase):
     def test_log_info(self):
         """测试 log_info()"""
         appended = []
-        mock_console = type('MockConsole', (), {'append': lambda self, text: appended.append(text)})()
+        mock_console = type("MockConsole", (), {"append": lambda self, text: appended.append(text)})()
         self.ctx.console = mock_console
 
         self.ctx.log_info("info message")
@@ -282,7 +301,7 @@ class TestAppContextConvenienceMethods(unittest.TestCase):
     def test_log_warning(self):
         """测试 log_warning()"""
         appended = []
-        mock_console = type('MockConsole', (), {'append': lambda self, text: appended.append(text)})()
+        mock_console = type("MockConsole", (), {"append": lambda self, text: appended.append(text)})()
         self.ctx.console = mock_console
 
         self.ctx.log_warning("warning message")
@@ -292,7 +311,7 @@ class TestAppContextConvenienceMethods(unittest.TestCase):
     def test_log_error(self):
         """测试 log_error()"""
         appended = []
-        mock_console = type('MockConsole', (), {'append': lambda self, text: appended.append(text)})()
+        mock_console = type("MockConsole", (), {"append": lambda self, text: appended.append(text)})()
         self.ctx.console = mock_console
 
         self.ctx.log_error("error message")
@@ -308,6 +327,7 @@ class TestAppContextConvenienceMethods(unittest.TestCase):
     def test_mark_initialized_thread_safe(self):
         """测试 mark_initialized 线程安全"""
         import threading
+
         errors = []
 
         def mark_init():
@@ -360,11 +380,23 @@ class TestAppContextToDict(unittest.TestCase):
         """测试 to_dict 返回的键"""
         state_dict = self.ctx.to_dict()
         expected_keys = [
-            "api_token_set", "uptime_seconds", "uptime_str", "port",
-            "server_dir", "server_dir_set", "installed_version", "ignore_ssl",
-            "console_set", "install_state_set", "is_installing",
-            "server_proc_set", "is_server_running", "httpd_set", "tray_set",
-            "initialized", "server_dir_history_count"
+            "api_token_set",
+            "uptime_seconds",
+            "uptime_str",
+            "port",
+            "server_dir",
+            "server_dir_set",
+            "installed_version",
+            "ignore_ssl",
+            "console_set",
+            "install_state_set",
+            "is_installing",
+            "server_proc_set",
+            "is_server_running",
+            "httpd_set",
+            "tray_set",
+            "initialized",
+            "server_dir_history_count",
         ]
         for key in expected_keys:
             self.assertIn(key, state_dict, f"缺少键: {key}")

@@ -3,9 +3,6 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger
-from .constants import LOGS_DIR
-from .server import server_running
 import ctypes
 import ctypes.wintypes
 import os
@@ -13,6 +10,10 @@ import sys
 import threading
 import traceback
 import webbrowser
+
+from .app_logger import safe_log_exception
+from .constants import LOGS_DIR
+from .server import server_running
 
 
 def _log(msg):
@@ -37,6 +38,8 @@ def _log(msg):
             print(line, end="")
     except Exception as e:
         safe_log_exception("tray", f"操作失败: {e}", "warning")
+
+
 class SystemTray:
     """Windows 系统托盘图标，使用 ctypes 调用 Win32 API 实现。
     托盘菜单：打开管理界面、启动/停止服务器、退出程序。"""
@@ -56,9 +59,9 @@ class SystemTray:
 
     def _open_browser_with_retry(self):
         """打开浏览器，带重试机制和备选方案，确保用户能看到管理界面。"""
-        import time
         import os
         import subprocess
+        import time
 
         url = self.url
         _log(f"正在打开浏览器: {url}")
@@ -67,10 +70,10 @@ class SystemTray:
         for attempt in range(3):
             try:
                 if webbrowser.open(url, new=2):
-                    _log(f"浏览器打开成功 (尝试 {attempt+1}/3)")
+                    _log(f"浏览器打开成功 (尝试 {attempt + 1}/3)")
                     return True
             except Exception as e:
-                _log(f"webbrowser.open 失败 (尝试 {attempt+1}/3): {e}")
+                _log(f"webbrowser.open 失败 (尝试 {attempt + 1}/3): {e}")
             time.sleep(0.5)
 
         # 方法2: os.startfile（Windows 专用）
@@ -123,16 +126,12 @@ class SystemTray:
                 LR_LOADFROMFILE = 0x00000010
                 _log(f"图标文件存在，尝试加载: {icon_path}")
                 # 先尝试加载 32x32 图标（系统托盘标准大小）
-                hicon = ctypes.windll.user32.LoadImageW(
-                    0, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE
-                )
+                hicon = ctypes.windll.user32.LoadImageW(0, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
                 if hicon:
                     _log(f"加载自定义图标成功 (32x32): {icon_path}")
                     return hicon
                 # 如果 32x32 失败，尝试默认大小
-                hicon = ctypes.windll.user32.LoadImageW(
-                    0, icon_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE
-                )
+                hicon = ctypes.windll.user32.LoadImageW(0, icon_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE)
                 if hicon:
                     _log(f"加载自定义图标成功 (默认大小): {icon_path}")
                     return hicon
@@ -195,43 +194,42 @@ class SystemTray:
         """显示右键菜单。"""
         try:
             u = self._user32 if self._user32 else ctypes.windll.user32
-            
+
             # 创建弹出菜单
             menu = u.CreatePopupMenu()
             if not menu:
                 _log("创建弹出菜单失败")
                 return
             _log(f"创建弹出菜单成功, menu={menu}")
-            
+
             # 添加菜单项
             MFT_STRING = 0x0000
             MFT_SEPARATOR = 0x00000800
-            
+
             r1 = u.AppendMenuW(menu, MFT_STRING, self.ID_OPEN, "打开管理界面")
             toggle_text = "停止服务器" if server_running() else "启动服务器"
             r2 = u.AppendMenuW(menu, MFT_STRING, self.ID_TOGGLE, toggle_text)
             r3 = u.AppendMenuW(menu, MFT_SEPARATOR, 0, "")
             r4 = u.AppendMenuW(menu, MFT_STRING, self.ID_EXIT, "退出程序")
             _log(f"添加菜单项: open={r1}, toggle={r2}, sep={r3}, exit={r4}")
-            
+
             # 获取光标位置
             pt = ctypes.wintypes.POINT()
             u.GetCursorPos(ctypes.byref(pt))
             _log(f"光标位置: x={pt.x}, y={pt.y}")
-            
+
             # 设置前台窗口（必须，否则菜单可能不显示）
             u.SetForegroundWindow(self._hwnd)
-            
+
             # 显示菜单（使用 TPM_RIGHTBUTTON | TPM_RETURNCMD）
             # TPM_RETURNCMD: 直接返回选中的菜单项 ID，而不是发送 WM_COMMAND
             TPM_RIGHTBUTTON = 0x0002
             TPM_RETURNCMD = 0x0100
-            TPM_BOTTOMALIGN = 0x0020
-            
+
             flags = TPM_RIGHTBUTTON | TPM_RETURNCMD
             cmd = u.TrackPopupMenu(menu, flags, pt.x, pt.y, 0, self._hwnd, None)
             _log(f"TrackPopupMenu 返回: cmd={cmd}")
-            
+
             # 处理菜单选择（使用 TPM_RETURNCMD 时，返回值是菜单项 ID）
             _log(f"菜单选择处理: cmd={cmd}, ID_OPEN={self.ID_OPEN}, ID_TOGGLE={self.ID_TOGGLE}, ID_EXIT={self.ID_EXIT}")
             if cmd > 0:
@@ -266,14 +264,14 @@ class SystemTray:
                     _log(f"未知的菜单项 ID: {cmd}")
             else:
                 _log(f"用户取消菜单选择或 TrackPopupMenu 失败: cmd={cmd}")
-            
+
             # 销毁菜单
             u.DestroyMenu(menu)
-            
+
             # 发送 WM_NULL 消息（Windows 已知问题：菜单关闭后必须发送，否则下次可能不显示）
             WM_NULL = 0x0000
             u.PostMessageW(self._hwnd, WM_NULL, 0, 0)
-            
+
             _log("显示菜单完成")
         except Exception as e:
             _log(f"显示菜单异常: {e}\n{traceback.format_exc()}")
@@ -399,9 +397,7 @@ class SystemTray:
             _log(f"注册窗口类, atom={atom}, 错误码={kernel32.GetLastError()}")
 
             # 创建隐藏窗口
-            self._hwnd = user32.CreateWindowExW(
-                0, class_name, "MbesBeacon", 0, 0, 0, 0, 0, 0, 0, hInstance, None
-            )
+            self._hwnd = user32.CreateWindowExW(0, class_name, "MbesBeacon", 0, 0, 0, 0, 0, 0, 0, hInstance, None)
             _log(f"创建窗口, hwnd={self._hwnd}, 错误码={kernel32.GetLastError()}")
             if not self._hwnd:
                 _log("创建窗口失败，退出托盘线程")

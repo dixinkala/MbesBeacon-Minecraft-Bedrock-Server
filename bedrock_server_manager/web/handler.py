@@ -2,22 +2,22 @@
 HTTP 请求处理模块：Handler 类、路由注册、认证校验。
 """
 
-import contextlib
-from .. import console as _console_mod
-from .. import install as _install_mod
-from .. import state
-from .. import utils
-from ..ratelimit import check_rate_limit
-from ..server import server_running
-from ..app_context import AppContext
-from ..app_logger import get_app_logger, safe_log_exception
 import json
 import os
-import threading
 import time
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
+from .. import (
+    console as _console_mod,
+    install as _install_mod,
+    state,
+    utils,
+)
+from ..app_context import AppContext
+from ..app_logger import safe_log_exception
+from ..ratelimit import check_rate_limit
+from ..server import server_running
 from .route_decorator import init_routes
 from .routes import (
     BackupsRoutesMixin,
@@ -81,6 +81,15 @@ class Handler(
         self.end_headers()
         self.wfile.write(body)
 
+    def _log(self, message, level="info"):
+        """Log message."""
+        try:
+            from ..app_logger import get_app_logger
+
+            get_app_logger().log(level, message)
+        except Exception:
+            pass
+
     def _json(self, obj, code=200):
         self._send(code, json.dumps(obj, ensure_ascii=False))
 
@@ -97,16 +106,12 @@ class Handler(
     # ---- 路由处理方法 ----
     def do_GET(self):
         """GET 请求处理：使用路由表分发，保留静态文件和 SSE 流的特殊处理。"""
-        from urllib.parse import parse_qs, urlparse
 
         parsed = urlparse(self.path)
         path = parsed.path
         q = parse_qs(parsed.query)
         # 放行静态首页和健康检查端点，其余 API 均需认证
-        if (
-            path not in ("/", "/index.html", "/api/health")
-            and not self._check_auth()
-        ):
+        if path not in ("/", "/index.html", "/api/health") and not self._check_auth():
             self._json({"ok": False, "error": "请求来源不合法，已拒绝"}, code=403)
             return
         # SSE 流：控制台实时输出
@@ -125,8 +130,6 @@ class Handler(
     def _serve_console_stream(self, q):
         """SSE 流：控制台实时输出。"""
         import json as _json
-        import time as _time
-
 
         since = int(q.get("since", ["0"])[0])
         self.send_response(200)
@@ -141,7 +144,7 @@ class Handler(
             text, idx = AppContext.instance().console.read_since(idx)
             if text or idx > 0:
                 payload = _json.dumps({"lines": text, "count": idx, "running": server_running()}, ensure_ascii=False)
-                self.wfile.write(("id: %d\ndata: %s\n\n" % (idx, payload)).encode("utf-8"))
+                self.wfile.write(f"id: {idx}\ndata: {payload}\n\n".encode())
                 self.wfile.flush()
             while not client_closed:
                 text, new_idx = AppContext.instance().console.wait_for_new(idx, timeout=1.0)
@@ -150,7 +153,7 @@ class Handler(
                     payload = _json.dumps(
                         {"lines": text, "count": idx, "running": server_running()}, ensure_ascii=False
                     )
-                    self.wfile.write(("id: %d\ndata: %s\n\n" % (idx, payload)).encode("utf-8"))
+                    self.wfile.write(f"id: {idx}\ndata: {payload}\n\n".encode())
                     self.wfile.flush()
                 else:
                     self.wfile.write(b": ping\n\n")
@@ -159,47 +162,47 @@ class Handler(
             client_closed = True
         except Exception:
             client_closed = True
+
     def _shutdown_later(self):
         """延迟关闭程序：停止服务器、停止托盘、关闭 HTTP 服务器、退出程序。"""
-        import os
-        import sys
         time.sleep(0.5)
         try:
             from ..app_context import AppContext
+
             ctx = AppContext.instance()
-            
+
             # 1. 停止服务器进程
             try:
                 server_proc = ctx.server_proc
                 if server_proc and server_proc.running:
-                    _log("正在停止服务器进程...")
+                    self._log("正在停止服务器进程...")
                     server_proc.stop(wait=8)
             except Exception as e:
-                _log(f"停止服务器进程失败: {e}")
-            
+                self._log(f"停止服务器进程失败: {e}")
+
             # 2. 停止系统托盘
             try:
                 tray = ctx.tray
                 if tray:
-                    _log("正在停止系统托盘...")
+                    self._log("正在停止系统托盘...")
                     tray.stop()
             except Exception as e:
-                _log(f"停止系统托盘失败: {e}")
-            
+                self._log(f"停止系统托盘失败: {e}")
+
             # 3. 关闭 HTTP 服务器
             try:
                 httpd = ctx.httpd
                 if httpd:
-                    _log("正在关闭 HTTP 服务器...")
+                    self._log("正在关闭 HTTP 服务器...")
                     httpd.shutdown()
             except Exception as e:
-                _log(f"关闭 HTTP 服务器失败: {e}")
-            
-            _log("程序退出完成")
-            
+                self._log(f"关闭 HTTP 服务器失败: {e}")
+
+            self._log("程序退出完成")
+
             # 4. 强制退出程序（确保所有线程都被终止）
             os._exit(0)
-            
+
         except Exception as e:
             safe_log_exception("handler", f"关闭程序失败: {e}", "error")
             # 即使出错也要强制退出
@@ -213,8 +216,6 @@ class Handler(
         2. Origin/Referer 必须匹配本程序实际监听的端口（防止本地其他服务的 XSS 攻击）
         3. 只允许 127.0.0.1 和 localhost，不允许其他本地地址
         """
-        from urllib.parse import urlparse
-
 
         token = self.headers.get("X-API-Token", "")
         if token and token == AppContext.instance().api_token:
@@ -229,26 +230,27 @@ class Handler(
         if origin:
             try:
                 parsed = urlparse(origin)
-                if parsed.hostname in ("127.0.0.1", "localhost"):
-                    if server_port is None or parsed.port == server_port:
-                        return True
+                if parsed.hostname in ("127.0.0.1", "localhost") and (
+                    server_port is None or parsed.port == server_port
+                ):
+                    return True
             except Exception as e:
-                        safe_log_exception("handler", f"操作失败: {e}", "warning")
+                safe_log_exception("handler", f"操作失败: {e}", "warning")
         # 校验 Referer
         referer = self.headers.get("Referer", "")
         if referer:
             try:
                 parsed = urlparse(referer)
-                if parsed.hostname in ("127.0.0.1", "localhost"):
-                    if server_port is None or parsed.port == server_port:
-                        return True
+                if parsed.hostname in ("127.0.0.1", "localhost") and (
+                    server_port is None or parsed.port == server_port
+                ):
+                    return True
             except Exception as e:
-                        safe_log_exception("handler", f"操作失败: {e}", "warning")
+                safe_log_exception("handler", f"操作失败: {e}", "warning")
         return False
 
     def do_POST(self):
         """POST 请求处理：使用路由表分发。"""
-        from urllib.parse import urlparse
 
         parsed = urlparse(self.path)
         path = parsed.path
@@ -286,7 +288,6 @@ init_routes(Handler)
 def get_index_html():
     """获取前端页面 HTML。优先从 web/index.html 加载，失败时回退到内嵌字符串。"""
     import sys
-    import os
 
     # 尝试从外部文件加载
     try:

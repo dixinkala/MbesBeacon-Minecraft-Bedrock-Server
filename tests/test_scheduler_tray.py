@@ -8,14 +8,12 @@ scheduler.py 和 tray.py 的单元测试
 - 系统托盘基本功能（mock GUI 部分）
 """
 
-import json
 import os
 import sys
 import tempfile
-import threading
 import time
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -26,13 +24,8 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_valid_restart_daily(self):
         """测试合法的每日重启任务"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
-        task = {
-            "id": "daily_restart",
-            "type": "restart",
-            "enabled": True,
-            "schedule_type": "daily",
-            "time": "04:00"
-        }
+
+        task = {"id": "daily_restart", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"}
         ok, err = validate_scheduled_task(task)
         self.assertTrue(ok, f"应该通过校验: {err}")
         self.assertEqual(err, "")
@@ -40,12 +33,13 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_valid_backup_interval(self):
         """测试合法的间隔备份任务"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {
             "id": "interval_backup",
             "type": "backup",
             "enabled": True,
             "schedule_type": "interval",
-            "interval_hours": 6
+            "interval_hours": 6,
         }
         ok, err = validate_scheduled_task(task)
         self.assertTrue(ok, f"应该通过校验: {err}")
@@ -53,12 +47,13 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_valid_announce_hourly(self):
         """测试合法的每小时公告任务"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {
             "id": "hourly_announce",
             "type": "announce",
             "enabled": True,
             "schedule_type": "hourly",
-            "message": "服务器公告"
+            "message": "服务器公告",
         }
         ok, err = validate_scheduled_task(task)
         self.assertTrue(ok, f"应该通过校验: {err}")
@@ -66,6 +61,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_not_dict(self):
         """测试非字典类型"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         ok, err = validate_scheduled_task("not a dict")
         self.assertFalse(ok)
         self.assertIn("字典", err)
@@ -73,6 +69,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_missing_id(self):
         """测试缺少 id 字段"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -81,6 +78,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_type(self):
         """测试非法的任务类型"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "invalid_type", "enabled": True, "schedule_type": "daily", "time": "04:00"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -89,6 +87,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_enabled_not_bool(self):
         """测试 enabled 不是布尔值"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "restart", "enabled": "yes", "schedule_type": "daily", "time": "04:00"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -97,6 +96,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_schedule_type(self):
         """测试非法的调度方式"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "restart", "enabled": True, "schedule_type": "weekly", "time": "04:00"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -105,6 +105,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_daily_time_format(self):
         """测试 daily 时间格式错误"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "4:0"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -113,6 +114,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_daily_missing_time(self):
         """测试 daily 缺少 time 字段"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "restart", "enabled": True, "schedule_type": "daily"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -121,6 +123,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_interval_out_of_range(self):
         """测试 interval 超出范围"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "backup", "enabled": True, "schedule_type": "interval", "interval_hours": 200}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -129,6 +132,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_interval_not_number(self):
         """测试 interval 不是数字"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "backup", "enabled": True, "schedule_type": "interval", "interval_hours": "abc"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -137,6 +141,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_announce_missing_message(self):
         """测试 announce 缺少 message 字段"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "announce", "enabled": True, "schedule_type": "hourly"}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -145,6 +150,7 @@ class TestValidateScheduledTask(unittest.TestCase):
     def test_invalid_announce_empty_message(self):
         """测试 announce message 为空"""
         from bedrock_server_manager.scheduler import validate_scheduled_task
+
         task = {"id": "test", "type": "announce", "enabled": True, "schedule_type": "hourly", "message": "   "}
         ok, err = validate_scheduled_task(task)
         self.assertFalse(ok)
@@ -157,9 +163,10 @@ class TestValidateScheduledTasks(unittest.TestCase):
     def test_valid_list(self):
         """测试合法的任务列表"""
         from bedrock_server_manager.scheduler import validate_scheduled_tasks
+
         tasks = [
             {"id": "task1", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"},
-            {"id": "task2", "type": "backup", "enabled": False, "schedule_type": "interval", "interval_hours": 12}
+            {"id": "task2", "type": "backup", "enabled": False, "schedule_type": "interval", "interval_hours": 12},
         ]
         ok, err, valid = validate_scheduled_tasks(tasks)
         self.assertTrue(ok)
@@ -168,6 +175,7 @@ class TestValidateScheduledTasks(unittest.TestCase):
     def test_empty_list(self):
         """测试空任务列表"""
         from bedrock_server_manager.scheduler import validate_scheduled_tasks
+
         ok, err, valid = validate_scheduled_tasks([])
         self.assertTrue(ok)
         self.assertEqual(len(valid), 0)
@@ -175,6 +183,7 @@ class TestValidateScheduledTasks(unittest.TestCase):
     def test_not_list(self):
         """测试非列表类型"""
         from bedrock_server_manager.scheduler import validate_scheduled_tasks
+
         ok, err, valid = validate_scheduled_tasks("not a list")
         self.assertFalse(ok)
         self.assertIn("数组", err)
@@ -182,9 +191,10 @@ class TestValidateScheduledTasks(unittest.TestCase):
     def test_invalid_task_in_list(self):
         """测试列表中包含非法任务"""
         from bedrock_server_manager.scheduler import validate_scheduled_tasks
+
         tasks = [
             {"id": "task1", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"},
-            {"id": "task2", "type": "invalid", "enabled": True, "schedule_type": "daily", "time": "04:00"}
+            {"id": "task2", "type": "invalid", "enabled": True, "schedule_type": "daily", "time": "04:00"},
         ]
         ok, err, valid = validate_scheduled_tasks(tasks)
         self.assertFalse(ok)
@@ -208,19 +218,26 @@ class TestScheduledTasksPersistence(unittest.TestCase):
     def tearDown(self):
         """清理临时目录"""
         import shutil
+
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_save_and_load_tasks(self):
         """测试保存和加载定时任务"""
-        from bedrock_server_manager.scheduler import save_scheduled_tasks, load_scheduled_tasks, SCHEDULED_TASKS_FILE
         import bedrock_server_manager as bsm
+        from bedrock_server_manager.scheduler import SCHEDULED_TASKS_FILE, load_scheduled_tasks, save_scheduled_tasks
 
         # 设置服务器目录
         bsm.settings["server_dir"] = self.server_dir
 
         tasks = [
             {"id": "daily_restart", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"},
-            {"id": "interval_backup", "type": "backup", "enabled": False, "schedule_type": "interval", "interval_hours": 6}
+            {
+                "id": "interval_backup",
+                "type": "backup",
+                "enabled": False,
+                "schedule_type": "interval",
+                "interval_hours": 6,
+            },
         ]
 
         # 保存任务
@@ -242,12 +259,14 @@ class TestScheduledTasksPersistence(unittest.TestCase):
 
     def test_save_invalid_tasks(self):
         """测试保存非法任务应该失败"""
-        from bedrock_server_manager.scheduler import save_scheduled_tasks
         import bedrock_server_manager as bsm
+        from bedrock_server_manager.scheduler import save_scheduled_tasks
 
         bsm.settings["server_dir"] = self.server_dir
 
-        invalid_tasks = [{"id": "test", "type": "invalid_type", "enabled": True, "schedule_type": "daily", "time": "04:00"}]
+        invalid_tasks = [
+            {"id": "test", "type": "invalid_type", "enabled": True, "schedule_type": "daily", "time": "04:00"}
+        ]
         ok, err = save_scheduled_tasks(invalid_tasks)
         self.assertFalse(ok)
         self.assertIn("任务类型", err)
@@ -260,7 +279,7 @@ class TestSchedulerLifecycle(unittest.TestCase):
 
     def test_start_and_stop_scheduler(self):
         """测试启动和停止调度器"""
-        from bedrock_server_manager.scheduler import start_scheduler, stop_scheduler, _scheduler_thread, _scheduler_stop
+        from bedrock_server_manager.scheduler import start_scheduler, stop_scheduler
 
         # 启动调度器
         start_scheduler()
@@ -268,6 +287,7 @@ class TestSchedulerLifecycle(unittest.TestCase):
 
         # 验证线程已启动
         from bedrock_server_manager import scheduler
+
         self.assertIsNotNone(scheduler._scheduler_thread)
         self.assertTrue(scheduler._scheduler_thread.is_alive())
 
@@ -281,8 +301,8 @@ class TestSchedulerLifecycle(unittest.TestCase):
 
     def test_double_start_no_duplicate(self):
         """测试重复启动不会创建多个线程"""
-        from bedrock_server_manager.scheduler import start_scheduler, stop_scheduler
         from bedrock_server_manager import scheduler
+        from bedrock_server_manager.scheduler import start_scheduler, stop_scheduler
 
         start_scheduler()
         time.sleep(0.3)
@@ -306,7 +326,8 @@ class TestSystemTray(unittest.TestCase):
         """测试托盘模块可以正常导入"""
         try:
             from bedrock_server_manager import tray
-            self.assertTrue(hasattr(tray, 'SystemTray'))
+
+            self.assertTrue(hasattr(tray, "SystemTray"))
         except ImportError as e:
             self.skipTest(f"托盘模块导入失败（可能缺少依赖）: {e}")
 
@@ -314,20 +335,22 @@ class TestSystemTray(unittest.TestCase):
         """测试 SystemTray 类存在且有基本方法"""
         try:
             from bedrock_server_manager.tray import SystemTray
+
             # 检查类是否有基本方法
-            self.assertTrue(hasattr(SystemTray, '__init__'))
-            self.assertTrue(hasattr(SystemTray, 'start') or hasattr(SystemTray, 'run'))
-            self.assertTrue(hasattr(SystemTray, 'stop') or hasattr(SystemTray, 'quit'))
+            self.assertTrue(hasattr(SystemTray, "__init__"))
+            self.assertTrue(hasattr(SystemTray, "start") or hasattr(SystemTray, "run"))
+            self.assertTrue(hasattr(SystemTray, "stop") or hasattr(SystemTray, "quit"))
         except ImportError as e:
             self.skipTest(f"托盘模块导入失败: {e}")
 
-    @patch('bedrock_server_manager.tray.SystemTray')
+    @patch("bedrock_server_manager.tray.SystemTray")
     def test_tray_mock_creation(self, MockTray):
         """测试使用 mock 创建托盘实例"""
         mock_instance = MagicMock()
         MockTray.return_value = mock_instance
 
         from bedrock_server_manager.tray import SystemTray
+
         tray = SystemTray()
         self.assertIsNotNone(tray)
         MockTray.assert_called_once()

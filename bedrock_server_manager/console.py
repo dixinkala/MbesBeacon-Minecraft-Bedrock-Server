@@ -3,8 +3,9 @@
 """
 
 import os
-from .app_logger import get_app_logger, safe_log_exception
 import threading
+
+from .app_logger import safe_log_exception
 
 
 class ConsoleBuffer:
@@ -37,18 +38,18 @@ class ConsoleBuffer:
         """滚动日志文件：log.1 → log.2, log → log.1，保留最近 MAX_LOG_FILES 个。"""
         try:
             base, ext = os.path.splitext(path)
-            oldest = "%s.%d%s" % (base, self.MAX_LOG_FILES - 1, ext)
+            oldest = f"{base}.{self.MAX_LOG_FILES - 1}{ext}"
             if os.path.exists(oldest):
                 os.remove(oldest)
             for i in range(self.MAX_LOG_FILES - 2, -1, -1):
-                src = "%s.%d%s" % (base, i, ext) if i > 0 else path
-                dst = "%s.%d%s" % (base, i + 1, ext)
+                src = f"{base}.{i}{ext}" if i > 0 else path
+                dst = f"{base}.{i + 1}{ext}"
                 if os.path.exists(src):
                     if os.path.exists(dst):
                         os.remove(dst)
                     os.rename(src, dst)
         except Exception as e:
-                safe_log_exception("console", f"操作失败: {e}", "warning")
+            safe_log_exception("console", f"操作失败: {e}", "warning")
 
     def append(self, text):
         with self._cond:
@@ -62,7 +63,7 @@ class ConsoleBuffer:
                     with open(self.log_file, "a", encoding="utf-8") as f:
                         f.write(text)
                 except Exception as e:
-                                safe_log_exception("console", f"操作失败: {e}", "warning")
+                    safe_log_exception("console", f"操作失败: {e}", "warning")
             self._cond.notify_all()
 
     def read_since(self, idx):

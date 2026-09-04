@@ -3,11 +3,12 @@
 """
 
 import contextlib
-from .app_logger import get_app_logger, safe_log_exception
 import os
 import shutil
 import threading
 import time
+
+from .app_logger import safe_log_exception
 
 PROP_META = [
     ("server-name", "服务器名称", "text", "Dedicated Server"),
@@ -90,7 +91,7 @@ _scheduler_stop = threading.Event()
 _CONFIG_RANGES = {
     "server-port": (1, 65535),
     "server-portv6": (1, 65535),
-    "max-players": (1, 99999),
+    "max-players": (1, 100),
     "view-distance": (3, 96),
     "tick-distance": (2, 12),
     "spawn-protection": (0, 100),
@@ -268,10 +269,10 @@ def validate_config_updates(updates: dict) -> tuple[bool, str, str]:
                 return False, f"{key} 必须是整数", key
             lo, hi = _CONFIG_RANGES[key]
             if not (lo <= n <= hi):
-                return False, "%s 取值范围 %d-%d" % (key, lo, hi), key
+                return False, f"{key} 取值范围 {lo}-{hi}", key
             # 端口保留检查
             if key in ("server-port", "server-portv6") and n in _RESERVED_PORTS:
-                return False, "端口 %d 是常用端口，建议使用其他端口" % n, key
+                return False, f"端口 {n} 是常用端口，建议使用其他端口", key
             continue
 
         # 2. 根据元数据类型校验
@@ -303,14 +304,13 @@ def validate_config_updates(updates: dict) -> tuple[bool, str, str]:
                 except (ValueError, TypeError):
                     return False, f"{key} 必须是数字", key
 
-            elif ptype == "text":
+            elif ptype == "text" and key in _CONFIG_TEXT_LENGTHS:
                 # 文本长度校验
-                if key in _CONFIG_TEXT_LENGTHS:
-                    min_len, max_len = _CONFIG_TEXT_LENGTHS[key]
-                    if len(value_str) < min_len:
-                        return False, f"{key} 长度不能少于 {min_len} 个字符", key
-                    if len(value_str) > max_len:
-                        return False, f"{key} 长度不能超过 {max_len} 个字符", key
+                min_len, max_len = _CONFIG_TEXT_LENGTHS[key]
+                if len(value_str) < min_len:
+                    return False, f"{key} 长度不能少于 {min_len} 个字符", key
+                if len(value_str) > max_len:
+                    return False, f"{key} 长度不能超过 {max_len} 个字符", key
 
     return True, "", ""
 

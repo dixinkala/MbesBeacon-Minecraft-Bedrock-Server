@@ -3,23 +3,22 @@ misc 相关路由处理方法
 """
 
 import threading
+
 from ...app_context import AppContext
-from ...state import DEFAULT_THEME
 from ...players import list_installed_packs
 from ...scheduler import load_scheduled_tasks, save_scheduled_tasks
 from ...security import read_audit_log
+from ...state import DEFAULT_THEME
 from ...utils import save_theme
-
-from ..route_decorator import register_route, register_get_route
+from ..route_decorator import register_get_route, register_route
 
 
 class MiscRoutesMixin:
     """misc 相关路由处理方法 mixin。"""
 
-
     @register_route("/api/cancel")
     def _route_cancel(self, data):
-    
+
         AppContext.instance().install_state.cancel.set()
         self._json({"ok": True})
 
