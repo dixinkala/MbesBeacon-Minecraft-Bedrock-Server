@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 讨论与问答
+    url: https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/discussions
+    about: 请在讨论区提出问题、分享想法或寻求帮助
+  - name: 📖 文档
+    url: https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/README.md
+    about: 查看项目文档和使用说明

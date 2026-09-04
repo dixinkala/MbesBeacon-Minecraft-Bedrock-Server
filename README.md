@@ -1,13 +1,43 @@
 # MbesBeacon
 
+<div align="center">
+
 **Minecraft Bedrock Edition Server Beacon — Minecraft 基岩版服务器管理器**
 
-MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专用服务器管理工具，采用"系统托盘 + Web 管理界面"混合架构，让服务器的安装、配置、运维变得简单直观。
+[![GitHub stars](https://img.shields.io/github/stars/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=yellow)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=green)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/network/members)
+[![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
+[![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+
+**一键搭建 · 图形化管理 · 安全可靠 · 开箱即用**
+
+</div>
 
 ---
 
-## 目录
+MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专用服务器管理工具，采用"系统托盘 + Web 管理界面"混合架构，让服务器的安装、配置、运维变得简单直观。
 
+> ⭐ **如果这个项目对你有帮助，请给一个 Star！你的支持是我持续更新的动力！**
+
+---
+
+## ✨ 特性亮点
+
+| 🚀 一键安装 | ⚙️ 图形化配置 | 🎮 玩家管理 | 💾 世界备份 |
+|------------|-------------|------------|------------|
+| 自动下载官方服务端，支持所有历史版本 | 30+ 配置项可视化编辑，配置历史回滚 | 在线玩家列表，权限/踢出/封禁/白名单 | 手动/自动备份，一键恢复，保留策略 |
+
+| 📊 性能监控 | 📝 实时控制台 | 🕐 计划任务 | 🔒 安全可靠 |
+|------------|-------------|------------|------------|
+| 实时CPU/内存/玩家数监控 | SSE实时日志推送，命令自动补全 | 定时重启/备份/公告，自动化运维 | API Token认证，下载完整性校验，审计日志 |
+
+---
+
+## 📖 目录
+
+- [快速开始](#快速开始)
 - [项目解决什么问题](#项目解决什么问题)
 - [主要功能](#主要功能)
 - [系统要求](#系统要求)
@@ -16,8 +46,29 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 - [输入输出示例](#输入输出示例)
 - [项目结构](#项目结构)
 - [安全特性](#安全特性)
+- [路线图](#路线图)
+- [贡献指南](#贡献指南)
 - [常见问题](#常见问题)
 - [许可证](#许可证)
+
+---
+
+## 🚀 快速开始
+
+### 3步启动你的 Minecraft 基岩版服务器
+
+```bash
+# 1. 下载 MbesBeacon.exe
+# 从 Releases 页面下载最新版本
+
+# 2. 双击运行
+# 程序自动打开浏览器管理界面 (http://127.0.0.1:19100)
+
+# 3. 一键安装服务器
+# 选择版本 → 选择目录 → 开始安装 → 自动启动
+```
+
+就是这么简单！无需命令行，无需手动配置，3分钟即可开服。
 
 ---
 
@@ -415,6 +466,109 @@ A：点标题栏「软件更新」手动检测 MbesBeacon 软件新版本。注�
 
 ### Q：系统托盘图标不显示怎么办？
 A：检查 Windows 托盘隐藏区域（任务栏右下角箭头），可将 MbesBeacon 图标拖到任务栏固定显示。
+
+---
+
+## 🗺️ 路线图
+
+### ✅ 已完成 (v1.0.x)
+- [x] 服务器一键下载安装（支持所有历史版本）
+- [x] 图形化配置管理（30+ 配置项）
+- [x] 实时控制台（SSE 推送，命令自动补全）
+- [x] 玩家管理（权限/踢出/封禁/白名单/IP封禁）
+- [x] 世界管理（多世界切换/导入导出）
+- [x] 世界备份（手动/自动备份，一键恢复）
+- [x] 性能监控（CPU/内存/玩家数）
+- [x] 计划任务（定时重启/备份/公告）
+- [x] 系统托盘集成
+- [x] 多主题支持
+- [x] 安全加固（API Token/下载校验/审计日志）
+
+### 🚧 计划中 (v1.1.x)
+- [ ] 插件/Mod 管理界面
+- [ ] 性能历史趋势图表
+- [ ] 世界备份管理界面（手动备份/恢复/删除）
+- [ ] 资源包/行为包上传安装
+- [ ] 多语言支持（英文）
+- [ ] 首次启动交互式向导
+
+### 💡 未来规划 (v2.0.x)
+- [ ] Linux/macOS 平台支持
+- [ ] 远程管理（Web 面板远程访问）
+- [ ] 插件系统支持第三方扩展
+- [ ] 服务器集群管理
+- [ ] 移动端管理 App
+
+> 💡 **有功能建议？欢迎提交 [Issue](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/issues/new) 或 [Pull Request](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/pulls)！**
+
+---
+
+## 🤝 贡献指南
+
+我们欢迎任何形式的贡献！无论是提交 Bug 报告、功能建议，还是直接提交代码，都非常感谢。
+
+### 如何贡献
+
+1. **Fork 本仓库**
+2. **创建功能分支**：`git checkout -b feature/AmazingFeature`
+3. **提交更改**：`git commit -m 'Add some AmazingFeature'`
+4. **推送到分支**：`git push origin feature/AmazingFeature`
+5. **开启 Pull Request**
+
+### 开发环境搭建
+
+```bash
+# 克隆项目
+git clone https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server.git
+cd MbesBeacon-Minecraft-Bedrock-Server
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行开发版本
+python run.py
+
+# 运行测试
+pytest tests/ -v
+
+# 代码格式化
+ruff format .
+
+# 代码检查
+ruff check .
+```
+
+### 代码规范
+
+- 遵循 [PEP 8](https://peps.python.org/pep-0008/) 代码风格
+- 使用 `ruff` 进行代码格式化和检查
+- 所有新功能必须包含单元测试
+- 提交信息遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范
+
+### 报告 Bug
+
+提交 Bug 时请包含：
+- 操作系统版本（Windows 10/11）
+- MbesBeacon 版本号
+- 复现步骤
+- 预期行为 vs 实际行为
+- 截图/日志（如有）
+
+详细指南请查看 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+---
+
+## ⭐ 支持项目
+
+如果你觉得这个项目对你有帮助，可以通过以下方式支持：
+
+- ⭐ **给项目点个 Star**
+- 🔀 **Fork 项目并参与贡献**
+- 🐛 **提交 Bug 报告和功能建议**
+- 💬 **在社区中分享这个项目**
+- ☕ **请开发者喝杯咖啡**（可选）
+
+你的每一个 Star 都是我持续更新的动力！
 
 ---
 
