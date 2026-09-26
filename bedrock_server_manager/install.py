@@ -287,7 +287,6 @@ def download_file(url, dest, progress_cb=None, cancel_flag=None, ignore_ssl=Fals
             elif total and resume_pos > 0 and not is_partial:
                 # 服务器不支持断点续传，从头开始
                 resume_pos = 0
-                total = total
 
             # 打开文件（追加模式或写入模式）
             mode = "ab" if (resume_pos > 0 and is_partial) else "wb"
