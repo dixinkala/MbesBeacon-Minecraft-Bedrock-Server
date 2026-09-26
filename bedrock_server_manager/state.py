@@ -16,7 +16,6 @@ from .app_logger import safe_log_exception
 from .constants import (
     APP_DATA_DIR,
     CACHE_DIR,
-    DEFAULT_PORT,
     LOGS_DIR,
 )
 
