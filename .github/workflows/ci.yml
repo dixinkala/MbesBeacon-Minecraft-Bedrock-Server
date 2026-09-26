@@ -10,6 +10,8 @@ jobs:
   test:
     name: 测试 (Python ${{ matrix.python-version }})
     runs-on: windows-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +31,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov ruff
+        pip install pytest pytest-cov
 
     - name: 🔍 代码格式检查（硬性要求）
       run: |
@@ -55,6 +57,9 @@ jobs:
     runs-on: windows-latest
     needs: test
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      actions: read
 
     steps:
     - name: 📥 检出代码
@@ -87,6 +92,9 @@ jobs:
     runs-on: windows-latest
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      actions: read
 
     steps:
     - name: 📥 下载构建产物
@@ -96,7 +104,7 @@ jobs:
         path: dist
 
     - name: 🚀 创建 Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2 (2024-09-05)
       with:
         files: dist/MbesBeacon.exe
         generate_release_notes: true
