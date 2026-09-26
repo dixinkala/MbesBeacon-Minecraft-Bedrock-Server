@@ -22,12 +22,11 @@ LOG_LEVELS = {
 
 # 全局日志器实例
 _app_logger = None
-_log_initialized = False
 
 
 def get_app_logger():
     """获取应用日志器实例（单例）。"""
-    global _app_logger, _log_initialized
+    global _app_logger
     if _app_logger is not None:
         return _app_logger
 
@@ -61,7 +60,6 @@ def get_app_logger():
     # 控制台输出（仅在开发模式下，避免干扰服务器控制台）
     # 注意：在 windowed 模式下没有控制台，所以这里不添加 StreamHandler
 
-    _log_initialized = True
     return _app_logger
 
 

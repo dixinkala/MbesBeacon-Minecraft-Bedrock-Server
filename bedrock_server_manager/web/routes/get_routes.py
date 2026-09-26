@@ -69,8 +69,10 @@ class GetRoutesMixin:
             mem_mb = proc.memory_info().rss / (1024 * 1024)
             cpu_percent = proc.cpu_percent(interval=0.1)
         except ImportError:
+            # psutil 未安装时使用默认值（健康检查降级）
             pass
         except Exception:
+            # 获取进程信息失败时使用默认值
             pass
         uptime = time.time() - app_start_time
 
