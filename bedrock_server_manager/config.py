@@ -5,7 +5,6 @@
 import contextlib
 import os
 import shutil
-import threading
 import time
 
 from .app_logger import safe_log_exception
@@ -78,14 +77,6 @@ FULL_PROP_META = PROP_META + [
     ("the-end-height", "末地高度", "int", "0"),
     ("the-end-depth", "末地深度", "int", "128"),
 ]
-
-# 性能监控数据缓存
-_perf_cache = {"cpu": 0, "memory": 0, "players": 0, "timestamp": 0}
-_perf_lock = threading.Lock()
-
-# 定时任务调度器
-_scheduler_thread = None
-_scheduler_stop = threading.Event()
 
 # 配置项数值范围校验
 _CONFIG_RANGES = {

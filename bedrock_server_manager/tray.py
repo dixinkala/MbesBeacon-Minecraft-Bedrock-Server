@@ -32,6 +32,7 @@ def _log(msg):
                     f.write("\ufeff")  # UTF-8 BOM
                 f.write(line)
         except Exception:
+            # 托盘日志写入失败时静默（不阻塞托盘主流程）
             pass
         # 控制台输出（开发模式可见）
         with contextlib.suppress(Exception):

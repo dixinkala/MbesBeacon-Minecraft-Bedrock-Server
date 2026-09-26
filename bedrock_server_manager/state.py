@@ -111,17 +111,22 @@ def migrate_legacy_data():
 
 
 # ---------------- AppContext 全局单例集成 ----------------
-# 新代码应通过 AppContext.instance() 访问全局状态
+# 新代码应通过 _ctx() 访问全局状态
 # 此处保持向后兼容，将模块级全局变量同步到 AppContext
 
-from .app_context import AppContext
+
+def _ctx():
+    """获取 AppContext 单例（延迟导入，避免与 app_context 循环依赖）。"""
+    from .app_context import AppContext
+
+    return AppContext.instance()
 
 
 def sync_to_app_context():
     """将模块级全局变量同步到 AppContext 单例。
     在应用启动时调用一次，确保 AppContext 与现有全局变量保持一致。
     """
-    ctx = AppContext.instance()
+    ctx = _ctx()
     ctx.api_token = API_TOKEN
     ctx.console = console
     ctx.install_state = install_state
@@ -137,7 +142,7 @@ def sync_from_app_context():
     """将 AppContext 单例的状态同步回模块级全局变量。
     在修改 AppContext 后调用，确保向后兼容。
     """
-    ctx = AppContext.instance()
+    ctx = _ctx()
     global console, install_state, settings, server_proc, httpd, API_TOKEN, mutex_handle
     API_TOKEN = ctx.api_token
     console = ctx.console
@@ -148,13 +153,13 @@ def sync_from_app_context():
     mutex_handle = ctx.mutex_handle
 
 
-def get_app_context() -> AppContext:
+def get_app_context():
     """获取 AppContext 单例（便捷函数）。
 
     Returns:
         AppContext: 全局单例实例
     """
-    return AppContext.instance()
+    return _ctx()
 
 
 def log(text: str) -> None:
@@ -163,7 +168,7 @@ def log(text: str) -> None:
     Args:
         text: 日志文本
     """
-    AppContext.instance().log(text)
+    _ctx().log(text)
 
 
 def log_info(text: str) -> None:
@@ -172,7 +177,7 @@ def log_info(text: str) -> None:
     Args:
         text: 日志文本
     """
-    AppContext.instance().log_info(text)
+    _ctx().log_info(text)
 
 
 def log_warning(text: str) -> None:
@@ -181,7 +186,7 @@ def log_warning(text: str) -> None:
     Args:
         text: 日志文本
     """
-    AppContext.instance().log_warning(text)
+    _ctx().log_warning(text)
 
 
 def log_error(text: str) -> None:
@@ -190,7 +195,7 @@ def log_error(text: str) -> None:
     Args:
         text: 日志文本
     """
-    AppContext.instance().log_error(text)
+    _ctx().log_error(text)
 
 
 def get_setting(key: str, default=None):
@@ -203,7 +208,7 @@ def get_setting(key: str, default=None):
     Returns:
         设置值，如果不存在则返回默认值
     """
-    return AppContext.instance().get_setting(key, default)
+    return _ctx().get_setting(key, default)
 
 
 def set_setting(key: str, value) -> None:
@@ -213,10 +218,10 @@ def set_setting(key: str, value) -> None:
         key: 设置键名
         value: 设置值
     """
-    AppContext.instance().set_setting(key, value)
+    _ctx().set_setting(key, value)
     # 同步回模块级全局变量
     global settings
-    settings = AppContext.instance().settings
+    settings = _ctx().settings
 
 
 def get_state_dict() -> dict:
@@ -225,4 +230,4 @@ def get_state_dict() -> dict:
     Returns:
         状态字典
     """
-    return AppContext.instance().to_dict()
+    return _ctx().to_dict()

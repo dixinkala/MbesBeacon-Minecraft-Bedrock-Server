@@ -185,6 +185,7 @@ def _execute_scheduled_task(task, server_dir, note=None):
 
             get_app_logger().info(f"定时任务[{note}]: {task_type} - {server_dir}")
         except Exception:
+            # 日志记录失败不影响任务执行
             pass
     try:
         if task_type == "restart":

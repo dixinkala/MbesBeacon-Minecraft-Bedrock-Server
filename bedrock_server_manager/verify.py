@@ -23,7 +23,6 @@ _KNOWN_HASHES: dict[str, str] = {}
 BDS_VERSIONS_API = "https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json"
 
 # 官方哈希获取状态（避免重复请求）
-_official_hashes_loaded = False
 
 
 def fetch_official_hashes(timeout: int = 10) -> dict[str, str]:
@@ -91,9 +90,7 @@ def load_official_hashes(force: bool = False) -> int:
     Returns:
         int: 成功加载的哈希数量
     """
-    global _official_hashes_loaded
-
-    if _official_hashes_loaded and not force:
+    if getattr(load_official_hashes, "_loaded", False) and not force:
         return len(_KNOWN_HASHES)
 
     official_hashes = fetch_official_hashes()
@@ -101,7 +98,7 @@ def load_official_hashes(force: bool = False) -> int:
         if version not in _KNOWN_HASHES:
             _KNOWN_HASHES[version] = sha256_hash
 
-    _official_hashes_loaded = True
+    load_official_hashes._loaded = True
     return len(official_hashes)
 
 
@@ -296,8 +293,7 @@ def _verify_signer_identity(exe_path: str) -> tuple[bool, str]:
     返回 (ok, message)：ok=True 表示签名者为官方，message 为签名者名称。
     """
     try:
-        import ctypes
-        from ctypes import wintypes
+        import ctypes.wintypes
 
         # 定义 CryptQueryObject 所需的常量和结构体
         CERT_QUERY_OBJECT_FILE = 0x00000001
@@ -307,7 +303,7 @@ def _verify_signer_identity(exe_path: str) -> tuple[bool, str]:
 
         class CERT_INFO(ctypes.Structure):
             _fields_ = [
-                ("dwVersion", wintypes.DWORD),
+                ("dwVersion", ctypes.wintypes.DWORD),
                 ("SerialNumber", ctypes.c_void_p),
                 ("SignatureAlgorithm", ctypes.c_void_p),
                 ("Issuer", ctypes.c_void_p),
@@ -322,21 +318,21 @@ def _verify_signer_identity(exe_path: str) -> tuple[bool, str]:
 
         class CERT_CONTEXT(ctypes.Structure):
             _fields_ = [
-                ("dwCertEncodingType", wintypes.DWORD),
+                ("dwCertEncodingType", ctypes.wintypes.DWORD),
                 ("pbCertEncoded", ctypes.POINTER(ctypes.c_byte)),
-                ("cbCertEncoded", wintypes.DWORD),
+                ("cbCertEncoded", ctypes.wintypes.DWORD),
                 ("pCertInfo", ctypes.POINTER(CERT_INFO)),
-                ("hCertStore", wintypes.HANDLE),
+                ("hCertStore", ctypes.wintypes.HANDLE),
             ]
 
         crypt32 = ctypes.windll.crypt32
 
         # 调用 CryptQueryObject 获取证书上下文
-        h_store = wintypes.HANDLE()
-        h_msg = wintypes.HANDLE()
-        pdw_encoding = wintypes.DWORD()
-        pdw_content_type = wintypes.DWORD()
-        pdw_format_type = wintypes.DWORD()
+        h_store = ctypes.wintypes.HANDLE()
+        h_msg = ctypes.wintypes.HANDLE()
+        pdw_encoding = ctypes.wintypes.DWORD()
+        pdw_content_type = ctypes.wintypes.DWORD()
+        pdw_format_type = ctypes.wintypes.DWORD()
         pCertContext = ctypes.POINTER(CERT_CONTEXT)()
 
         success = crypt32.CryptQueryObject(
@@ -436,40 +432,39 @@ def verify_pe_signature(exe_path: str) -> tuple[bool, str]:
 
         # 2. 尝试使用 WinVerifyTrust API 验证数字签名（Windows 专用）
         try:
-            import ctypes
-            from ctypes import wintypes
+            import ctypes.wintypes
 
             # 定义 WinVerifyTrust 所需的结构体
             class GUID(ctypes.Structure):
                 _fields_ = [
-                    ("Data1", wintypes.DWORD),
-                    ("Data2", wintypes.WORD),
-                    ("Data3", wintypes.WORD),
+                    ("Data1", ctypes.wintypes.DWORD),
+                    ("Data2", ctypes.wintypes.WORD),
+                    ("Data3", ctypes.wintypes.WORD),
                     ("Data4", ctypes.c_ubyte * 8),
                 ]
 
             class WINTRUST_FILE_INFO(ctypes.Structure):
                 _fields_ = [
-                    ("cbStruct", wintypes.DWORD),
-                    ("pcwszFilePath", wintypes.LPCWSTR),
-                    ("hFile", wintypes.HANDLE),
+                    ("cbStruct", ctypes.wintypes.DWORD),
+                    ("pcwszFilePath", ctypes.wintypes.LPCWSTR),
+                    ("hFile", ctypes.wintypes.HANDLE),
                     ("pgKnownSubject", ctypes.POINTER(GUID)),
                 ]
 
             class WINTRUST_DATA(ctypes.Structure):
                 _fields_ = [
-                    ("cbStruct", wintypes.DWORD),
+                    ("cbStruct", ctypes.wintypes.DWORD),
                     ("pPolicyCallbackData", ctypes.c_void_p),
                     ("pSIPClientData", ctypes.c_void_p),
-                    ("dwUIChoice", wintypes.DWORD),
-                    ("fdwRevocationChecks", wintypes.DWORD),
-                    ("dwUnionChoice", wintypes.DWORD),
+                    ("dwUIChoice", ctypes.wintypes.DWORD),
+                    ("fdwRevocationChecks", ctypes.wintypes.DWORD),
+                    ("dwUnionChoice", ctypes.wintypes.DWORD),
                     ("pFile", ctypes.POINTER(WINTRUST_FILE_INFO)),
-                    ("dwStateAction", wintypes.DWORD),
-                    ("hWVTStateData", wintypes.HANDLE),
-                    ("pwszURLReference", wintypes.LPCWSTR),
-                    ("dwProvFlags", wintypes.DWORD),
-                    ("dwUIContext", wintypes.DWORD),
+                    ("dwStateAction", ctypes.wintypes.DWORD),
+                    ("hWVTStateData", ctypes.wintypes.HANDLE),
+                    ("pwszURLReference", ctypes.wintypes.LPCWSTR),
+                    ("dwProvFlags", ctypes.wintypes.DWORD),
+                    ("dwUIContext", ctypes.wintypes.DWORD),
                 ]
 
             WTD_UI_NONE = 2

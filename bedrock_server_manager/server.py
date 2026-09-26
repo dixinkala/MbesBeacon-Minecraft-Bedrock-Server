@@ -70,6 +70,7 @@ def get_server_port(server_dir: str) -> int:
                 except (ValueError, TypeError):
                     return 19132
     except Exception:
+        # 配置文件不存在或解析失败时返回默认端口 19132
         pass
     return 19132
 
@@ -216,6 +217,7 @@ class ServerProcess:
 
                 get_app_logger().warning(f"server.py on_output 异常: {e}")
             except Exception:
+                # 应用日志不可用时静默，避免二次异常
                 pass
 
     def send(self, cmd):
@@ -236,6 +238,7 @@ class ServerProcess:
 
                 get_app_logger().warning(f"server.py 发送 stop 命令异常: {e}")
             except Exception:
+                # 应用日志不可用时静默，之后会走 kill 兜底
                 pass
         t0 = time.time()
         while self.running and time.time() - t0 < wait:
@@ -255,14 +258,13 @@ class ServerProcess:
 
                         get_app_logger().warning(f"server.py 杀死进程异常: {e}")
                     except Exception:
+                        # 应用日志不可用时静默，进程退出由系统兜底
                         pass
         self.on_state(False)
 
 
 def get_server_proc():
     """获取或创建 ServerProcess 单例。"""
-    settings = _get_settings()
-
     ctx = AppContext.instance()
     settings = ctx.settings
     console = ctx.console

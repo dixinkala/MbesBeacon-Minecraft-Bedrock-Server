@@ -223,11 +223,11 @@ class TestScheduledTasksPersistence(unittest.TestCase):
 
     def test_save_and_load_tasks(self):
         """测试保存和加载定时任务"""
-        import bedrock_server_manager as bsm
+        from bedrock_server_manager import settings
         from bedrock_server_manager.scheduler import SCHEDULED_TASKS_FILE, load_scheduled_tasks, save_scheduled_tasks
 
         # 设置服务器目录
-        bsm.settings["server_dir"] = self.server_dir
+        settings["server_dir"] = self.server_dir
 
         tasks = [
             {"id": "daily_restart", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"},
@@ -255,14 +255,14 @@ class TestScheduledTasksPersistence(unittest.TestCase):
         self.assertEqual(loaded[1]["id"], "interval_backup")
 
         # 清理设置
-        bsm.settings["server_dir"] = ""
+        settings["server_dir"] = ""
 
     def test_save_invalid_tasks(self):
         """测试保存非法任务应该失败"""
-        import bedrock_server_manager as bsm
+        from bedrock_server_manager import settings
         from bedrock_server_manager.scheduler import save_scheduled_tasks
 
-        bsm.settings["server_dir"] = self.server_dir
+        settings["server_dir"] = self.server_dir
 
         invalid_tasks = [
             {"id": "test", "type": "invalid_type", "enabled": True, "schedule_type": "daily", "time": "04:00"}
@@ -271,7 +271,7 @@ class TestScheduledTasksPersistence(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("任务类型", err)
 
-        bsm.settings["server_dir"] = ""
+        settings["server_dir"] = ""
 
 
 class TestSchedulerLifecycle(unittest.TestCase):

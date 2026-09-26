@@ -361,6 +361,7 @@ def select_server_dir(d: str) -> tuple:
 
                     get_app_logger().warning(f"install.py 停止服务器异常: {e}")
                 except Exception:
+                    # 停止旧服务器失败不影响目录切换
                     pass
     settings["server_dir"] = d
     add_server_dir_history(d)
@@ -526,8 +527,7 @@ def detect_server_version(dir_path):
     exe_path = os.path.join(dir_path, SERVER_EXE)
     if os.path.isfile(exe_path):
         try:
-            import ctypes
-            from ctypes import wintypes
+            import ctypes.wintypes
 
             size = ctypes.windll.version.GetFileVersionInfoSizeW(exe_path, None)
             if size > 0:
@@ -535,7 +535,7 @@ def detect_server_version(dir_path):
                 if ctypes.windll.version.GetFileVersionInfoW(exe_path, None, size, buf):
 
                     class LANGANDCODEPAGE(ctypes.Structure):
-                        _fields_ = [("wLanguage", wintypes.WORD), ("wCodePage", wintypes.WORD)]
+                        _fields_ = [("wLanguage", ctypes.wintypes.WORD), ("wCodePage", ctypes.wintypes.WORD)]
 
                     lang_addr = ctypes.c_uint()
                     lang_len = ctypes.c_uint()
@@ -684,6 +684,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                             if os.path.exists(zip_path):
                                 os.remove(zip_path)
                         except OSError:
+                            # 删除损坏的 ZIP 失败可忽略
                             pass
                         raise RuntimeError(
                             f"下载文件完整性校验失败: {error_msg}\n提示: 可尝试切换其他下载源或使用自定义地址"
@@ -700,6 +701,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                     if os.path.exists(zip_path):
                         os.remove(zip_path)
                 except OSError:
+                    # 删除损坏的临时文件失败可忽略
                     pass
                 continue
         if not download_ok:

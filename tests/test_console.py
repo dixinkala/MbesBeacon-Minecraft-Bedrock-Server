@@ -299,7 +299,7 @@ class TestConsoleBufferThreadSafety(unittest.TestCase):
         def reader():
             try:
                 for _ in range(100):
-                    text, count = buf.read_since(0)
+                    buf.read_since(0)
                     time.sleep(0.001)
             except Exception as e:
                 errors.append(e)

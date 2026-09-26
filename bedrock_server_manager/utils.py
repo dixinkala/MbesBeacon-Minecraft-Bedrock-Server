@@ -279,8 +279,6 @@ def check_disk_space(target_dir: str, required_mb: int = 300) -> tuple[bool, int
 
 def load_theme() -> str:
     """加载主题设置。"""
-    import json
-
     theme = dict(DEFAULT_THEME)
     try:
         with open(THEME_FILE, encoding="utf-8") as f:
@@ -296,8 +294,6 @@ def load_theme() -> str:
 
 def save_theme(theme: str) -> bool:
     """保存主题设置。"""
-    import json
-
     try:
         with open(THEME_FILE, "w", encoding="utf-8") as f:
             json.dump(theme, f, ensure_ascii=False)

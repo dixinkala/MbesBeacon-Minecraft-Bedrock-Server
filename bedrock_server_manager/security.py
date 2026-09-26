@@ -113,6 +113,7 @@ def audit_log(action, detail="", server_dir=None):
 
             print(f"[警告] 审计日志写入失败: {e}", file=sys.stderr)
         except Exception:
+            # stderr 也不可用时静默（极少见）
             pass
 
 

@@ -34,6 +34,7 @@ def _main():
         if migrated:
             get_app_logger().info(f"已迁移旧数据: {', '.join(migrated)}")
     except Exception:
+        # 日志记录失败时静默，避免掩盖主流程
         pass
 
     # 同步模块级全局变量到 AppContext（确保全局状态一致）
@@ -197,6 +198,7 @@ def _main():
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
+        # 用户按 Ctrl+C 退出，走 finally 清理流程
         pass
     finally:
         if tray:
