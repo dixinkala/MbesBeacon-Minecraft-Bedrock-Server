@@ -234,7 +234,7 @@ _state.install_state = _global_ctx.install_state
 console = _global_ctx.console
 install_state = _global_ctx.install_state
 
-__version__ = "2.0.0"
+__version__ = "1.0.22"
 
 
 def get_app_context():
