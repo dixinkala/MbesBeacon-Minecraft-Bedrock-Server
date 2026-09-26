@@ -145,6 +145,8 @@ class ServerProcess:
     def _reader(self):
         proc = self.proc
         settings = _get_settings()
+        # 标记是否已安排自动重启（若为 True，则不触发 on_state(False)，由重启线程接管）
+        auto_restarting = False
         try:
             while True:
                 line = proc.stdout.readline()
@@ -193,7 +195,9 @@ class ServerProcess:
                                 self._emit(f"[系统] 自动重启失败: {e}\n")
 
                         threading.Thread(target=_delayed_restart, args=(backoff,), daemon=True).start()
-                        return  # 不触发 on_state(False)，重启线程会处理
+                        auto_restarting = True
+        # 若已安排自动重启，则由重启线程接管状态，不再通知"已停止"
+        if not auto_restarting:
             self.on_state(False)
 
     @staticmethod

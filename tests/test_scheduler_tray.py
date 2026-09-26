@@ -351,7 +351,8 @@ class TestSystemTray(unittest.TestCase):
 
         from bedrock_server_manager.tray import SystemTray
 
-        tray = SystemTray()
+        # SystemTray.__init__ 需要 url 参数（mock 类会忽略实际值）
+        tray = SystemTray("http://127.0.0.1:19100")
         self.assertIsNotNone(tray)
         MockTray.assert_called_once()
 
