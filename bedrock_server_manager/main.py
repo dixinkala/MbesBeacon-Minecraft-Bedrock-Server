@@ -20,7 +20,8 @@ from .app_logger import get_app_logger, safe_log_exception
 from .app_update import check_app_update_async
 from .constants import APP_MARKER, APP_TITLE, APP_VERSION, DEFAULT_PORT, LOGS_DIR
 from .server import get_server_proc, server_running
-from .state import migrate_legacy_data, sync_to_app_context
+from . import state as _state
+from .state import migrate_legacy_data
 from .tray import SystemTray
 from .utils import installed, open_browser_with_retry, resolve_server_dir
 from .web.handler import Handler
@@ -39,7 +40,15 @@ def _main():
 
     # 同步模块级全局变量到 AppContext（确保全局状态一致）
     with contextlib.suppress(Exception):
-        sync_to_app_context()
+        ctx = AppContext.instance()
+        ctx.api_token = _state.API_TOKEN
+        ctx.console = _state.console
+        ctx.install_state = _state.install_state
+        ctx.settings = _state.settings
+        ctx.server_proc = _state.server_proc
+        ctx.httpd = _state.httpd
+        ctx.port = DEFAULT_PORT
+        ctx.mark_initialized()
 
     # windowed(exe无控制台)模式下 stdout/stderr 为 None，需重定向
     if sys.stdout is None:
