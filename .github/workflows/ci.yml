@@ -31,15 +31,13 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-cov ruff
 
-    - name: 🔍 代码格式检查
+    - name: 🔍 代码格式检查（硬性要求）
       run: |
         ruff format --check .
-      continue-on-error: true
 
-    - name: 🔍 代码 Lint 检查
+    - name: 🔍 代码 Lint 检查（硬性要求）
       run: |
         ruff check .
-      continue-on-error: true
 
     - name: 🧪 运行测试
       run: |

@@ -1,0 +1,53 @@
+# CodeQL 代码安全扫描
+# 自动分析代码中的安全漏洞和代码质量问题
+# 官方文档: https://docs.github.com/code-security/code-scanning
+
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '23 1 * * 0'  # 每周日 01:23 自动扫描
+
+jobs:
+  analyze:
+    name: 代码扫描 (${{ matrix.language }})
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 360
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+
+    - name: 🐍 初始化 CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        # 配置查询规则:
+        # - security-and-quality: 安全 + 质量规则（推荐，包含以下所有）
+        # - security-extended: 安全扩展规则
+        # - security: 基础安全规则
+        queries: security-and-quality
+
+    - name: 🔨 构建代码
+      run: |
+        python -m compileall -q bedrock_server_manager
+        echo "✅ 代码编译检查通过"
+
+    - name: 🔍 运行 CodeQL 分析
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"

@@ -1,0 +1,43 @@
+# Dependabot 依赖自动更新配置
+# 自动检查依赖安全更新和版本更新
+# 官方文档: https://docs.github.com/code-security/dependabot
+
+version: 2
+updates:
+  # Python 依赖（requirements.txt）
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"      # 每周检查一次
+      day: "monday"           # 每周一检查
+      time: "09:00"           # 北京时间 09:00 (UTC+8)
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    # 安全更新（CVE 漏洞修复）总是启用
+    # 版本更新仅针对这些依赖
+    ignore:
+      # PyInstaller 保持锁定，避免打包环境变化
+      - dependency-name: "pyinstaller"
+      # ruff 保持锁定，避免代码风格规则变化
+      - dependency-name: "ruff"
+
+  # GitHub Actions 工作流
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore(ci)"
