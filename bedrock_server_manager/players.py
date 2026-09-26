@@ -255,6 +255,7 @@ def ban_ip(ip, reason="", server_dir=None):
 
                     get_app_logger().warning(f"players.py 发送 ban-ip 命令异常: {e}")
                 except Exception:
+                    # 应用日志记录失败时静默
                     pass
         audit_log("BAN_IP", f"{ip} {reason}", d)
         return True, ""
@@ -284,6 +285,7 @@ def pardon_ip(ip, server_dir=None):
 
                     get_app_logger().warning(f"players.py 发送 pardon-ip 命令异常: {e}")
                 except Exception:
+                    # 应用日志记录失败时静默
                     pass
         audit_log("PARDON_IP", ip, d)
         return True, ""
