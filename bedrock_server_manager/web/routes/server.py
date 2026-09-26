@@ -30,7 +30,8 @@ class ServerRoutesMixin:
             port = int(props.get("server-port", "19132"))
             s = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
             try:
-                s.bind(("0.0.0.0", port))
+                # 绑定本地回环地址检测端口占用（Windows 下 UDP 端口占用检测有效）
+                s.bind(("127.0.0.1", port))
                 port_free = True
             except OSError:
                 port_free = False
@@ -39,8 +40,11 @@ class ServerRoutesMixin:
             if not port_free:
                 self._json({"ok": False, "error": f"端口 {port} 已被占用，请在「服务器配置」中修改 server-port 后重试"})
                 return
-        except Exception:
-            pass
+        except Exception as e:
+            # 端口检测失败不影响启动（实际启动时会再次检测）
+            from ...app_logger import safe_log_exception
+
+            safe_log_exception("routes/server", f"端口占用检测异常: {e}", "debug")
         try:
             p = get_server_proc()
             p.server_dir = d
