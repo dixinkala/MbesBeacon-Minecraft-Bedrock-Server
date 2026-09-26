@@ -72,7 +72,7 @@ class TestAppContextRuntimeState(unittest.TestCase):
         """测试 API token 属性"""
         # api_token 初始值从 state 模块获取或随机生成，应为非空字符串
         self.assertIsInstance(self.ctx.api_token, str)
-        self.assertTrue(len(self.ctx.api_token) > 0)
+        self.assertGreater(len(self.ctx.api_token), 0)
         self.assertTrue(self.ctx.has_api_token)
 
         # 测试设置为空字符串
