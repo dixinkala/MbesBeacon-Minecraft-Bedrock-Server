@@ -15,12 +15,12 @@ import urllib.request
 import webbrowser
 from http.server import ThreadingHTTPServer
 
+from . import state as _state
 from .app_context import AppContext
 from .app_logger import get_app_logger, safe_log_exception
 from .app_update import check_app_update_async
 from .constants import APP_MARKER, APP_TITLE, APP_VERSION, DEFAULT_PORT, LOGS_DIR
 from .server import get_server_proc, server_running
-from . import state as _state
 from .state import migrate_legacy_data
 from .tray import SystemTray
 from .utils import installed, open_browser_with_retry, resolve_server_dir
