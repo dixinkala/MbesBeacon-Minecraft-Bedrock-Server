@@ -53,6 +53,8 @@ ignore = [
 "__init__.py" = ["F401"]  # 未使用的导入（__init__.py 中用于导出）
 "test_*.py" = ["N802"]  # 测试文件放宽要求
 "*_test.py" = ["N802"]
+"run.py" = ["E402"]  # 入口文件：先输出版权信息再导入主模块（有意设计）
+"bedrock_server_manager/state.py" = ["E402"]  # 向后兼容：先定义全局变量再导入 AppContext（有意设计）
 
 [tool.ruff.lint.isort]
 # 导入排序配置

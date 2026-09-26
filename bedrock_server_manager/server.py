@@ -70,6 +70,7 @@ def get_server_port(server_dir: str) -> int:
                 except (ValueError, TypeError):
                     return 19132
     except Exception:
+        # 配置文件不存在或解析失败时返回默认端口 19132
         pass
     return 19132
 
@@ -145,6 +146,8 @@ class ServerProcess:
     def _reader(self):
         proc = self.proc
         settings = _get_settings()
+        # 标记是否已安排自动重启（若为 True，则不触发 on_state(False)，由重启线程接管）
+        auto_restarting = False
         try:
             while True:
                 line = proc.stdout.readline()
@@ -193,7 +196,9 @@ class ServerProcess:
                                 self._emit(f"[系统] 自动重启失败: {e}\n")
 
                         threading.Thread(target=_delayed_restart, args=(backoff,), daemon=True).start()
-                        return  # 不触发 on_state(False)，重启线程会处理
+                        auto_restarting = True
+        # 若已安排自动重启，则由重启线程接管状态，不再通知"已停止"
+        if not auto_restarting:
             self.on_state(False)
 
     @staticmethod
@@ -212,6 +217,7 @@ class ServerProcess:
 
                 get_app_logger().warning(f"server.py on_output 异常: {e}")
             except Exception:
+                # 应用日志不可用时静默，避免二次异常
                 pass
 
     def send(self, cmd):
@@ -232,6 +238,7 @@ class ServerProcess:
 
                 get_app_logger().warning(f"server.py 发送 stop 命令异常: {e}")
             except Exception:
+                # 应用日志不可用时静默，之后会走 kill 兜底
                 pass
         t0 = time.time()
         while self.running and time.time() - t0 < wait:
@@ -251,14 +258,13 @@ class ServerProcess:
 
                         get_app_logger().warning(f"server.py 杀死进程异常: {e}")
                     except Exception:
+                        # 应用日志不可用时静默，进程退出由系统兜底
                         pass
         self.on_state(False)
 
 
 def get_server_proc():
     """获取或创建 ServerProcess 单例。"""
-    settings = _get_settings()
-
     ctx = AppContext.instance()
     settings = ctx.settings
     console = ctx.console
