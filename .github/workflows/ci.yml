@@ -104,7 +104,7 @@ jobs:
         path: dist
 
     - name: 🚀 创建 Release
-      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2 (2024-09-05)
+      uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v2 (2024-09-05)
       with:
         files: dist/MbesBeacon.exe
         generate_release_notes: true
