@@ -160,7 +160,7 @@ def _check_via_html(ignore_ssl=False, timeout=10):
     # 2. 抓取 tag 页面，提取标题 / 发布日期 / 发布说明
     _, page = _http_get(final_url, ignore_ssl=ignore_ssl, timeout=timeout)
     title = ""
-    m = re.search(r"<title>(.*?)</title>", page, re.S)
+    m = _TITLE_RE.search(page)
     if m:
         title = html_lib.unescape(m.group(1)).strip()
         # 去掉 GitHub 页面前缀 "Release " 与后缀 " · 用户名/仓库名"
