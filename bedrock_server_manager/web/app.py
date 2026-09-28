@@ -7,9 +7,15 @@ import time
 
 from ..app_context import AppContext as GlobalAppContext
 from ..backup import backup_worlds, list_backups
-from ..config import load_properties, properties_to_dict, save_properties, validate_config_updates
+from ..config import (
+    backup_config_history,
+    load_properties,
+    properties_to_dict,
+    save_properties,
+    validate_config_updates,
+)
 from ..constants import DEFAULT_PORT
-from ..security import validate_command
+from ..security import audit_log, validate_command
 from ..server import get_server_proc, server_running
 from ..utils import installed, props_path, resolve_server_dir
 
@@ -117,8 +123,17 @@ class AppContext:
         return properties_to_dict(load_properties(p))
 
     def save_config(self, updates):
-        """保存配置更新，返回 (ok, error_msg, failed_field)。"""
+        """保存配置更新，返回 (ok, error_msg, failed_field)。
 
+        统一封装：校验 → 合并写入 → 配置历史备份 → 审计日志。
+        /api/config 路由与内部调用共用，避免重复实现。
+
+        Args:
+            updates: 配置更新字典
+
+        Returns:
+            tuple: (ok, error_msg, failed_field)
+        """
         ok, err, field = validate_config_updates(updates)
         if not ok:
             return False, err, field
@@ -138,7 +153,9 @@ class AppContext:
         for k in cur:
             if k not in seen:
                 merged.append((k, cur[k]))
+        backup_config_history(p)
         save_properties(p, merged)
+        audit_log("CONFIG_SAVE", ",".join(updates.keys()))
         return True, "", ""
 
     def send_command(self, cmd):

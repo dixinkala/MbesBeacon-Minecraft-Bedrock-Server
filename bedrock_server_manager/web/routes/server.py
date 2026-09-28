@@ -9,6 +9,7 @@ from ...config import load_properties, properties_to_dict
 from ...server import get_server_proc
 from ...state import console
 from ...utils import installed, resolve_server_dir
+from ...web.app import AppContext as WebAppContext
 from ..route_decorator import register_route
 
 
@@ -68,13 +69,10 @@ class ServerRoutesMixin:
     @register_route("/api/server/restart")
     def _route_server_restart(self, data):
 
-        try:
-            p = get_server_proc()
-            p.stop()
-            time.sleep(1)
-            p.start()
-            self._json({"ok": True})
-        except Exception as e:
-            self._json({"ok": False, "error": str(e)})
+        ok, err = WebAppContext.instance().restart_server()
+        if not ok:
+            self._json({"ok": False, "error": str(err)})
+            return
+        self._json({"ok": True})
 
         # ---------------- 多世界管理 ----------------
