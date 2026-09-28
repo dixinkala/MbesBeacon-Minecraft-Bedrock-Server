@@ -10,6 +10,7 @@
     is_running = ctx.is_server_running()
 """
 
+import secrets
 import threading
 import time
 from typing import Any, Optional
@@ -22,6 +23,9 @@ class AppContext:
     所有全局状态都通过此容器管理，减少模块间的隐式耦合。
 
     线程安全：所有状态访问都通过锁保护，确保多线程环境下的一致性。
+
+    P1-1 迁移说明：api_token / app_start_time / settings 由本类自行生成与管理，
+    不再依赖 state.py（state 模块通过惰性代理兼容旧引用）。
 
     示例：
         >>> ctx = AppContext.instance()
@@ -36,34 +40,21 @@ class AppContext:
 
     def __init__(self) -> None:
         """初始化应用上下文，所有状态初始化为默认值。"""
-        # 运行时状态
-        # 延迟导入避免循环依赖，直接从 state 模块获取 API_TOKEN
-        try:
-            from .state import API_TOKEN as _state_api_token
-
-            self._api_token: str = _state_api_token
-        except (ImportError, AttributeError):
-            import secrets
-
-            self._api_token: str = secrets.token_hex(16)
+        # 运行时状态（自行生成，不再从 state 模块读取）
+        self._api_token: str = secrets.token_hex(16)
         self._app_start_time: float = time.time()
         self._mutex_handle: Any = None
 
         # 全局单例状态（在各模块中创建后设置）
         self._console: Any = None
         self._install_state: Any = None
-        # 直接引用 state.settings，确保两者是同一个对象
-        try:
-            from .state import settings as _state_settings
-
-            self._settings: dict[str, Any] = _state_settings
-        except (ImportError, AttributeError):
-            self._settings: dict[str, Any] = {
-                "server_dir": "",
-                "ignore_ssl": False,
-                "installed_version": "",
-                "server_dir_history": [],
-            }
+        # 默认设置字典（由本类持有，state.settings 通过惰性代理引用同一对象）
+        self._settings: dict[str, Any] = {
+            "server_dir": "",
+            "ignore_ssl": False,
+            "installed_version": "",
+            "server_dir_history": [],
+        }
         self._server_proc: Any = None
         self._server_lock = threading.Lock()
         self._httpd: Any = None

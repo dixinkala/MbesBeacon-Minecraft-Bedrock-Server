@@ -166,14 +166,13 @@ from .security import (  # noqa: F401
 from .server import ServerProcess, get_server_proc, server_running  # noqa: F401
 
 # 全局状态通过 AppContext 访问（推荐）
-# 以下模块级全局变量保留用于向后兼容，新代码请使用 AppContext.instance()
+# API_TOKEN / app_start_time / settings 通过包级 __getattr__ 惰性代理到
+# AppContext.instance()（见本文件底部），保证与当前实例一致；
+# 以下纯兼容变量保留顶层绑定
 from .state import (  # noqa: F401  # 向后兼容
-    API_TOKEN,
-    app_start_time,
     httpd,
     server_lock,
     server_proc,
-    settings,
 )
 from .tray import SystemTray  # noqa: F401
 from .utils import (  # noqa: F401
@@ -266,3 +265,14 @@ def get_app_context():
 # - API_TOKEN → AppContext.instance().api_token
 # - app_start_time → AppContext.instance().app_start_time
 # - server_lock → AppContext.instance().server_lock
+
+
+def __getattr__(name: str):
+    """P1-1 惰性代理：API_TOKEN / app_start_time / settings 转发到 state 的惰性代理。
+
+    保证 AppContext.reset() 后模块级导出仍与当前实例一致
+    （bsm.API_TOKEN / bsm.app_start_time / bsm.settings）。
+    """
+    if name in ("API_TOKEN", "app_start_time", "settings"):
+        return getattr(_state, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
