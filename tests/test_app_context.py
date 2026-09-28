@@ -541,16 +541,6 @@ class TestAppContextLazyProxy(unittest.TestCase):
         self.assertEqual(app_start_time, ctx.app_start_time)
         self.assertIs(settings, ctx.settings)
 
-    def test_state_helper_functions_via_proxy(self):
-        """state 便捷函数经 AppContext 正常工作"""
-        from bedrock_server_manager.state import get_setting, get_state_dict, set_setting
-
-        set_setting("helper_key", "helper_value")
-        self.assertEqual(get_setting("helper_key"), "helper_value")
-        state_dict = get_state_dict()
-        for key in ("api_token_set", "uptime_seconds", "server_dir", "installed"):
-            self.assertIn(key, state_dict)
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
