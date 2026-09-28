@@ -96,6 +96,7 @@ from .constants import (  # noqa: F401
     APP_TITLE,
     APP_VERSION,
     CDN_TEMPLATE,
+    DANGEROUS_COMMANDS,
     DEFAULT_PORT,
     IS_WINDOWS,
     LINKS_API,
@@ -152,7 +153,6 @@ from .scheduler import (  # noqa: F401
     stop_scheduler,
 )
 from .security import (  # noqa: F401
-    DANGEROUS_COMMANDS,
     DANGEROUS_ENDPOINTS,
     SAFE_COMMANDS,
     audit_log,
