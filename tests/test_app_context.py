@@ -477,11 +477,11 @@ class TestAppContextStateConsistency(unittest.TestCase):
         self.assertEqual(settings.get("test_key"), "value")
 
     def test_app_start_time_matches_state(self):
-        """AppContext.app_start_time 与 state.app_start_time 同源"""
+        """AppContext.app_start_time 与 state.app_start_time 精确同源（批2惰性代理）"""
         from bedrock_server_manager.state import app_start_time
 
         ctx = AppContext.instance()
-        self.assertAlmostEqual(ctx.app_start_time, app_start_time, delta=2.0)
+        self.assertEqual(ctx.app_start_time, app_start_time)
 
     def test_console_synced_after_package_init(self):
         """包初始化后模块级导出与 state 全局变量保持同步（桥接正确性）"""
@@ -499,6 +499,56 @@ class TestAppContextStateConsistency(unittest.TestCase):
 
         self.assertFalse(hasattr(get_routes_mod, "app_start_time"))
         self.assertGreater(AppContext.instance().app_start_time, 0)
+
+
+class TestAppContextLazyProxy(unittest.TestCase):
+    """P1-1 批2 惰性代理测试：state/包导出与 AppContext 保持一致（含 reset 场景）"""
+
+    def setUp(self):
+        AppContext.reset()
+
+    def tearDown(self):
+        AppContext.reset()
+
+    def test_package_api_token_tracks_reset(self):
+        """reset 后 bsm.API_TOKEN 指向新实例（惰性代理，非导入快照）"""
+        import bedrock_server_manager as bsm
+
+        old_token = AppContext.instance().api_token
+        AppContext.reset()
+        ctx = AppContext.instance()
+        self.assertEqual(bsm.API_TOKEN, ctx.api_token)
+        self.assertNotEqual(bsm.API_TOKEN, old_token)
+
+    def test_package_settings_tracks_reset(self):
+        """reset 后 bsm.settings 是新实例的同一对象，写入互见"""
+        import bedrock_server_manager as bsm
+
+        AppContext.reset()
+        ctx = AppContext.instance()
+        self.assertIs(bsm.settings, ctx.settings)
+        bsm.settings["proxy_key"] = "proxy_value"
+        self.assertEqual(ctx.settings.get("proxy_key"), "proxy_value")
+
+    def test_state_proxy_after_reset(self):
+        """reset 后 state.API_TOKEN / settings / app_start_time 与当前实例一致"""
+        import bedrock_server_manager.state as state_mod
+
+        AppContext.reset()
+        ctx = AppContext.instance()
+        self.assertEqual(state_mod.API_TOKEN, ctx.api_token)
+        self.assertEqual(state_mod.app_start_time, ctx.app_start_time)
+        self.assertIs(state_mod.settings, ctx.settings)
+
+    def test_state_helper_functions_via_proxy(self):
+        """state 便捷函数经 AppContext 正常工作"""
+        from bedrock_server_manager.state import get_setting, get_state_dict, set_setting
+
+        set_setting("helper_key", "helper_value")
+        self.assertEqual(get_setting("helper_key"), "helper_value")
+        state_dict = get_state_dict()
+        for key in ("api_token_set", "uptime_seconds", "server_dir", "installed"):
+            self.assertIn(key, state_dict)
 
 
 if __name__ == "__main__":
