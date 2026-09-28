@@ -273,6 +273,98 @@ class TestScheduledTasksPersistence(unittest.TestCase):
 
         settings["server_dir"] = ""
 
+    def test_load_cache_reuse_when_unchanged(self):
+        """文件未变化时复用缓存（同一对象，不重复读盘）"""
+        from bedrock_server_manager import settings
+        from bedrock_server_manager.scheduler import load_scheduled_tasks, save_scheduled_tasks
+
+        settings["server_dir"] = self.server_dir
+        tasks = [{"id": "daily_restart", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"}]
+        save_scheduled_tasks(tasks)
+        first = load_scheduled_tasks()
+        second = load_scheduled_tasks()
+        self.assertIs(first, second)
+        settings["server_dir"] = ""
+
+    def test_load_reparses_after_external_change(self):
+        """外部修改文件（mtime 变化）后缓存失效并重新解析"""
+        from bedrock_server_manager import settings
+        from bedrock_server_manager.scheduler import SCHEDULED_TASKS_FILE, load_scheduled_tasks, save_scheduled_tasks
+
+        settings["server_dir"] = self.server_dir
+        save_scheduled_tasks(
+            [{"id": "daily_restart", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"}]
+        )
+        load_scheduled_tasks()
+        # 外部直接改写文件并更新 mtime
+        file_path = os.path.join(self.server_dir, SCHEDULED_TASKS_FILE)
+        with open(file_path, "w", encoding="utf-8") as f:
+            import json
+
+            json.dump(
+                [
+                    {
+                        "id": "hourly_announce",
+                        "type": "announce",
+                        "enabled": True,
+                        "schedule_type": "hourly",
+                        "message": "hi",
+                    }
+                ],
+                f,
+            )
+        os.utime(file_path, ns=(1700000000123456789, 1700000000123456789))
+        loaded = load_scheduled_tasks()
+        self.assertEqual(len(loaded), 1)
+        self.assertEqual(loaded[0]["id"], "hourly_announce")
+        settings["server_dir"] = ""
+
+    def test_load_after_save_returns_new_tasks(self):
+        """save 后 load 立即返回新任务（写后同步缓存）"""
+        from bedrock_server_manager import settings
+        from bedrock_server_manager.scheduler import load_scheduled_tasks, save_scheduled_tasks
+
+        settings["server_dir"] = self.server_dir
+        save_scheduled_tasks(
+            [{"id": "daily_restart", "type": "restart", "enabled": True, "schedule_type": "daily", "time": "04:00"}]
+        )
+        save_scheduled_tasks(
+            [
+                {
+                    "id": "interval_backup",
+                    "type": "backup",
+                    "enabled": True,
+                    "schedule_type": "interval",
+                    "interval_hours": 6,
+                }
+            ]
+        )
+        loaded = load_scheduled_tasks()
+        self.assertEqual(len(loaded), 1)
+        self.assertEqual(loaded[0]["id"], "interval_backup")
+        settings["server_dir"] = ""
+
+    def test_load_missing_file_returns_empty(self):
+        """文件不存在时返回空列表并清空缓存"""
+        from bedrock_server_manager import settings
+        from bedrock_server_manager.scheduler import load_scheduled_tasks
+
+        settings["server_dir"] = self.server_dir
+        self.assertEqual(load_scheduled_tasks(), [])
+        settings["server_dir"] = ""
+
+    def test_load_corrupted_json_returns_empty(self):
+        """JSON 损坏时返回空列表且不抛异常"""
+        from bedrock_server_manager import settings
+        from bedrock_server_manager.scheduler import SCHEDULED_TASKS_FILE, load_scheduled_tasks
+
+        settings["server_dir"] = self.server_dir
+        file_path = os.path.join(self.server_dir, SCHEDULED_TASKS_FILE)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("{invalid json!!!")
+        self.assertEqual(load_scheduled_tasks(), [])
+        settings["server_dir"] = ""
+
 
 class TestSchedulerLifecycle(unittest.TestCase):
     """测试调度器的启动和停止"""
