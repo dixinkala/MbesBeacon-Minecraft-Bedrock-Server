@@ -32,7 +32,6 @@ from ...players import (
     send_command_capture,
 )
 from ...server import get_server_proc, server_running
-from ...state import app_start_time
 from ...utils import (
     browse_directory,
     detect_servers,
@@ -74,7 +73,7 @@ class GetRoutesMixin:
         except Exception:
             # 获取进程信息失败时使用默认值
             pass
-        uptime = time.time() - app_start_time
+        uptime = time.time() - AppContext.instance().app_start_time
 
         self._json(
             {

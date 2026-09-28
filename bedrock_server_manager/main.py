@@ -15,7 +15,6 @@ import urllib.request
 import webbrowser
 from http.server import ThreadingHTTPServer
 
-from . import state as _state
 from .app_context import AppContext
 from .app_logger import get_app_logger, safe_log_exception
 from .app_update import check_app_update_async
@@ -38,15 +37,11 @@ def _main():
         # 日志记录失败时静默，避免掩盖主流程
         pass
 
-    # 同步模块级全局变量到 AppContext（确保全局状态一致）
+    # 应用初始化状态：port 与初始化标记
+    # 说明：api_token / console / install_state / settings 等状态在
+    # AppContext.__init__ 与包 __init__ 中已与 state 保持同步，此处无需重复赋值
     with contextlib.suppress(Exception):
         ctx = AppContext.instance()
-        ctx.api_token = _state.API_TOKEN
-        ctx.console = _state.console
-        ctx.install_state = _state.install_state
-        ctx.settings = _state.settings
-        ctx.server_proc = _state.server_proc
-        ctx.httpd = _state.httpd
         ctx.port = DEFAULT_PORT
         ctx.mark_initialized()
 

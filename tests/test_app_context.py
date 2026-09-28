@@ -450,5 +450,56 @@ class TestAppContextRepr(unittest.TestCase):
         self.assertIn("19101", repr_str)
 
 
+class TestAppContextStateConsistency(unittest.TestCase):
+    """P1-1 状态迁移一致性测试：AppContext 与 state 全局变量保持同步"""
+
+    def setUp(self):
+        AppContext.reset()
+
+    def tearDown(self):
+        AppContext.reset()
+
+    def test_api_token_matches_state(self):
+        """AppContext 的 api_token 与 state.API_TOKEN 一致（迁移后仍同源）"""
+        from bedrock_server_manager.state import API_TOKEN
+
+        ctx = AppContext.instance()
+        self.assertEqual(ctx.api_token, API_TOKEN)
+
+    def test_settings_is_same_object_as_state(self):
+        """AppContext.settings 与 state.settings 是同一对象（单一数据源）"""
+        from bedrock_server_manager.state import settings
+
+        ctx = AppContext.instance()
+        self.assertIs(ctx.settings, settings)
+        # 通过 AppContext 写入后 state 可见
+        ctx.set_setting("test_key", "value")
+        self.assertEqual(settings.get("test_key"), "value")
+
+    def test_app_start_time_matches_state(self):
+        """AppContext.app_start_time 与 state.app_start_time 同源"""
+        from bedrock_server_manager.state import app_start_time
+
+        ctx = AppContext.instance()
+        self.assertAlmostEqual(ctx.app_start_time, app_start_time, delta=2.0)
+
+    def test_console_synced_after_package_init(self):
+        """包初始化后模块级导出与 state 全局变量保持同步（桥接正确性）"""
+        import bedrock_server_manager as bsm
+        from bedrock_server_manager.state import console, install_state
+
+        self.assertIsNotNone(bsm.console)
+        self.assertIsNotNone(bsm.install_state)
+        self.assertIs(bsm.console, console)
+        self.assertIs(bsm.install_state, install_state)
+
+    def test_health_route_uses_context_app_start_time(self):
+        """health 路由应使用 AppContext.app_start_time（不再依赖 state 直接引用）"""
+        import bedrock_server_manager.web.routes.get_routes as get_routes_mod
+
+        self.assertFalse(hasattr(get_routes_mod, "app_start_time"))
+        self.assertGreater(AppContext.instance().app_start_time, 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
