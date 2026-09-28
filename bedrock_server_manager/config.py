@@ -122,9 +122,22 @@ def detect_file_encoding(filepath: str) -> str:
 
 def load_properties(filepath: str) -> list[tuple[str, str]]:
     """加载 server.properties 文件，返回 [(key, value), ...]。
-    注释和空行会被跳过。"""
+    注释和空行会被跳过。
+
+    P2-2：基于文件 mtime（纳秒）+ size 缓存解析结果——文件未变化时
+    复用缓存，避免高频路由（/api/config 等）重复读盘解析。
+    所有调用方均只读返回值，缓存引用可安全复用。
+    """
     if not os.path.isfile(filepath):
         return []
+    try:
+        stat = os.stat(filepath)
+        stat_key = (stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        return []
+    cached = _properties_cache.get(filepath)
+    if cached is not None and cached[0] == stat_key:
+        return cached[1]
     enc = detect_file_encoding(filepath)
     items = []
     try:
@@ -138,7 +151,12 @@ def load_properties(filepath: str) -> list[tuple[str, str]]:
                     items.append((key.strip(), value.strip()))
     except Exception:
         return []
+    _properties_cache[filepath] = (stat_key, items)
     return items
+
+
+# server.properties 解析缓存：filepath -> (stat_key, items)
+_properties_cache: dict = {}
 
 
 def save_properties(filepath: str, items: list[tuple[str, str]]) -> bool:

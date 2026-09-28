@@ -219,6 +219,50 @@ class TestPropertiesIO(unittest.TestCase):
         d = bsm.properties_to_dict(items)
         self.assertEqual(d, {"a": "1", "b": "2"})
 
+    def test_load_properties_cache_reuse(self):
+        """文件未变化时复用缓存（同一对象，不重复读盘解析）"""
+        with open(self.props_path, "w", encoding="utf-8") as f:
+            f.write("server-name=Test Server\nmax-players=10\n")
+        items1 = bsm.load_properties(self.props_path)
+        items2 = bsm.load_properties(self.props_path)
+        self.assertIs(items1, items2)
+
+    def test_load_properties_cache_invalidated_on_change(self):
+        """文件内容变化（mtime/size 变化）后缓存失效并重新解析"""
+        with open(self.props_path, "w", encoding="utf-8") as f:
+            f.write("server-name=Old\nmax-players=10\n")
+        bsm.load_properties(self.props_path)
+        with open(self.props_path, "w", encoding="utf-8") as f:
+            f.write("server-name=New\nmax-players=20\n")
+        # 显式更新 mtime，模拟外部修改（低精度文件系统上写入可能不改变 mtime）
+        os.utime(self.props_path, ns=(1700000000123456789, 1700000000123456789))
+        items = bsm.load_properties(self.props_path)
+        d = bsm.properties_to_dict(items)
+        self.assertEqual(d["server-name"], "New")
+        self.assertEqual(d["max-players"], "20")
+
+    def test_load_properties_cache_same_size_different_content(self):
+        """相同 size 但 mtime 变化的文件仍能正确失效（mtime_ns 精度）"""
+        with open(self.props_path, "w", encoding="utf-8") as f:
+            f.write("server-name=AAA\nmax-players=10\n")
+        bsm.load_properties(self.props_path)
+        # 写入同长度不同内容，并显式修改 mtime（纳秒），不依赖文件系统时钟精度
+        with open(self.props_path, "w", encoding="utf-8") as f:
+            f.write("server-name=BBB\nmax-players=10\n")
+        os.utime(self.props_path, ns=(1700000000123456789, 1700000000123456789))
+        items = bsm.load_properties(self.props_path)
+        self.assertEqual(bsm.properties_to_dict(items)["server-name"], "BBB")
+
+    def test_save_properties_invalidates_cache(self):
+        """save_properties 写入后 load 读到新值（mtime 变化自动失效）"""
+        with open(self.props_path, "w", encoding="utf-8") as f:
+            f.write("server-name=Old\nmax-players=10\n")
+        bsm.load_properties(self.props_path)
+        bsm.save_properties(self.props_path, [("server-name", "Updated"), ("max-players", "20")])
+        items = bsm.load_properties(self.props_path)
+        d = bsm.properties_to_dict(items)
+        self.assertEqual(d["server-name"], "Updated")
+
 
 class TestParseOnlinePlayers(unittest.TestCase):
     """在线玩家解析"""
