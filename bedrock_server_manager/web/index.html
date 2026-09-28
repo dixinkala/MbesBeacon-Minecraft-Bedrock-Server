@@ -302,7 +302,7 @@
         <span class="hint" id="consoleState"></span>
       </div>
       <div class="console" id="consoleBox"></div>
-      
+
       <div style="display:flex;gap:8px;margin-bottom:8px;">
         <input type="text" id="consoleSearch" class="input" placeholder="🔍 搜索日志..." oninput="filterConsole()" style="flex:1;">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;">
@@ -461,7 +461,7 @@
     </div>
   </div>
 
-  
+
   <!-- 性能监控 -->
   <div class="page" id="page-monitor">
     <div class="card">
@@ -2244,10 +2244,10 @@ async function loadPacks(){
   try{
     const r=await jget('/api/packs');
     const c=$('packsContent');
-    if(!r || !r.ok){ 
+    if(!r || !r.ok){
       const errMsg = (r && r.error) ? r.error : '服务器未配置或请求失败';
-      c.innerHTML='<div class="hint" style="padding:12px;">📦 包列表加载失败：'+errMsg+'<br>请先安装服务器并设置服务器目录。</div>'; 
-      return; 
+      c.innerHTML='<div class="hint" style="padding:12px;">📦 包列表加载失败：'+errMsg+'<br>请先安装服务器并设置服务器目录。</div>';
+      return;
     }
     const packs=r.packs||{};
     let html='';
@@ -2258,9 +2258,9 @@ async function loadPacks(){
     if((packs.behavior_packs||[]).length===0) html+='<div class="hint">未安装行为包</div>';
     else (packs.behavior_packs||[]).forEach(p=>{ html+='<div class="field" style="padding:8px 12px;margin-bottom:4px;border-radius:6px;background:var(--bg2);"><strong>'+p.name+'</strong> <span class="hint">v'+(p.version||'?')+'</span></div>'; });
     c.innerHTML=html;
-  }catch(e){ 
+  }catch(e){
     const errMsg = e.message ? e.message : String(e);
-    $('packsContent').innerHTML='<div class="hint" style="padding:12px;">📦 包列表加载失败：'+errMsg+'<br>请先安装服务器并设置服务器目录。</div>'; 
+    $('packsContent').innerHTML='<div class="hint" style="padding:12px;">📦 包列表加载失败：'+errMsg+'<br>请先安装服务器并设置服务器目录。</div>';
   }
 }
 

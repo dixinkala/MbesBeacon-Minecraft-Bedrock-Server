@@ -5,8 +5,9 @@
 
 repos:
   # Ruff: 代码规范检查与格式化
+  # rev 与 requirements.txt 锁定的 ruff==0.16.6 保持一致
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.0
+    rev: v0.16.6
     hooks:
       - id: ruff
         name: ruff (lint)
@@ -24,7 +25,7 @@ repos:
 
   # 尾随空白检查
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         name: 移除尾随空白
@@ -66,10 +67,10 @@ repos:
       - id: run-tests
         name: 运行单元测试
         description: "提交前运行单元测试"
-        entry: python -m pytest test_unit.py -q
+        entry: python -m pytest tests/test_unit.py -q
         language: system
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
         always_run: false
 
 # 配置
