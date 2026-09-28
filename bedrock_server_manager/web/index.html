@@ -1927,7 +1927,7 @@ window.onCmdKeydown=(e)=>{
 };
 
 const cmdHistory=[]; let cmdHistIdx=-1;
-const DANGEROUS_CMDS=['stop','kill','ban','pardon','deop'];
+const DANGEROUS_CMDS=['stop','kill','ban','pardon','deop','restart'];
 function sendCmd(){
   const c=$('inCmd').value.trim();
   if(!c){ showAlert('请输入指令','warn'); return; }
