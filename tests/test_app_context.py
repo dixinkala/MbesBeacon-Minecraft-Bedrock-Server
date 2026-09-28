@@ -532,13 +532,14 @@ class TestAppContextLazyProxy(unittest.TestCase):
 
     def test_state_proxy_after_reset(self):
         """reset 后 state.API_TOKEN / settings / app_start_time 与当前实例一致"""
-        import bedrock_server_manager.state as state_mod
-
         AppContext.reset()
         ctx = AppContext.instance()
-        self.assertEqual(state_mod.API_TOKEN, ctx.api_token)
-        self.assertEqual(state_mod.app_start_time, ctx.app_start_time)
-        self.assertIs(state_mod.settings, ctx.settings)
+        # 注意：from-import 在 reset 之后执行，取到的即当前实例的值
+        from bedrock_server_manager.state import API_TOKEN, app_start_time, settings
+
+        self.assertEqual(API_TOKEN, ctx.api_token)
+        self.assertEqual(app_start_time, ctx.app_start_time)
+        self.assertIs(settings, ctx.settings)
 
     def test_state_helper_functions_via_proxy(self):
         """state 便捷函数经 AppContext 正常工作"""
