@@ -16,21 +16,38 @@ from .server import get_server_proc, server_running
 from .utils import resolve_server_dir
 
 _scheduled_tasks = []
+_scheduled_tasks_stat = None  # (st_mtime_ns, st_size)：文件未变化时复用缓存
 _scheduler_stop = threading.Event()
 _scheduler_thread = None
 
 
 def load_scheduled_tasks():
-    """加载定时任务配置。"""
-    global _scheduled_tasks
+    """加载定时任务配置。
+
+    P2-3：基于文件 mtime（纳秒）+ size 缓存——调度循环每 30 秒调用一次，
+    文件未变化时复用内存缓存，避免重复读盘解析。
+    """
+    global _scheduled_tasks, _scheduled_tasks_stat
     try:
         d = resolve_server_dir()
         if not d:
             return []
         p = os.path.join(d, SCHEDULED_TASKS_FILE)
-        if os.path.exists(p):
-            with open(p, encoding="utf-8") as f:
-                _scheduled_tasks = json.load(f)
+        if not os.path.exists(p):
+            _scheduled_tasks = []
+            _scheduled_tasks_stat = None
+            return _scheduled_tasks
+        try:
+            stat = os.stat(p)
+            stat_key = (stat.st_mtime_ns, stat.st_size)
+        except OSError:
+            return _scheduled_tasks
+        if _scheduled_tasks_stat == stat_key:
+            return _scheduled_tasks
+        with open(p, encoding="utf-8") as f:
+            loaded = json.load(f)
+        _scheduled_tasks = loaded
+        _scheduled_tasks_stat = stat_key
         return _scheduled_tasks
     except (json.JSONDecodeError, PermissionError, OSError) as e:
         safe_log_exception("scheduler.py", f"加载定时任务失败: {e}", "warning")
@@ -98,7 +115,7 @@ def validate_scheduled_tasks(tasks):
 
 def save_scheduled_tasks(tasks):
     """保存定时任务配置（保存前校验格式）。"""
-    global _scheduled_tasks
+    global _scheduled_tasks, _scheduled_tasks_stat
     # 保存前校验格式
     ok, err, valid_tasks = validate_scheduled_tasks(tasks)
     if not ok:
@@ -110,7 +127,13 @@ def save_scheduled_tasks(tasks):
         p = os.path.join(d, SCHEDULED_TASKS_FILE)
         with open(p, "w", encoding="utf-8") as f:
             json.dump(valid_tasks, f, indent=2, ensure_ascii=False)
+        # 同步缓存：内容已知为 valid_tasks，写后更新 stat 避免下次重复读盘
         _scheduled_tasks = valid_tasks
+        try:
+            stat = os.stat(p)
+            _scheduled_tasks_stat = (stat.st_mtime_ns, stat.st_size)
+        except OSError:
+            _scheduled_tasks_stat = None
         return True, ""
     except (PermissionError, OSError, TypeError) as e:
         safe_log_exception("scheduler.py", f"保存定时任务失败: {e}", "warning")
