@@ -10,23 +10,16 @@ import threading
 from ...app_context import AppContext
 from ...app_update import check_app_update
 from ...backup import backup_worlds, delete_server
-from ...config import (
-    backup_config_history,
-    load_properties,
-    properties_to_dict,
-    save_properties,
-    validate_config_updates,
-)
 from ...install import do_install, get_latest_server_info, select_server_dir
 from ...players import add_allowlist, remove_allowlist, validate_player_name
-from ...security import audit_log, check_dangerous_operation, validate_custom_url
+from ...security import check_dangerous_operation, validate_custom_url
 from ...server import get_server_proc, server_running
 from ...utils import (
     installed,
-    props_path,
     resolve_server_dir,
     save_settings,
 )
+from ...web.app import AppContext as WebAppContext
 from ..route_decorator import register_post_route
 
 
@@ -134,31 +127,14 @@ class PostExtraRoutesMixin:
     @register_post_route("/api/config")
     def _post_config(self, data):
 
-        p = props_path()
-        if not p:
-            self._json({"ok": False, "error": "尚未安装服务器"})
-            return
         updates = data.get("data") or {}
-        ok, err, failed_field = validate_config_updates(updates)
+        ok, err, failed_field = WebAppContext.instance().save_config(updates)
         if not ok:
-            self._json({"ok": False, "error": f"配置校验失败：{err}", "failed_field": failed_field})
+            if failed_field:
+                self._json({"ok": False, "error": f"配置校验失败：{err}", "failed_field": failed_field})
+            else:
+                self._json({"ok": False, "error": err})
             return
-        items = load_properties(p)
-        cur = properties_to_dict(items)
-        for k, v in updates.items():
-            cur[k] = str(v)
-        seen = set()
-        merged = []
-        for k, _v in items:
-            if k in cur:
-                merged.append((k, cur[k]))
-                seen.add(k)
-        for k in cur:
-            if k not in seen:
-                merged.append((k, cur[k]))
-        backup_config_history(p)
-        save_properties(p, merged)
-        audit_log("CONFIG_SAVE", ",".join(updates.keys()))
         self._json({"ok": True})
 
     @register_post_route("/api/server/delete")
