@@ -27,9 +27,7 @@ import functools
 import inspect
 import threading
 from collections.abc import Callable
-from typing import Any, TypeVar, cast
-
-T = TypeVar("T")
+from typing import Any, cast
 
 
 class DIContainer:
