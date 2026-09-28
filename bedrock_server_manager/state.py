@@ -30,6 +30,11 @@ mutex_handle = None
 
 # ---------------- 全局单例状态 ----------------
 # 注意：以下对象在各模块中创建后赋值到此处，供全局访问
+# 【P1-1 迁移说明】这些状态已统一由 AppContext.instance() 管理：
+#   console / install_state / settings → 包 __init__ 创建后同步到 AppContext 与 state
+#   server_proc / httpd / server_lock / mutex_handle → 业务代码全部经 AppContext 读写，
+#      此处保留仅为向后兼容（state.* 中从未写入真实值）
+# 新代码一律使用 AppContext.instance()，不再直接读写本模块全局变量
 console = None  # ConsoleBuffer 实例（在 console.py 中创建）
 install_state = None  # InstallState 实例（在 install.py 中创建）
 settings = {  # 全局设置字典
@@ -38,9 +43,9 @@ settings = {  # 全局设置字典
     "installed_version": "",
     "server_dir_history": [],
 }
-server_proc = None  # ServerProcess 单例（在 server.py 中管理）
-server_lock = threading.Lock()  # 服务器进程锁
-httpd = None  # HTTP 服务器实例（在 main.py 中创建）
+server_proc = None  # ServerProcess 单例（已由 AppContext 管理，此处兼容保留）
+server_lock = threading.Lock()  # 服务器进程锁（已由 AppContext 管理，此处兼容保留）
+httpd = None  # HTTP 服务器实例（已由 AppContext 管理，此处兼容保留）
 
 # 玩家名校验正则
 

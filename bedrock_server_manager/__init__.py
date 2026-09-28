@@ -221,9 +221,11 @@ from .worlds import (  # noqa: F401
 
 _global_ctx = _GlobalAppContext.instance()
 
-if _global_ctx.console is None:
+# 注意：console / install_state 为 property，未设置时返回 Null 对象而非 None，
+# 必须使用 has_console / has_install_state 判断（修复 ConsoleBuffer 从未创建的问题）
+if not _global_ctx.has_console:
     _global_ctx.console = _ConsoleBuffer()
-if _global_ctx.install_state is None:
+if not _global_ctx.has_install_state:
     _global_ctx.install_state = _InstallState()
 
 # 同步到 state.py（保持向后兼容）
