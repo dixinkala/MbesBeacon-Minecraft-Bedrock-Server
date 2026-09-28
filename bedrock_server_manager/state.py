@@ -2,13 +2,19 @@
 核心状态模块：集中管理所有模块级全局变量，避免循环导入。
 其他模块通过 `from .state import *` 或具体导入访问全局状态。
 常量已移至 constants.py，此处保留向后兼容导入。
+
+【P1-1 迁移说明（批 2）】
+- API_TOKEN / app_start_time / settings 已由 AppContext 自行生成与管理，
+  本模块通过模块级 __getattr__ 惰性代理到 AppContext.instance()，
+  保证 reset 后仍与当前实例保持一致。
+- console / install_state 由包 __init__ 创建后同步到此处（镜像）。
+- server_proc / httpd / server_lock / mutex_handle 仅为向后兼容保留。
+新代码一律使用 AppContext.instance()。
 """
 
 import os
 import re
-import secrets as _secrets
 import threading
-import time
 
 from .app_logger import safe_log_exception
 
@@ -19,33 +25,37 @@ from .constants import (
     LOGS_DIR,
 )
 
-# API 安全 token：启动时随机生成，用于 CSRF 防护
-API_TOKEN = _secrets.token_hex(16)
-
-# 应用启动时间戳，用于健康检查
-app_start_time = time.time()
-
 # 单实例互斥量句柄，退出时释放
 mutex_handle = None
 
 # ---------------- 全局单例状态 ----------------
 # 注意：以下对象在各模块中创建后赋值到此处，供全局访问
-# 【P1-1 迁移说明】这些状态已统一由 AppContext.instance() 管理：
-#   console / install_state / settings → 包 __init__ 创建后同步到 AppContext 与 state
-#   server_proc / httpd / server_lock / mutex_handle → 业务代码全部经 AppContext 读写，
-#      此处保留仅为向后兼容（state.* 中从未写入真实值）
-# 新代码一律使用 AppContext.instance()，不再直接读写本模块全局变量
+# console / install_state 由包 __init__ 创建后同步到 AppContext 与 state（镜像）
+# server_proc / httpd / server_lock / mutex_handle 仅向后兼容保留（从未写入真实值）
 console = None  # ConsoleBuffer 实例（在 console.py 中创建）
 install_state = None  # InstallState 实例（在 install.py 中创建）
-settings = {  # 全局设置字典
-    "server_dir": "",
-    "ignore_ssl": False,
-    "installed_version": "",
-    "server_dir_history": [],
-}
 server_proc = None  # ServerProcess 单例（已由 AppContext 管理，此处兼容保留）
 server_lock = threading.Lock()  # 服务器进程锁（已由 AppContext 管理，此处兼容保留）
 httpd = None  # HTTP 服务器实例（已由 AppContext 管理，此处兼容保留）
+
+
+def __getattr__(name: str):
+    """P1-1 惰性代理：API_TOKEN / app_start_time / settings 转发到 AppContext。
+
+    使用模块级 __getattr__（PEP 562）而非模块加载时绑定，确保
+    AppContext.reset() 之后旧引用仍指向当前实例的状态。
+    """
+    if name in ("API_TOKEN", "app_start_time", "settings"):
+        from .app_context import AppContext  # 函数内延迟导入，避免循环依赖
+
+        ctx = AppContext.instance()
+        if name == "API_TOKEN":
+            return ctx.api_token
+        if name == "app_start_time":
+            return ctx.app_start_time
+        return ctx.settings
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 # 玩家名校验正则
 
@@ -115,8 +125,15 @@ def migrate_legacy_data():
 
 
 # ---------------- 便捷函数 ----------------
-# 以下便捷函数直接操作本模块的模块级全局变量，保持向后兼容。
+# 以下便捷函数直接操作 AppContext 的全局状态，保持向后兼容。
 # 新代码请使用 AppContext.instance() 访问全局状态。
+
+
+def _ctx():
+    """获取全局 AppContext 实例（函数内延迟导入，避免循环依赖）。"""
+    from .app_context import AppContext
+
+    return AppContext.instance()
 
 
 def log(text: str) -> None:
@@ -166,7 +183,7 @@ def get_setting(key: str, default=None):
     Returns:
         设置值，如果不存在则返回默认值
     """
-    return settings.get(key, default)
+    return _ctx().settings.get(key, default)
 
 
 def set_setting(key: str, value) -> None:
@@ -176,7 +193,7 @@ def set_setting(key: str, value) -> None:
         key: 设置键名
         value: 设置值
     """
-    settings[key] = value
+    _ctx().settings[key] = value
 
 
 def get_state_dict() -> dict:
@@ -185,9 +202,10 @@ def get_state_dict() -> dict:
     Returns:
         状态字典
     """
+    ctx = _ctx()
     return {
-        "api_token_set": bool(API_TOKEN),
-        "uptime_seconds": round(time.time() - app_start_time, 2),
-        "server_dir": settings.get("server_dir", ""),
-        "installed": bool(settings.get("installed_version", "")),
+        "api_token_set": bool(ctx.api_token),
+        "uptime_seconds": round(ctx.uptime_seconds, 2),
+        "server_dir": ctx.settings.get("server_dir", ""),
+        "installed": bool(ctx.settings.get("installed_version", "")),
     }
