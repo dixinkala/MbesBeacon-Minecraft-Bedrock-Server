@@ -8,6 +8,8 @@ import threading
 import time
 from collections import deque
 
+import psutil
+
 from .players import parse_online_players, safe_log_exception
 
 
@@ -29,6 +31,9 @@ class PerformanceMonitor:
         self._last_tick_time = None
         self._tick_count = 0
         self._current_tps = 0.0
+        # P2-1 增量读取：记录上次控制台读取位置与玩家快照，避免每 5 秒全文扫描
+        self._last_console_idx = 0
+        self._players_snapshot = 0
 
     def collect(self, server_proc=None, console=None):
         """收集一次性能数据。
@@ -76,9 +81,9 @@ class PerformanceMonitor:
                 safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
             # 获取 CPU 和内存使用情况
+            # psutil 为锁定运行时依赖（requirements.txt）；psutil.Error 覆盖
+            # NoSuchProcess/AccessDenied，进程刚退出时采集不崩溃
             try:
-                import psutil
-
                 p = psutil.Process(pid)
                 data["cpu_percent"] = round(
                     p.cpu_percent(interval=None), 1
@@ -89,44 +94,45 @@ class PerformanceMonitor:
                 try:
                     total_mem = psutil.virtual_memory().total
                     data["memory_percent"] = round(mem_info.rss / total_mem * 100, 1)
-                except (OSError, ValueError, AttributeError) as e:
+                except (OSError, ValueError, AttributeError, psutil.Error) as e:
                     safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
-            except ImportError:
-                # psutil 不可用，使用 tasklist 作为后备（Windows）
+            except (OSError, ValueError, AttributeError, psutil.Error) as e:
+                safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
+
+            # 获取在线玩家数与 TPS（增量读取控制台日志，不全文扫描）
+            # P2-1：仅读取自上次采集以来的新增日志；玩家列表为完整快照输出，
+            # 解析到新快照则更新，否则沿用上次值（保持与全文解析等效）。
+            recent_text = ""
+            if console is not None:
                 try:
-                    import subprocess
-
-                    result = subprocess.run(
-                        ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
-                        capture_output=True,
-                        text=True,
-                        timeout=5,
-                    )
-                    if result.stdout and "," in result.stdout:
-                        parts = result.stdout.strip().split(",")
-                        if len(parts) >= 5:
-                            mem_str = parts[4].strip('"').replace(" K", "").replace(",", "")
-                            data["memory_mb"] = round(int(mem_str) / 1024, 1)
+                    recent_text, new_idx = console.read_since(self._last_console_idx)
+                    if new_idx < self._last_console_idx:
+                        # 控制台被清空或截断导致索引失效：从头重读
+                        recent_text, new_idx = console.read_since(0)
+                    self._last_console_idx = new_idx
                 except (OSError, ValueError, AttributeError) as e:
                     safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
-            # 获取在线玩家数
+            # 在线玩家数
             try:
                 # 尝试从服务器进程获取在线玩家列表
                 if hasattr(server_proc, "get_online_players"):
                     online = server_proc.get_online_players()
-                    data["players"] = len(online) if online else 0
+                    if online:
+                        self._players_snapshot = len(online)
+                    data["players"] = self._players_snapshot
                 else:
-                    # 从控制台日志解析最近的玩家列表
+                    # 从控制台日志增量解析玩家列表（快照保持）
                     if console is not None:
-                        recent_text, _ = console.read_since(0)
                         online = parse_online_players(recent_text)
-                        data["players"] = len(online) if online else 0
+                        if online:
+                            self._players_snapshot = len(online)
+                        data["players"] = self._players_snapshot
             except (OSError, ValueError, AttributeError) as e:
                 safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
-            # 解析 TPS（从控制台日志）
-            data["tps"] = self._parse_tps(console)
+            # 解析 TPS（从增量控制台日志；BDS 默认无 TPS 输出时返回 0）
+            data["tps"] = self._parse_tps(recent_text)
 
         except (OSError, ValueError, AttributeError) as e:
             safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
@@ -136,18 +142,17 @@ class PerformanceMonitor:
 
         return data
 
-    def _parse_tps(self, console=None):
-        """从控制台日志解析 TPS（每秒刻数）。
+    def _parse_tps(self, recent_text=None):
+        """从控制台日志增量文本解析 TPS（每秒刻数）。
 
         注意：Minecraft 基岩版专用服务器（BDS）默认不输出 TPS 信息到控制台，
         因此 TPS 字段通常为 0。如果未来 BDS 版本支持 TPS 输出，此方法会自动解析。
         支持的格式："TPS: 20.0"、"ticks per second: 20.0"、"Average tick time: 50ms"。
         """
-        if console is None:
+        if recent_text is None or recent_text == "":
             return self._current_tps
 
         try:
-            recent_text, _ = console.read_since(max(0, len(console.lines) - 50))
             # 匹配 TPS 相关输出（BDS 目前不支持，预留解析能力）
             tps_patterns = [
                 r"TPS[:\s]+([\d.]+)",
@@ -254,6 +259,8 @@ class PerformanceMonitor:
         with self._lock:
             self._history.clear()
             self._current_tps = 0.0
+            self._last_console_idx = 0
+            self._players_snapshot = 0
 
 
 # 全局性能监控器实例
