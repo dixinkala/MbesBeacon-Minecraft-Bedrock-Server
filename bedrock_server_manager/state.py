@@ -3,11 +3,10 @@
 其他模块通过 `from .state import *` 或具体导入访问全局状态。
 常量已移至 constants.py，此处保留向后兼容导入。
 
-【P1-1 迁移说明（批 3）】
-- API_TOKEN / app_start_time / settings 已由 AppContext 自行生成与管理，
-  本模块通过模块级 __getattr__ 惰性代理到 AppContext.instance()，
-  保证 reset 后仍与当前实例保持一致。
-- console / install_state 由包 __init__ 创建后同步到此处（镜像）。
+【P1-1 迁移说明（批 4）】
+- API_TOKEN / app_start_time / settings / console / install_state 已由
+  AppContext 自行生成与管理，本模块通过模块级 __getattr__ 惰性代理到
+  AppContext.instance()，保证 reset 后仍与当前实例保持一致。
 - server_proc / httpd / server_lock 仅为向后兼容保留（从未写入真实值）。
 - 便捷函数与死代码已清理（log*/get_setting/set_setting/get_state_dict、
   PLAYER_NAME_RE、mutex_handle 均无引用）。
@@ -27,23 +26,21 @@ from .constants import (
 )
 
 # ---------------- 全局单例状态 ----------------
-# 注意：以下对象在各模块中创建后赋值到此处，供全局访问
-# console / install_state 由包 __init__ 创建后同步到 AppContext 与 state（镜像）
+# console / install_state 经 __getattr__ 惰性代理（见下方），不再定义模块级变量
 # server_proc / httpd / server_lock 仅向后兼容保留（从未写入真实值）
-console = None  # ConsoleBuffer 实例（在 console.py 中创建）
-install_state = None  # InstallState 实例（在 install.py 中创建）
 server_proc = None  # ServerProcess 单例（已由 AppContext 管理，此处兼容保留）
 server_lock = threading.Lock()  # 服务器进程锁（已由 AppContext 管理，此处兼容保留）
 httpd = None  # HTTP 服务器实例（已由 AppContext 管理，此处兼容保留）
 
 
 def __getattr__(name: str):
-    """P1-1 惰性代理：API_TOKEN / app_start_time / settings 转发到 AppContext。
+    """P1-1 惰性代理：API_TOKEN / app_start_time / settings / console / install_state
+    转发到 AppContext。
 
     使用模块级 __getattr__（PEP 562）而非模块加载时绑定，确保
     AppContext.reset() 之后旧引用仍指向当前实例的状态。
     """
-    if name in ("API_TOKEN", "app_start_time", "settings"):
+    if name in ("API_TOKEN", "app_start_time", "settings", "console", "install_state"):
         from .app_context import AppContext  # 函数内延迟导入，避免循环依赖
 
         ctx = AppContext.instance()
@@ -51,6 +48,10 @@ def __getattr__(name: str):
             return ctx.api_token
         if name == "app_start_time":
             return ctx.app_start_time
+        if name == "console":
+            return ctx.console
+        if name == "install_state":
+            return ctx.install_state
         return ctx.settings
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

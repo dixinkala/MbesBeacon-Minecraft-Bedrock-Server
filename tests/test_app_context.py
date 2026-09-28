@@ -483,15 +483,27 @@ class TestAppContextStateConsistency(unittest.TestCase):
         ctx = AppContext.instance()
         self.assertEqual(ctx.app_start_time, app_start_time)
 
-    def test_console_synced_after_package_init(self):
-        """包初始化后模块级导出与 state 全局变量保持同步（桥接正确性）"""
-        import bedrock_server_manager as bsm
-        from bedrock_server_manager.state import console, install_state
+    def test_console_proxy_forwards_to_context(self):
+        """state.console / install_state 经惰性代理指向当前 AppContext（批4）"""
+        import bedrock_server_manager.state as state_mod
 
-        self.assertIsNotNone(bsm.console)
-        self.assertIsNotNone(bsm.install_state)
-        self.assertIs(bsm.console, console)
-        self.assertIs(bsm.install_state, install_state)
+        ctx = AppContext.instance()
+        self.assertFalse(ctx.has_console)  # reset 后初始无 console
+        mock_console = object()
+        mock_install = object()
+        ctx.console = mock_console
+        ctx.install_state = mock_install
+        self.assertIs(state_mod.console, mock_console)
+        self.assertIs(state_mod.install_state, mock_install)
+
+    def test_package_console_is_real_buffer(self):
+        """包级 console/install_state 快照导出为真实对象（批4 保留兼容）"""
+        import bedrock_server_manager as bsm
+        from bedrock_server_manager.console import ConsoleBuffer
+        from bedrock_server_manager.install import InstallState
+
+        self.assertIsInstance(bsm.console, ConsoleBuffer)
+        self.assertIsInstance(bsm.install_state, InstallState)
 
     def test_health_route_uses_context_app_start_time(self):
         """health 路由应使用 AppContext.app_start_time（不再依赖 state 直接引用）"""
