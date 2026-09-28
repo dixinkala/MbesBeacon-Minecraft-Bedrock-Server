@@ -57,7 +57,7 @@ class TestDIContainer(unittest.TestCase):
 
     def test_reregister_singleton_overrides_transient(self):
         """transient 被 singleton 覆盖后按单例解析（状态互斥修复）"""
-        self.di.register_transient("svc", lambda: object())
+        self.di.register_transient("svc", object)
         fixed = object()
         self.di.register_singleton("svc", lambda: fixed)
         first = self.di.resolve("svc")
@@ -67,15 +67,15 @@ class TestDIContainer(unittest.TestCase):
 
     def test_reregister_transient_overrides_singleton(self):
         """singleton 被 transient 覆盖后每次新建（清除缓存）"""
-        self.di.register_singleton("svc", lambda: object())
+        self.di.register_singleton("svc", object)
         cached = self.di.resolve("svc")
-        self.di.register_transient("svc", lambda: object())
+        self.di.register_transient("svc", object)
         first = self.di.resolve("svc")
         self.assertIsNot(first, cached)
 
     def test_register_instance_overrides_factory(self):
         """register_instance 覆盖工厂注册"""
-        self.di.register_singleton("svc", lambda: object())
+        self.di.register_singleton("svc", object)
         obj = object()
         self.di.register_instance("svc", obj)
         self.assertIs(self.di.resolve("svc"), obj)
@@ -94,21 +94,18 @@ class TestInjectDecorator(unittest.TestCase):
     """inject 装饰器测试"""
 
     def setUp(self):
-        import bedrock_server_manager.di as di_mod
+        from bedrock_server_manager.di import container
 
-        self.di = DIContainer()
-        # 替换 di 模块级全局 container（inject 引用的是 di.container），测试后恢复
-        self._orig_container = di_mod.container
-        di_mod.container = self.di
+        container.clear()
 
     def tearDown(self):
-        import bedrock_server_manager.di as di_mod
+        from bedrock_server_manager.di import container
 
-        di_mod.container = self._orig_container
+        container.clear()
 
     def test_inject_dependency(self):
         """注入注册的依赖"""
-        self.di.register_instance("settings", {"key": "value"})
+        container.register_instance("settings", {"key": "value"})
 
         @inject("settings")
         def func(settings):
@@ -118,7 +115,7 @@ class TestInjectDecorator(unittest.TestCase):
 
     def test_inject_keeps_explicit_kwarg(self):
         """显式提供的参数优先于注入"""
-        self.di.register_instance("settings", {"default": True})
+        container.register_instance("settings", {"default": True})
 
         @inject("settings")
         def func(settings):
@@ -128,7 +125,7 @@ class TestInjectDecorator(unittest.TestCase):
 
     def test_inject_positional_argument_respected(self):
         """位置参数提供时不注入"""
-        self.di.register_instance("settings", {"default": True})
+        container.register_instance("settings", {"default": True})
 
         @inject("settings")
         def func(settings):
@@ -147,8 +144,8 @@ class TestInjectDecorator(unittest.TestCase):
 
     def test_inject_multiple_dependencies(self):
         """多依赖注入"""
-        self.di.register_instance("a", "value_a")
-        self.di.register_instance("b", "value_b")
+        container.register_instance("a", "value_a")
+        container.register_instance("b", "value_b")
 
         @inject("a", "b")
         def func(a, b):
