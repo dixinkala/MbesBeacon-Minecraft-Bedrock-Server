@@ -141,15 +141,20 @@ class WorldsRoutesMixin:
                         arcname = os.path.relpath(full, d)
                         zf.write(full, arcname)
 
-            # 发送文件
-            with open(temp_path, "rb") as f:
-                data = f.read()
+            # 发送文件（P2-4：分块流式发送，避免整文件读入内存——
+            # 大世界 ZIP 不再一次性驻留内存，内存峰值降至单块 64KB）
+            file_size = os.path.getsize(temp_path)
             self.send_response(200)
             self.send_header("Content-Type", "application/zip")
             self.send_header("Content-Disposition", f"attachment; filename={filename}")
-            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Content-Length", str(file_size))
             self.end_headers()
-            self.wfile.write(data)
+            with open(temp_path, "rb") as f:
+                while True:
+                    chunk = f.read(64 * 1024)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
 
             # 清理临时文件
             import contextlib
