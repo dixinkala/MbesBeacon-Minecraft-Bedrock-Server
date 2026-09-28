@@ -4,11 +4,16 @@ worlds 相关路由处理方法
 
 import time
 
+from ...app_context import AppContext
 from ...security import check_dangerous_operation
-from ...state import console
 from ...utils import resolve_server_dir
 from ...worlds import delete_world, duplicate_world, get_active_world_name, list_worlds, rename_world, set_active_world
 from ..route_decorator import register_get_route, register_route
+
+
+def _console():
+    """获取控制台缓冲（经 AppContext，避免 state 顶层绑定快照）。"""
+    return AppContext.instance().console
 
 
 class WorldsRoutesMixin:
@@ -37,7 +42,7 @@ class WorldsRoutesMixin:
             return
         ok, err = set_active_world(d, world_name)
         if ok:
-            console.append(f"\n[系统] 已切换到世界: {world_name}（重启服务器后生效）\n")
+            _console().append(f"\n[系统] 已切换到世界: {world_name}（重启服务器后生效）\n")
             self._json({"ok": True})
         else:
             self._json({"ok": False, "error": err})
@@ -53,7 +58,7 @@ class WorldsRoutesMixin:
             return
         ok, err = rename_world(d, old_name, new_name)
         if ok:
-            console.append(f"\n[系统] 世界已重命名: {old_name} -> {new_name}\n")
+            _console().append(f"\n[系统] 世界已重命名: {old_name} -> {new_name}\n")
             self._json({"ok": True})
         else:
             self._json({"ok": False, "error": err})
@@ -81,7 +86,7 @@ class WorldsRoutesMixin:
             return
         ok, err = delete_world(d, world_name)
         if ok:
-            console.append(f"\n[系统] 世界已删除: {world_name}\n")
+            _console().append(f"\n[系统] 世界已删除: {world_name}\n")
             self._json({"ok": True})
         else:
             self._json({"ok": False, "error": err})
@@ -97,7 +102,7 @@ class WorldsRoutesMixin:
             return
         ok, err = duplicate_world(d, source_name, new_name)
         if ok:
-            console.append(f"\n[系统] 世界已复制: {source_name} -> {new_name}\n")
+            _console().append(f"\n[系统] 世界已复制: {source_name} -> {new_name}\n")
             self._json({"ok": True})
         else:
             self._json({"ok": False, "error": err})
@@ -209,7 +214,7 @@ class WorldsRoutesMixin:
 
                 backup_dir = os.path.join(d, f"worlds_backup_{int(time.time())}")
                 shutil.copytree(worlds_dir, backup_dir)
-                console.append(f"\n[系统] 导入存档前已备份当前 worlds 到: {backup_dir}\n")
+                _console().append(f"\n[系统] 导入存档前已备份当前 worlds 到: {backup_dir}\n")
 
             # 解压 ZIP 文件
             with zipfile.ZipFile(temp_path, "r") as zf:
@@ -227,7 +232,7 @@ class WorldsRoutesMixin:
             with contextlib.suppress(Exception):
                 os.remove(temp_path)
 
-            console.append(f"\n[系统] 世界存档已导入: {file_name}\n")
+            _console().append(f"\n[系统] 世界存档已导入: {file_name}\n")
             self._json({"ok": True, "message": "导入成功"})
         except Exception as e:
             self._json({"ok": False, "error": f"导入失败: {e}"})

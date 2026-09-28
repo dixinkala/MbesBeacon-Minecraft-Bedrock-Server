@@ -5,12 +5,17 @@ server 相关路由处理方法
 import os
 import time
 
+from ...app_context import AppContext
 from ...config import load_properties, properties_to_dict
 from ...server import get_server_proc
-from ...state import console
 from ...utils import installed, resolve_server_dir
 from ...web.app import AppContext as WebAppContext
 from ..route_decorator import register_route
+
+
+def _console():
+    """获取控制台缓冲（经 AppContext，避免 state 顶层绑定快照）。"""
+    return AppContext.instance().console
 
 
 class ServerRoutesMixin:
@@ -50,7 +55,9 @@ class ServerRoutesMixin:
             p = get_server_proc()
             p.server_dir = d
             p.start()
-            console.append("\n========== 正在启动服务器 ({}) ==========\n".format(time.strftime("%Y-%m-%d %H:%M:%S")))
+            _console().append(
+                "\n========== 正在启动服务器 ({}) ==========\n".format(time.strftime("%Y-%m-%d %H:%M:%S"))
+            )
             self._json({"ok": True})
         except Exception as e:
             self._json({"ok": False, "error": str(e)})
@@ -60,7 +67,7 @@ class ServerRoutesMixin:
 
         try:
             p = get_server_proc()
-            console.append("\n[系统] 正在发送 stop 指令，等待服务器保存退出...\n")
+            _console().append("\n[系统] 正在发送 stop 指令，等待服务器保存退出...\n")
             p.stop()
             self._json({"ok": True})
         except Exception as e:

@@ -227,11 +227,8 @@ if not _global_ctx.has_console:
 if not _global_ctx.has_install_state:
     _global_ctx.install_state = _InstallState()
 
-# 同步到 state.py（保持向后兼容）
-_state.console = _global_ctx.console
-_state.install_state = _global_ctx.install_state
-
-# 模块级全局变量（向后兼容，新代码请使用 AppContext.instance()）
+# P1-1 批4：不再向 state.py 同步镜像；以下顶层绑定为包导入时的快照兼容导出
+# （覆盖同名子模块属性；state.console / state.install_state 走 state 的惰性代理）
 console = _global_ctx.console
 install_state = _global_ctx.install_state
 
@@ -272,6 +269,8 @@ def __getattr__(name: str):
 
     保证 AppContext.reset() 后模块级导出仍与当前实例一致
     （bsm.API_TOKEN / bsm.app_start_time / bsm.settings）。
+    注意：console / install_state 不在此名单——同名子模块会遮蔽惰性代理，
+    由上方顶层快照绑定提供兼容导出。
     """
     if name in ("API_TOKEN", "app_start_time", "settings"):
         return getattr(_state, name)
