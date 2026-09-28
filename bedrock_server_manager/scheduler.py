@@ -2,13 +2,15 @@
 定时任务调度模块：定时重启、定时备份、定时公告。
 """
 
+import contextlib
 import json
 import os
 import threading
 import time
 
-from .app_logger import safe_log_exception
+from .app_logger import get_app_logger, safe_log_exception
 from .backup import backup_worlds_zip
+from .config import SCHEDULED_TASKS_FILE
 from .security import audit_log
 from .server import get_server_proc, server_running
 from .utils import resolve_server_dir
@@ -16,7 +18,6 @@ from .utils import resolve_server_dir
 _scheduled_tasks = []
 _scheduler_stop = threading.Event()
 _scheduler_thread = None
-SCHEDULED_TASKS_FILE = "scheduled_tasks.json"
 
 
 def load_scheduled_tasks():
@@ -119,6 +120,25 @@ def save_scheduled_tasks(tasks):
         return False, f"保存失败: {str(e)}"
 
 
+def _should_run_daily(now_hm, target_time, today, last_run_date):
+    """判断 daily 任务是否应执行（纯函数，便于测试）。
+
+    Args:
+        now_hm: 当前时间（HH:MM 字符串）
+        target_time: 任务目标时间（HH:MM 字符串）
+        today: 当前日期（YYYY-MM-DD 字符串）
+        last_run_date: 上次执行日期（YYYY-MM-DD 字符串，未执行为空）
+
+    Returns:
+        bool: 是否应执行（今天未执行且当前时间 >= 目标时间）
+    """
+    # 今天已执行过则不再触发
+    if last_run_date == today:
+        return False
+    # 正常触发（now_hm == target_time）或补执行（now_hm > target_time）
+    return now_hm >= target_time
+
+
 def _scheduler_loop():
     """定时任务调度循环。
 
@@ -137,27 +157,16 @@ def _scheduler_loop():
                     if not task.get("enabled", True):
                         continue
                     tid = task.get("id", "")
-                    task.get("type", "")
                     if task.get("schedule_type") == "daily":
                         target_time = task.get("time", "04:00")
                         last_run = last_check.get(tid, 0)
                         last_run_date = time.strftime("%Y-%m-%d", time.localtime(last_run)) if last_run else ""
-                        # 触发条件1：精确匹配目标时间（正常触发）
-                        # 触发条件2：已过目标时间且今天未执行（补执行机制）
-                        should_run = False
-                        if (
-                            now_hm == target_time
-                            and last_run_date != today
-                            or now_hm > target_time
-                            and last_run_date != today
-                        ):
-                            should_run = True
-                        if should_run:
+                        # 触发条件：今天未执行且当前时间 >= 目标时间（含补执行）
+                        if _should_run_daily(now_hm, target_time, today, last_run_date):
                             last_check[tid] = now
-                            if last_run_date != today and now_hm > target_time:
-                                _execute_scheduled_task(task, d, note="补执行")
-                            else:
-                                _execute_scheduled_task(task, d)
+                            # 目标时间已过才视为补执行（精确匹配时正常执行）
+                            note = "补执行" if now_hm > target_time else None
+                            _execute_scheduled_task(task, d, note=note)
                     elif task.get("schedule_type") == "interval":
                         interval_hours = float(task.get("interval_hours", 24))
                         last_run = last_check.get(tid, 0)
@@ -178,15 +187,10 @@ def _execute_scheduled_task(task, server_dir, note=None):
         note: 可选的执行备注（如"补执行"），用于日志记录
     """
     task_type = task.get("type", "")
-    # 如果有备注，记录到日志
+    # 如果有备注，记录到日志（日志失败不影响任务执行）
     if note:
-        try:
-            from .app_logger import get_app_logger
-
+        with contextlib.suppress(Exception):
             get_app_logger().info(f"定时任务[{note}]: {task_type} - {server_dir}")
-        except Exception:
-            # 日志记录失败不影响任务执行
-            pass
     try:
         if task_type == "restart":
             if server_running():

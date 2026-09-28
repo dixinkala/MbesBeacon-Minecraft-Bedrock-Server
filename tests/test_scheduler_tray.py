@@ -319,6 +319,41 @@ class TestSchedulerLifecycle(unittest.TestCase):
         scheduler._scheduler_thread.join(timeout=35)
 
 
+class TestDailyTriggerLogic(unittest.TestCase):
+    """测试 daily 调度触发判断纯函数（P1-4 抽取，消除优先级隐患）"""
+
+    def _should_run(self, now_hm, target_time, today, last_run_date):
+        from bedrock_server_manager.scheduler import _should_run_daily
+
+        return _should_run_daily(now_hm, target_time, today, last_run_date)
+
+    def test_exact_match_triggers(self):
+        """精确匹配目标时间且今天未执行 → 触发"""
+        self.assertTrue(self._should_run("04:00", "04:00", "2026-10-01", ""))
+
+    def test_past_target_triggers_catch_up(self):
+        """已过目标时间且今天未执行 → 补执行触发"""
+        self.assertTrue(self._should_run("05:30", "04:00", "2026-10-01", ""))
+
+    def test_already_run_today_no_trigger(self):
+        """今天已执行 → 不触发（无论时间是否到达）"""
+        self.assertFalse(self._should_run("04:00", "04:00", "2026-10-01", "2026-10-01"))
+        self.assertFalse(self._should_run("05:30", "04:00", "2026-10-01", "2026-10-01"))
+
+    def test_before_target_no_trigger(self):
+        """未到目标时间 → 不触发"""
+        self.assertFalse(self._should_run("03:00", "04:00", "2026-10-01", ""))
+
+    def test_previous_day_run_allows_today(self):
+        """昨天执行过 → 今天仍可触发"""
+        self.assertTrue(self._should_run("04:00", "04:00", "2026-10-02", "2026-10-01"))
+
+    def test_midnight_boundary(self):
+        """目标时间 00:00 边界：凌晨精确匹配触发"""
+        self.assertTrue(self._should_run("00:00", "00:00", "2026-10-01", ""))
+        self.assertFalse(self._should_run("00:00", "00:00", "2026-10-01", "2026-10-01"))
+
+
 class TestSystemTray(unittest.TestCase):
     """测试系统托盘基本功能（mock GUI 部分）"""
 
