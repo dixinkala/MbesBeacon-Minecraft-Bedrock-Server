@@ -485,16 +485,20 @@ class TestAppContextStateConsistency(unittest.TestCase):
 
     def test_console_proxy_forwards_to_context(self):
         """state.console / install_state 经惰性代理指向当前 AppContext（批4）"""
-        import bedrock_server_manager.state as state_mod
-
         ctx = AppContext.instance()
         self.assertFalse(ctx.has_console)  # reset 后初始无 console
         mock_console = object()
         mock_install = object()
         ctx.console = mock_console
         ctx.install_state = mock_install
-        self.assertIs(state_mod.console, mock_console)
-        self.assertIs(state_mod.install_state, mock_install)
+        # from-import 在设置之后执行，取到的即当前实例的值（统一导入方式）
+        from bedrock_server_manager.state import (
+            console as state_console,
+            install_state as state_install,
+        )
+
+        self.assertIs(state_console, mock_console)
+        self.assertIs(state_install, mock_install)
 
     def test_package_console_is_real_buffer(self):
         """包级 console/install_state 快照导出为真实对象（批4 保留兼容）"""
