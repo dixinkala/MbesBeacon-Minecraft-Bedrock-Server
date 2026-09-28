@@ -27,7 +27,9 @@ import functools
 import inspect
 import threading
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar, cast
+
+T = TypeVar("T")
 
 
 class DIContainer:
@@ -41,6 +43,7 @@ class DIContainer:
         """初始化依赖注入容器。"""
         self._singletons: dict[str, Any] = {}
         self._factories: dict[str, Callable[[], Any]] = {}
+        self._transient: set[str] = set()
         self._lock = threading.Lock()
 
     def register_singleton(self, name: str, factory: Callable[[], Any]) -> None:
@@ -54,9 +57,9 @@ class DIContainer:
         """
         with self._lock:
             self._factories[name] = factory
+            self._transient.discard(name)
             # 清除已缓存的单例（如果有）
-            if name in self._singletons:
-                del self._singletons[name]
+            self._singletons.pop(name, None)
 
     def register_transient(self, name: str, factory: Callable[[], Any]) -> None:
         """注册瞬态依赖。
@@ -69,9 +72,9 @@ class DIContainer:
         """
         with self._lock:
             self._factories[name] = factory
-            # 标记为瞬态（使用特殊前缀）
-            transient_key = f"__transient__{name}"
-            self._singletons[transient_key] = True
+            self._transient.add(name)
+            # 清除已缓存的单例（如果有）
+            self._singletons.pop(name, None)
 
     def register_instance(self, name: str, instance: Any) -> None:
         """直接注册一个实例（单例）。
@@ -82,6 +85,8 @@ class DIContainer:
         """
         with self._lock:
             self._singletons[name] = instance
+            self._transient.discard(name)
+            self._factories.pop(name, None)
 
     def resolve(self, name: str) -> Any:
         """解析依赖。
@@ -95,19 +100,18 @@ class DIContainer:
             解析到的依赖实例
         """
         with self._lock:
-            # 检查是否是瞬态依赖
-            transient_key = f"__transient__{name}"
-            if transient_key in self._singletons:
+            # 瞬态依赖：每次解析都调用工厂
+            if name in self._transient:
                 factory = self._factories.get(name)
                 if factory:
                     return factory()
                 return None
 
-            # 检查是否已经有单例实例
+            # 已缓存的单例实例
             if name in self._singletons:
                 return self._singletons[name]
 
-            # 检查是否有工厂函数
+            # 单例工厂：首次解析时创建并缓存
             factory = self._factories.get(name)
             if factory:
                 instance = factory()
@@ -133,13 +137,14 @@ class DIContainer:
         with self._lock:
             self._singletons.clear()
             self._factories.clear()
+            self._transient.clear()
 
 
 # 全局依赖注入容器
 container = DIContainer()
 
 
-def inject(*dependency_names: str) -> Callable:
+def inject(*dependency_names: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """依赖注入装饰器。
 
     将指定的依赖作为关键字参数注入到被装饰的函数中。
@@ -158,7 +163,7 @@ def inject(*dependency_names: str) -> Callable:
             console.append("message")
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         # 获取函数参数签名
         sig = inspect.signature(func)
         param_names = list(sig.parameters.keys())
@@ -178,7 +183,7 @@ def inject(*dependency_names: str) -> Callable:
                         kwargs[name] = dependency
             return func(*args, **kwargs)
 
-        return wrapper
+        return cast(Callable[..., Any], wrapper)
 
     return decorator
 
@@ -187,22 +192,23 @@ def initialize_container() -> DIContainer:
     """初始化依赖注入容器，注册常用依赖。
 
     与 AppContext 集成，注册常用的全局状态依赖。
+    全部注册为瞬态：每次解析从 AppContext 获取当前值，
+    避免缓存 AppContext 属性快照（reset 或延迟初始化后失效）。
 
     Returns:
         初始化后的容器
     """
     from .app_context import AppContext
 
-    # 注册单例依赖（从 AppContext 获取）
-    container.register_singleton("app_context", lambda: AppContext.instance())
-    container.register_singleton("settings", lambda: AppContext.instance().settings)
-    container.register_singleton("console", lambda: AppContext.instance().console)
-    container.register_singleton("install_state", lambda: AppContext.instance().install_state)
-    container.register_singleton("server_proc", lambda: AppContext.instance().server_proc)
-    container.register_singleton("server_lock", lambda: AppContext.instance().server_lock)
-    container.register_singleton("httpd", lambda: AppContext.instance().httpd)
-    container.register_singleton("api_token", lambda: AppContext.instance().api_token)
-    container.register_singleton("tray", lambda: AppContext.instance().tray)
+    container.register_transient("app_context", lambda: AppContext.instance())
+    container.register_transient("settings", lambda: AppContext.instance().settings)
+    container.register_transient("console", lambda: AppContext.instance().console)
+    container.register_transient("install_state", lambda: AppContext.instance().install_state)
+    container.register_transient("server_proc", lambda: AppContext.instance().server_proc)
+    container.register_transient("server_lock", lambda: AppContext.instance().server_lock)
+    container.register_transient("httpd", lambda: AppContext.instance().httpd)
+    container.register_transient("api_token", lambda: AppContext.instance().api_token)
+    container.register_transient("tray", lambda: AppContext.instance().tray)
 
     return container
 
