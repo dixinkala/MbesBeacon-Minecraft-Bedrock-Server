@@ -3,17 +3,18 @@
 其他模块通过 `from .state import *` 或具体导入访问全局状态。
 常量已移至 constants.py，此处保留向后兼容导入。
 
-【P1-1 迁移说明（批 2）】
+【P1-1 迁移说明（批 3）】
 - API_TOKEN / app_start_time / settings 已由 AppContext 自行生成与管理，
   本模块通过模块级 __getattr__ 惰性代理到 AppContext.instance()，
   保证 reset 后仍与当前实例保持一致。
 - console / install_state 由包 __init__ 创建后同步到此处（镜像）。
-- server_proc / httpd / server_lock / mutex_handle 仅为向后兼容保留。
+- server_proc / httpd / server_lock 仅为向后兼容保留（从未写入真实值）。
+- 便捷函数与死代码已清理（log*/get_setting/set_setting/get_state_dict、
+  PLAYER_NAME_RE、mutex_handle 均无引用）。
 新代码一律使用 AppContext.instance()。
 """
 
 import os
-import re
 import threading
 
 from .app_logger import safe_log_exception
@@ -25,13 +26,10 @@ from .constants import (
     LOGS_DIR,
 )
 
-# 单实例互斥量句柄，退出时释放
-mutex_handle = None
-
 # ---------------- 全局单例状态 ----------------
 # 注意：以下对象在各模块中创建后赋值到此处，供全局访问
 # console / install_state 由包 __init__ 创建后同步到 AppContext 与 state（镜像）
-# server_proc / httpd / server_lock / mutex_handle 仅向后兼容保留（从未写入真实值）
+# server_proc / httpd / server_lock 仅向后兼容保留（从未写入真实值）
 console = None  # ConsoleBuffer 实例（在 console.py 中创建）
 install_state = None  # InstallState 实例（在 install.py 中创建）
 server_proc = None  # ServerProcess 单例（已由 AppContext 管理，此处兼容保留）
@@ -56,10 +54,6 @@ def __getattr__(name: str):
         return ctx.settings
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-
-# 玩家名校验正则
-
-PLAYER_NAME_RE = re.compile(r"^[A-Za-z0-9_.]+$")
 
 # 主题配置
 THEME_FILE = os.path.join(APP_DATA_DIR, "theme.json")
@@ -122,90 +116,3 @@ def migrate_legacy_data():
             safe_log_exception("state.py", f"删除空目录失败: {e}", "debug")
 
     return migrated
-
-
-# ---------------- 便捷函数 ----------------
-# 以下便捷函数直接操作 AppContext 的全局状态，保持向后兼容。
-# 新代码请使用 AppContext.instance() 访问全局状态。
-
-
-def _ctx():
-    """获取全局 AppContext 实例（函数内延迟导入，避免循环依赖）。"""
-    from .app_context import AppContext
-
-    return AppContext.instance()
-
-
-def log(text: str) -> None:
-    """向控制台追加日志（便捷函数）。
-
-    Args:
-        text: 日志文本
-    """
-    if console is not None:
-        console.append(text)
-
-
-def log_info(text: str) -> None:
-    """向控制台追加信息级别日志（便捷函数）。
-
-    Args:
-        text: 日志文本
-    """
-    log(f"[信息] {text}")
-
-
-def log_warning(text: str) -> None:
-    """向控制台追加警告级别日志（便捷函数）。
-
-    Args:
-        text: 日志文本
-    """
-    log(f"[警告] {text}")
-
-
-def log_error(text: str) -> None:
-    """向控制台追加错误级别日志（便捷函数）。
-
-    Args:
-        text: 日志文本
-    """
-    log(f"[错误] {text}")
-
-
-def get_setting(key: str, default=None):
-    """获取设置值（便捷函数）。
-
-    Args:
-        key: 设置键名
-        default: 默认值
-
-    Returns:
-        设置值，如果不存在则返回默认值
-    """
-    return _ctx().settings.get(key, default)
-
-
-def set_setting(key: str, value) -> None:
-    """设置设置值（便捷函数）。
-
-    Args:
-        key: 设置键名
-        value: 设置值
-    """
-    _ctx().settings[key] = value
-
-
-def get_state_dict() -> dict:
-    """获取状态字典（用于健康检查和调试）。
-
-    Returns:
-        状态字典
-    """
-    ctx = _ctx()
-    return {
-        "api_token_set": bool(ctx.api_token),
-        "uptime_seconds": round(ctx.uptime_seconds, 2),
-        "server_dir": ctx.settings.get("server_dir", ""),
-        "installed": bool(ctx.settings.get("installed_version", "")),
-    }
