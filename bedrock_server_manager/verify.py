@@ -3,6 +3,7 @@
 包括 ZIP 完整性、SHA256 哈希、文件大小合理性、PE 签名校验。
 """
 
+import contextlib
 import hashlib
 import json
 import os
@@ -10,6 +11,7 @@ import zipfile
 from typing import Any
 
 from .app_logger import safe_log_exception
+from .constants import CACHE_DIR
 
 # BDS 服务端文件大小合理范围（字节）
 # 注意：BDS 版本持续更新，文件大小可能增长，上限设置较宽松以避免误判
@@ -103,15 +105,31 @@ def load_official_hashes(force: bool = False) -> int:
 
 
 # 本地哈希缓存文件路径（首次下载时记录，后续下载对比）
-_HASH_CACHE_FILE = os.path.join(os.path.expanduser("~"), ".bedrock_server_hashes.json")
+# 统一使用应用数据目录（constants.CACHE_DIR）；旧版本遗留的
+# ~/.bedrock_server_hashes.json 在首次读取缓存时自动迁移到新路径
+_HASH_CACHE_FILE = os.path.join(CACHE_DIR, "hashes.json")
+_LEGACY_HASH_CACHE_FILE = os.path.join(os.path.expanduser("~"), ".bedrock_server_hashes.json")
 
 
 def _load_hash_cache() -> dict[str, str]:
-    """加载本地哈希缓存。"""
+    """加载本地哈希缓存。
+
+    优先读取统一的应用数据目录缓存；若该文件尚不存在而旧版遗留缓存
+    （~/.bedrock_server_hashes.json）存在，则一次性迁移到新路径并清理旧文件。
+    """
     try:
         if os.path.isfile(_HASH_CACHE_FILE):
             with open(_HASH_CACHE_FILE, encoding="utf-8") as f:
                 return json.load(f)
+        # 首次读取时迁移旧版遗留缓存（兜底：即使启动时迁移未执行也能收敛路径）
+        if os.path.isfile(_LEGACY_HASH_CACHE_FILE):
+            with open(_LEGACY_HASH_CACHE_FILE, encoding="utf-8") as f:
+                cache = json.load(f)
+            if cache:
+                _save_hash_cache(cache)
+            with contextlib.suppress(OSError):
+                os.remove(_LEGACY_HASH_CACHE_FILE)
+            return cache
     except Exception as e:
         safe_log_exception("verify", f"操作失败: {e}", "warning")
     return {}
