@@ -4,11 +4,14 @@ verify 模块单元测试 - Minecraft 基岩版服务器管理器
 """
 
 import hashlib
+import json
 import os
 import tempfile
 import unittest
+import unittest.mock as mock
 import zipfile
 
+from bedrock_server_manager import verify as verify_module
 from bedrock_server_manager.verify import (
     calculate_sha256,
     verify_file_size,
@@ -122,6 +125,70 @@ class TestVerifyZipIntegrity(unittest.TestCase):
         """测试校验不存在 ZIP 文件"""
         ok, msg = verify_zip_integrity(os.path.join(self.tmpdir, "nonexistent.zip"))
         self.assertFalse(ok)
+
+
+class TestHashCache(unittest.TestCase):
+    """本地哈希缓存路径与旧路径迁移测试"""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.new_path = os.path.join(self.tmpdir, "cache", "hashes.json")
+        self.legacy_path = os.path.join(self.tmpdir, "legacy_hashes.json")
+        self._patch = mock.patch.multiple(
+            verify_module,
+            _HASH_CACHE_FILE=self.new_path,
+            _LEGACY_HASH_CACHE_FILE=self.legacy_path,
+        )
+        self._patch.start()
+        verify_module._KNOWN_HASHES.clear()
+
+    def tearDown(self):
+        self._patch.stop()
+        verify_module._KNOWN_HASHES.clear()
+        import shutil
+
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_register_known_hash_writes_new_path(self):
+        """注册哈希后应写入统一的新路径缓存文件"""
+        verify_module.register_known_hash("1.21.0", "abc123")
+        self.assertTrue(os.path.isfile(self.new_path))
+        with open(self.new_path, encoding="utf-8") as f:
+            cache = json.load(f)
+        self.assertEqual(cache.get("1.21.0"), "abc123")
+
+    def test_get_known_hash_roundtrip(self):
+        """注册后可读回，且内存与文件缓存一致"""
+        verify_module.register_known_hash("1.21.0", "abc123")
+        self.assertEqual(verify_module.get_known_hash("1.21.0"), "abc123")
+        verify_module._KNOWN_HASHES.clear()
+        # 清空内存后仍能从新路径缓存读回
+        self.assertEqual(verify_module.get_known_hash("1.21.0"), "abc123")
+
+    def test_load_migrates_legacy_cache(self):
+        """新路径不存在、旧路径存在时，应读取旧缓存并迁移到新路径"""
+        with open(self.legacy_path, "w", encoding="utf-8") as f:
+            json.dump({"1.20.0": "def456"}, f)
+        cache = verify_module._load_hash_cache()
+        self.assertEqual(cache.get("1.20.0"), "def456")
+        self.assertTrue(os.path.isfile(self.new_path))  # 已迁移到新路径
+        self.assertFalse(os.path.isfile(self.legacy_path))  # 旧文件已清理
+
+    def test_load_prefers_new_path(self):
+        """新旧路径同时存在时，应优先读取新路径"""
+        os.makedirs(os.path.dirname(self.new_path), exist_ok=True)
+        with open(self.new_path, "w", encoding="utf-8") as f:
+            json.dump({"1.22.0": "newhash"}, f)
+        with open(self.legacy_path, "w", encoding="utf-8") as f:
+            json.dump({"1.20.0": "oldhash"}, f)
+        cache = verify_module._load_hash_cache()
+        self.assertEqual(cache.get("1.22.0"), "newhash")
+        self.assertNotIn("1.20.0", cache)
+        self.assertTrue(os.path.isfile(self.legacy_path))  # 旧文件未被误删
+
+    def test_load_no_cache_files(self):
+        """无任何缓存文件时返回空字典"""
+        self.assertEqual(verify_module._load_hash_cache(), {})
 
 
 if __name__ == "__main__":
