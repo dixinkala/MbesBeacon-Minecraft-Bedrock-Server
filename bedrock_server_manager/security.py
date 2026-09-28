@@ -12,7 +12,6 @@ from urllib.parse import urlparse
 from .app_context import AppContext
 from .app_logger import safe_log_exception
 from .constants import (
-    DANGEROUS_COMMANDS as DANGEROUS_COMMANDS,  # re-export：兼容 from .security import DANGEROUS_COMMANDS
     DANGEROUS_MULTI_COMMANDS as _DANGEROUS_MULTI,
     DANGEROUS_SINGLE_COMMANDS as _DANGEROUS_SINGLE,
 )
