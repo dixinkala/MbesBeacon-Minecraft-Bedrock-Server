@@ -2,6 +2,8 @@
 命令自动补全模块：提供 Minecraft 基岩版服务器命令的自动补全和帮助信息。
 """
 
+from .constants import DANGEROUS_COMMANDS
+
 # Minecraft 基岩版服务器常用命令列表
 COMMANDS = {
     # 玩家管理
@@ -207,6 +209,12 @@ COMMANDS = {
     "script": {"desc": "脚本管理", "usage": "script <debug|profiler|watchdog> ...", "category": "其他"},
 }
 
+# 危险命令标记与 constants.DANGEROUS_COMMANDS 保持单一来源：
+# 凡在统一清单中的命令，其元数据补齐 dangerous 标记（帮助文本与安全校验一致）
+for _dangerous_name in DANGEROUS_COMMANDS:
+    if _dangerous_name in COMMANDS and not COMMANDS[_dangerous_name].get("dangerous"):
+        COMMANDS[_dangerous_name]["dangerous"] = True
+
 
 def get_all_commands() -> list[str]:
     """获取所有命令名称列表。
@@ -334,13 +342,19 @@ def get_command_suggestions(input_text: str, online_players: list[str] = None) -
 def is_dangerous_command(command: str) -> bool:
     """检查命令是否为危险命令。
 
+    优先依据 constants.DANGEROUS_COMMANDS 单一清单判断，
+    兼容命令库元数据（dangerous 标记已与清单同步）。
+
     Args:
         command: 命令名称
 
     Returns:
         bool: 是否为危险命令
     """
-    cmd_info = COMMANDS.get(command.lower().split()[0] if command else "")
+    cmd_name = command.lower().split()[0] if command else ""
+    if cmd_name in DANGEROUS_COMMANDS:
+        return True
+    cmd_info = COMMANDS.get(cmd_name)
     return bool(cmd_info and cmd_info.get("dangerous", False))
 
 

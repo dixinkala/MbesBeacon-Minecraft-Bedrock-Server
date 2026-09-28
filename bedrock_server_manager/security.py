@@ -11,6 +11,11 @@ from urllib.parse import urlparse
 
 from .app_context import AppContext
 from .app_logger import safe_log_exception
+from .constants import (
+    DANGEROUS_COMMANDS as DANGEROUS_COMMANDS,  # re-export：兼容 from .security import DANGEROUS_COMMANDS
+    DANGEROUS_MULTI_COMMANDS as _DANGEROUS_MULTI,
+    DANGEROUS_SINGLE_COMMANDS as _DANGEROUS_SINGLE,
+)
 from .utils import resolve_server_dir
 
 # 安全指令白名单
@@ -39,10 +44,7 @@ SAFE_COMMANDS = {
     "setgameproperty",
     "changesetting",
 }
-# 危险指令（需要二次确认）
-_DANGEROUS_SINGLE = {"stop", "kill", "ban", "pardon", "deop"}
-_DANGEROUS_MULTI = ("whitelist remove", "allowlist remove")
-DANGEROUS_COMMANDS = _DANGEROUS_SINGLE | set(_DANGEROUS_MULTI)
+# 危险指令（需要二次确认）：定义见 constants.DANGEROUS_*（单一事实来源）
 
 
 def _is_dangerous_command(cmd_lower: str) -> bool:

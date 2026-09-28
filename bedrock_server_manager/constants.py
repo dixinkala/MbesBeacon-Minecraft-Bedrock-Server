@@ -28,6 +28,15 @@ APP_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), 
 LOGS_DIR = os.path.join(APP_DATA_DIR, "logs")
 CACHE_DIR = os.path.join(APP_DATA_DIR, "cache")
 
+# ---------------- 危险命令清单（单一事实来源） ----------------
+# 服务器控制台指令层面需要二次确认的危险命令
+# security.py（校验）、commands.py（命令元数据）、前端（确认弹窗）统一引用此处
+DANGEROUS_SINGLE_COMMANDS = frozenset({"stop", "kill", "ban", "pardon", "deop", "restart"})
+# 多词危险指令前缀（含子命令级别，如 whitelist remove <玩家>）
+DANGEROUS_MULTI_COMMANDS = ("whitelist remove", "allowlist remove")
+# 汇总集合
+DANGEROUS_COMMANDS = DANGEROUS_SINGLE_COMMANDS | frozenset(DANGEROUS_MULTI_COMMANDS)
+
 # 确保目录存在
 for _d in (APP_DATA_DIR, LOGS_DIR, CACHE_DIR):
     with contextlib.suppress(Exception):
@@ -45,4 +54,7 @@ __all__ = [
     "APP_DATA_DIR",
     "LOGS_DIR",
     "CACHE_DIR",
+    "DANGEROUS_SINGLE_COMMANDS",
+    "DANGEROUS_MULTI_COMMANDS",
+    "DANGEROUS_COMMANDS",
 ]
