@@ -195,6 +195,9 @@ def save_properties(filepath: str, items: list[tuple[str, str]]) -> bool:
             for key, value in items:
                 if key not in written_keys:
                     f.write(f"{key}={value}\n")
+        # 写后主动失效缓存：等长内容 + FS mtime 精度不足时 mtime 可能不变化，
+        # 若依赖自然失效会导致下次 load 命中旧缓存（B6）
+        _properties_cache.pop(filepath, None)
         return True
     except Exception:
         return False
