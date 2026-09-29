@@ -5,7 +5,4 @@ psutil==7.2.2
 # 打包依赖（仅构建时需要）
 pyinstaller==6.22.2
 
-# 开发依赖（仅测试和开发时需要）
-pytest==9.1.1
-pytest-cov==7.1.0
-ruff==0.16.6
+# 开发/测试依赖见 requirements-dev.txt（含 pytest、pytest-cov、ruff）
