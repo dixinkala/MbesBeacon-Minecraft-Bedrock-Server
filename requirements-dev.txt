@@ -1,0 +1,8 @@
+# Minecraft 基岩版服务器管理器 - 开发/测试依赖
+# 引用运行时与打包依赖
+-r requirements.txt
+
+# 开发依赖（仅测试和开发时需要）
+pytest==9.1.1
+pytest-cov==7.1.0
+ruff==0.16.6
