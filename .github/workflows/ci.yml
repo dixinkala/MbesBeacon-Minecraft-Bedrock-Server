@@ -5,6 +5,17 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  # P3-4：支持手动触发（可跳过 tag 直接构建并发布 Release）
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: "创建 Release（手动发布）"
+        type: boolean
+        default: false
+      release_version:
+        description: "Release 版本号（如 v1.0.23）"
+        type: string
+        default: "v1.0.23"
 
 jobs:
   test:
@@ -27,11 +38,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
 
-    - name: 📦 安装依赖
+    - name: 📦 安装依赖（开发依赖含 pytest/ruff）
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov
+        pip install -r requirements-dev.txt
 
     - name: 🔍 代码格式检查（硬性要求）
       run: |
@@ -52,11 +62,37 @@ jobs:
         path: coverage.xml
       continue-on-error: true
 
+  smoke:
+    name: Windows 冒烟（真实 HTTP 服务）
+    runs-on: windows-latest
+    needs: test
+    permissions:
+      contents: read
+
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v7
+
+    - name: 🐍 设置 Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: 📦 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 🔥 运行冒烟测试
+      run: |
+        python smoke_test.py
+
   build:
     name: 构建 EXE
     runs-on: windows-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
+    needs: [test, smoke]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       actions: read
@@ -91,7 +127,7 @@ jobs:
     name: 发布 Release
     runs-on: windows-latest
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
     permissions:
       contents: write
       actions: read
@@ -108,5 +144,6 @@ jobs:
       with:
         files: dist/MbesBeacon.exe
         generate_release_notes: true
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.event.inputs.release_version }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

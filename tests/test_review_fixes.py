@@ -140,14 +140,15 @@ class TestSaveConfigCreatesHistory(unittest.TestCase):
 
     def test_save_config_generates_history(self):
         """保存配置后 .config_history 目录出现 server.properties.*.bak 备份。"""
-        from bedrock_server_manager.config import CONFIG_HISTORY_DIR, load_properties, properties_to_dict
+        from bedrock_server_manager.config import CONFIG_HISTORY_DIR
         from bedrock_server_manager.web.app import AppContext as WebAppContext
 
         ok, err, field = WebAppContext.instance().save_config({"server-name": "我的服务器"})
         self.assertTrue(ok, err)
-        # 配置已写入
-        data = properties_to_dict(load_properties(os.path.join(self.server_dir, "server.properties")))
-        self.assertEqual(data.get("server-name"), "我的服务器")
+        # 直接读文件断言（避开 properties mtime 缓存：等长内容时 mtime 精度可能不足）
+        with open(os.path.join(self.server_dir, "server.properties"), encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("server-name=我的服务器", content)
         # 历史备份已生成
         history_dir = os.path.join(self.server_dir, CONFIG_HISTORY_DIR)
         self.assertTrue(os.path.isdir(history_dir))
