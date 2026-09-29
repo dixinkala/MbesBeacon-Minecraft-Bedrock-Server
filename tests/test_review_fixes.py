@@ -175,6 +175,56 @@ class TestRateLimitKeyFix(unittest.TestCase):
         self.assertEqual(rate_limiter._get_limit("/api/backups/restore"), (2, 10.0))
 
 
+class TestPropertiesCacheInvalidation(unittest.TestCase):
+    """B6：save_properties 写后主动失效 properties 缓存。"""
+
+    def setUp(self):
+        from bedrock_server_manager import settings
+
+        self._old_server_dir = settings.get("server_dir", "")
+        self.tmpdir = tempfile.mkdtemp(prefix="mbes_b6_")
+        self.server_dir = os.path.join(self.tmpdir, "server")
+        os.makedirs(self.server_dir)
+        self.filepath = os.path.join(self.server_dir, "server.properties")
+        settings["server_dir"] = self.server_dir
+
+    def tearDown(self):
+        from bedrock_server_manager import settings
+
+        settings["server_dir"] = self._old_server_dir
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _seed(self, content):
+        with open(self.filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def test_save_same_length_reparsed(self):
+        """等长内容 + mtime 不变时，load 返回新值（缓存已主动失效）。"""
+        from bedrock_server_manager.config import load_properties, save_properties
+
+        self._seed("server-name=Old Name\nserver-port=19132\n")
+        first = load_properties(self.filepath)
+        self.assertEqual(dict(first)["server-name"], "Old Name")
+        # 等长内容保存（Old Name -> New Name 均 9 字符）
+        ok = save_properties(self.filepath, [("server-name", "New Name"), ("server-port", "19132")])
+        self.assertTrue(ok)
+        # 模拟粗精度 FS：保存后 mtime 与缓存记录一致（缓存若未失效会命中旧值）
+        st = os.stat(self.filepath)
+        os.utime(self.filepath, ns=(st.st_atime_ns, st.st_mtime_ns))
+        cached = load_properties(self.filepath)
+        self.assertEqual(dict(cached)["server-name"], "New Name")
+
+    def test_save_invalidates_existing_cache(self):
+        """保存后缓存条目被移除（_properties_cache 不含该文件）。"""
+        from bedrock_server_manager.config import _properties_cache, load_properties, save_properties
+
+        self._seed("server-name=Old Name\n")
+        load_properties(self.filepath)
+        self.assertIn(self.filepath, _properties_cache)
+        save_properties(self.filepath, [("server-name", "New Name")])
+        self.assertNotIn(self.filepath, _properties_cache)
+
+
 class TestHourlyTriggerLogic(unittest.TestCase):
     """B5：hourly 任务触发逻辑（纯函数）。"""
 
