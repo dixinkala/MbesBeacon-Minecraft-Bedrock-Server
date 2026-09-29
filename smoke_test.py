@@ -46,15 +46,15 @@ def main() -> int:
         with urllib.request.urlopen(req, timeout=5) as resp:
             body = json.loads(resp.read().decode("utf-8"))
         if resp.status != 200:
-            print(f"❌ SMOKE FAIL: /api/status 状态码 {resp.status}")
+            print(f"[SMOKE FAIL] /api/status 状态码 {resp.status}")
             return 1
         if not isinstance(body, dict) or "installed" not in body:
-            print(f"❌ SMOKE FAIL: /api/status 响应结构异常: {body}")
+            print(f"[SMOKE FAIL] /api/status 响应结构异常: {body}")
             return 1
-        print(f"✅ SMOKE OK: /api/status 200 · installed={body.get('installed')}")
+        print(f"[SMOKE OK] /api/status 200 installed={body.get('installed')}")
         return 0
     except Exception as e:
-        print(f"❌ SMOKE FAIL: {e}")
+        print(f"[SMOKE FAIL] {e}")
         return 1
     finally:
         httpd.shutdown()
