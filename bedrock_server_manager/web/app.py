@@ -153,7 +153,7 @@ class AppContext:
         for k in cur:
             if k not in seen:
                 merged.append((k, cur[k]))
-        backup_config_history(p)
+        backup_config_history(os.path.dirname(p))
         save_properties(p, merged)
         audit_log("CONFIG_SAVE", ",".join(updates.keys()))
         return True, "", ""

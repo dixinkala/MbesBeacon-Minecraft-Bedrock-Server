@@ -160,6 +160,25 @@ def _should_run_daily(now_hm, target_time, today, last_run_date):
     return now_hm >= target_time
 
 
+def _should_run_hourly(last_run, now=None):
+    """判断 hourly 任务是否应执行（纯函数，便于测试）。
+
+    hourly 语义：每小时执行一次，距上次执行 >= 1 小时即触发；
+    从未执行过（last_run=0）则立即执行一次（与 interval 首次行为一致）。
+
+    Args:
+        last_run: 上次执行时间戳（秒），0 表示从未执行
+        now: 当前时间戳（秒），默认取 time.time()
+
+    Returns:
+        bool: 是否应执行
+    """
+    if last_run <= 0:
+        return True
+    now = now if now is not None else time.time()
+    return now - last_run >= 3600
+
+
 def _scheduler_loop():
     """定时任务调度循环。
 
@@ -188,6 +207,12 @@ def _scheduler_loop():
                             # 目标时间已过才视为补执行（精确匹配时正常执行）
                             note = "补执行" if now_hm > target_time else None
                             _execute_scheduled_task(task, d, note=note)
+                    elif task.get("schedule_type") == "hourly":
+                        last_run = last_check.get(tid, 0)
+                        # 每小时执行一次（距上次执行 >= 1 小时；首次立即执行）
+                        if _should_run_hourly(last_run):
+                            last_check[tid] = now
+                            _execute_scheduled_task(task, d)
                     elif task.get("schedule_type") == "interval":
                         interval_hours = float(task.get("interval_hours", 24))
                         last_run = last_check.get(tid, 0)

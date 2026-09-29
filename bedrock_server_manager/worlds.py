@@ -171,18 +171,24 @@ def rename_world(server_dir: str, old_name: str, new_name: str) -> tuple[bool, s
     if os.path.exists(new_path):
         return False, f"世界 '{new_name}' 已存在"
 
-    # 如果是活动世界，需要先更新配置
+    # 若是活动世界，先记下需更新配置（重命名成功后目录已存在再改配置）
     active_world = get_active_world_name(server_dir)
-    if active_world == old_name:
-        ok, err = set_active_world(server_dir, new_name)
-        if not ok:
-            return False, err
+    is_active = active_world == old_name
 
     try:
         os.rename(old_path, new_path)
-        return True, ""
     except Exception as e:
         return False, f"重命名世界失败: {str(e)}"
+
+    if is_active:
+        # 此时新目录已存在，更新 server.properties 的 level-name
+        ok, err = set_active_world(server_dir, new_name)
+        if not ok:
+            # 配置更新失败时回滚目录重命名，保持原状
+            with contextlib.suppress(Exception):
+                os.rename(new_path, old_path)
+            return False, err
+    return True, ""
 
 
 def delete_world(server_dir: str, world_name: str) -> tuple[bool, str]:
