@@ -222,15 +222,15 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
 
 
 def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool, str]:
-    """删除指定备份目录。返回 (ok, error_msg)。
+    """删除指定备份（支持目录型与 ZIP 文件型）。返回 (ok, error_msg)。
 
     安全校验：
     1. 路径必须包含 _worlds_backups 关键词
     2. 路径必须在备份根目录内（绝对路径边界检查）
     """
     console = _get_console()
-    if not backup_path or not os.path.isdir(backup_path):
-        return False, "备份目录不存在"
+    if not backup_path or not (os.path.isdir(backup_path) or os.path.isfile(backup_path)):
+        return False, "备份不存在"
     # 安全校验1：必须在 _worlds_backups 目录下
     if "_worlds_backups" not in backup_path:
         return False, "非法路径，只能删除备份目录"
@@ -247,7 +247,10 @@ def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool
     except Exception as e:
         safe_log_exception("backup", f"操作失败: {e}", "warning")
     try:
-        shutil.rmtree(backup_path, ignore_errors=True)
+        if os.path.isdir(backup_path):
+            shutil.rmtree(backup_path, ignore_errors=True)
+        else:
+            os.remove(backup_path)
         console.append(f"\n[系统] 已删除备份: {os.path.basename(backup_path)}\n")
         return True, ""
     except Exception as e:

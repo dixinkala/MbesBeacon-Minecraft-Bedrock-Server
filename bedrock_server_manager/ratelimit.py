@@ -40,7 +40,7 @@ class RateLimiter:
             "/api/server/stop": (2, 10.0),  # 停止：每10秒2次
             "/api/server/restart": (1, 15.0),  # 重启：每15秒1次
             "/api/server/delete": (1, 30.0),  # 删除：每30秒1次
-            "/api/backup/restore": (2, 10.0),  # 恢复备份：每10秒2次
+            "/api/backups/restore": (2, 10.0),  # 恢复备份：每10秒2次
         }
 
     def _get_limit(self, endpoint):
