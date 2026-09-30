@@ -12,6 +12,13 @@ coverage.xml
 htmlcov/
 .tox/
 .nox/
+.ruff_cache/
+
+# 临时输出文件（误跟踪防御）
+_rf*.txt
+_run_tests.py
+_debug_*.py
+_test_out.txt
 
 # PyInstaller
 build/

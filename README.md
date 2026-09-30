@@ -310,7 +310,7 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 {
   "ok": true,
   "app": "mbesbeacon",
-  "version": "1.0.22",
+  "version": "1.1.13",
   "installed": true,
   "server_dir": "D:\\MinecraftServer",
   "installed_version": "1.21.0.03",

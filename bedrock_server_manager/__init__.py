@@ -232,7 +232,7 @@ if not _global_ctx.has_install_state:
 console = _global_ctx.console
 install_state = _global_ctx.install_state
 
-__version__ = "1.0.22"
+__version__ = "1.1.13"
 
 
 def get_app_context():
