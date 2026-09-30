@@ -193,11 +193,11 @@ class ServerProcess:
                             # 等待期间用户已点击"停止"，取消自动重启（防止服务器"复活"）
                             if self._user_stopped:
                                 self._emit("[系统] 自动重启已取消（用户已停止服务器）\n")
-                                return
-                            try:
-                                self.start()
-                            except Exception as e:
-                                self._emit(f"[系统] 自动重启失败: {e}\n")
+                            else:
+                                try:
+                                    self.start()
+                                except Exception as e:
+                                    self._emit(f"[系统] 自动重启失败: {e}\n")
 
                         threading.Thread(target=_delayed_restart, args=(backoff,), daemon=True).start()
                         auto_restarting = True
