@@ -1266,6 +1266,8 @@ function startConsoleStream(){
     consoleEventSource.onmessage=function(e){
       try{
         const data=JSON.parse(e.data);
+        // 控制台被截断（2000行上限）导致索引回退时清空重建，避免日志重复/倒退
+        if(data.reset){ $('consoleBox').innerHTML=''; }
         if(data.lines){
           const b=$('consoleBox');
           b.innerHTML+=highlightLog(data.lines);

@@ -12,7 +12,7 @@ from ...app_update import check_app_update
 from ...backup import backup_worlds, delete_server
 from ...install import do_install, get_latest_server_info, select_server_dir
 from ...players import add_allowlist, remove_allowlist, validate_player_name
-from ...security import check_dangerous_operation, validate_custom_url
+from ...security import check_dangerous_operation, validate_custom_url, validate_reason
 from ...server import get_server_proc, server_running
 from ...utils import (
     installed,
@@ -192,6 +192,10 @@ class PostExtraRoutesMixin:
         if not ok:
             self._json({"ok": False, "error": err})
             return
+        ok, err = validate_reason(reason)
+        if not ok:
+            self._json({"ok": False, "error": err})
+            return
         if not server_running():
             self._json({"ok": False, "error": "服务器未运行"})
             return
@@ -255,6 +259,10 @@ class PostExtraRoutesMixin:
         name = (data.get("name") or "").strip()
         reason = (data.get("reason") or "").strip()
         ok, err = validate_player_name(name)
+        if not ok:
+            self._json({"ok": False, "error": err})
+            return
+        ok, err = validate_reason(reason)
         if not ok:
             self._json({"ok": False, "error": err})
             return

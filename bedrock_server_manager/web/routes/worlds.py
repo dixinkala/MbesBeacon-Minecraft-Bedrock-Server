@@ -221,11 +221,17 @@ class WorldsRoutesMixin:
                 shutil.copytree(worlds_dir, backup_dir)
                 _console().append(f"\n[系统] 导入存档前已备份当前 worlds 到: {backup_dir}\n")
 
-            # 解压 ZIP 文件
+            # 解压 ZIP 文件（先做严格路径校验，防止路径遍历）
             with zipfile.ZipFile(temp_path, "r") as zf:
-                # 检查是否有路径遍历
                 for name in zf.namelist():
-                    if name.startswith("..") or name.startswith("/") or ":" in name:
+                    # 规范化成员路径：统一分隔符后逐段检查
+                    norm = name.replace("\\", "/")
+                    if norm.startswith("/") or ":" in norm:
+                        os.remove(temp_path)
+                        self._json({"ok": False, "error": f"ZIP 文件包含非法路径: {name}"})
+                        return
+                    parts = [p for p in norm.split("/") if p not in ("", ".")]
+                    if ".." in parts:
                         os.remove(temp_path)
                         self._json({"ok": False, "error": f"ZIP 文件包含非法路径: {name}"})
                         return

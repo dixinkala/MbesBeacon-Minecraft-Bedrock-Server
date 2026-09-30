@@ -44,10 +44,10 @@ _USER_AGENT = "MbesBeacon-Update-Checker/1.0"
 def _parse_version(version_str):
     """
     解析版本字符串为元组，用于比较。
-    支持 "v0.1.0"、"0.1.0"、"0.1.0.0" 等格式。
+    支持 "v0.1.0"、"0.1.0"、"0.1.0.0"、"1.0.22.1" 等格式（最多 4 段）。
     """
     if not version_str:
-        return (0, 0, 0)
+        return (0, 0, 0, 0)
     # 去掉前缀 v
     v = version_str.lstrip("vV")
     # 分割版本号
@@ -57,10 +57,10 @@ def _parse_version(version_str):
             parts.append(int(p))
         except ValueError:
             parts.append(0)
-    # 补齐到 3 位
-    while len(parts) < 3:
+    # 补齐到 4 位（第 4 段用于区分 1.0.22 与 1.0.22.1 等构建号差异）
+    while len(parts) < 4:
         parts.append(0)
-    return tuple(parts[:3])
+    return tuple(parts[:4])
 
 
 def _is_newer(latest_version, current_version):
