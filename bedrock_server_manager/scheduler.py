@@ -96,6 +96,13 @@ def validate_scheduled_task(task):
         "message" not in task or not isinstance(task["message"], str) or not task["message"].strip()
     ):
         return False, "announce 类型需要 message 字段"
+    if task["type"] == "announce" and isinstance(task.get("message"), str):
+        # 公告消息会被拼接到 say 命令，禁止换行（防止注入多条命令）
+        from .security import validate_reason
+
+        msg_ok, msg_err = validate_reason(task["message"])
+        if not msg_ok:
+            return False, f"公告消息无效：{msg_err}"
     return True, ""
 
 

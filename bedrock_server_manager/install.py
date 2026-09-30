@@ -603,6 +603,18 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
     install_state.set(phase="start", percent=0, text="开始安装...")
     try:
         os.makedirs(dir_target, exist_ok=True)
+        # 安装前磁盘空间检查（服务端压缩包约 60-120MB，解压后需约 300MB）
+        try:
+            from .utils import check_disk_space
+
+            ok_space, free_mb, required_mb = check_disk_space(dir_target, required_mb=300)
+            if not ok_space:
+                install_state.log_line(f"错误: 磁盘空间不足（剩余 {free_mb:.0f} MB，需要 {required_mb} MB）")
+                raise RuntimeError(f"磁盘空间不足：剩余 {free_mb:.0f} MB，需要 {required_mb} MB，请清理磁盘后重试")
+        except RuntimeError:
+            raise
+        except Exception as e:
+            install_state.log_line(f"警告: 磁盘空间检查失败，已跳过（{str(e)[:60]}）")
         ignore_ssl = settings.get("ignore_ssl", False)
         install_state.log_line(">>> 开始安装 Minecraft 基岩版服务器")
         urls_to_try = []

@@ -19,10 +19,11 @@ from .app_context import AppContext
 from .app_logger import get_app_logger, safe_log_exception
 from .app_update import check_app_update_async
 from .constants import APP_MARKER, APP_TITLE, APP_VERSION, DEFAULT_PORT, LOGS_DIR
+from .scheduler import start_scheduler, stop_scheduler
 from .server import get_server_proc, server_running
 from .state import migrate_legacy_data
 from .tray import SystemTray
-from .utils import installed, open_browser_with_retry, resolve_server_dir
+from .utils import installed, load_settings, open_browser_with_retry, resolve_server_dir
 from .web.handler import Handler
 
 
@@ -44,6 +45,9 @@ def _main():
         ctx = AppContext.instance()
         ctx.port = DEFAULT_PORT
         ctx.mark_initialized()
+        # 加载磁盘设置（迁移完成后从 APP_DATA_DIR/settings.json 恢复上次状态：
+        # server_dir、installed_version、历史目录、ignore_ssl 等）
+        load_settings()
 
     # windowed(exe无控制台)模式下 stdout/stderr 为 None，需重定向
     if sys.stdout is None:
@@ -65,7 +69,6 @@ def _main():
             time.sleep(1.5)
 
             # 多次探测是否真有实例在运行（每次间隔 0.5 秒，共 3 次）
-            found_running = False
             for retry in range(3):
                 for probe_port in range(DEFAULT_PORT, DEFAULT_PORT + 20):
                     try:
@@ -84,7 +87,7 @@ def _main():
                             return
                     except Exception:
                         continue
-                if not found_running and retry < 2:
+                if retry < 2:
                     time.sleep(0.5)
 
             # 多次探测后仍未找到运行中的实例，说明是残留互斥量，释放旧的并继续启动
@@ -130,6 +133,10 @@ def _main():
 
     AppContext.instance().httpd = httpd
 
+    # 启动定时任务调度器（定时重启/备份/公告）
+    with contextlib.suppress(Exception):
+        start_scheduler()
+
     # 异步检查软件更新（不阻塞启动，结果缓存供前端使用）
     with contextlib.suppress(Exception):
         check_app_update_async(force=False, ignore_ssl=AppContext.instance().settings.get("ignore_ssl", False))
@@ -157,7 +164,11 @@ def _main():
             import os
 
             try:
-                # 1. 停止服务器进程
+                # 1. 停止定时任务调度器
+                with contextlib.suppress(Exception):
+                    stop_scheduler()
+
+                # 2. 停止服务器进程
                 try:
                     from .server import get_server_proc, server_running
 
@@ -168,21 +179,21 @@ def _main():
                 except Exception as e:
                     print(f"停止服务器进程失败: {e}")
 
-                # 2. 停止系统托盘
+                # 3. 停止系统托盘
                 try:
                     if tray:
                         tray.stop()
                 except Exception as e:
                     print(f"停止系统托盘失败: {e}")
 
-                # 3. 关闭 HTTP 服务器
+                # 4. 关闭 HTTP 服务器
                 try:
                     if httpd:
                         httpd.shutdown()
                 except Exception as e:
                     print(f"关闭 HTTP 服务器失败: {e}")
 
-                # 4. 强制退出程序
+                # 5. 强制退出程序
                 os._exit(0)
 
             except Exception as e:
@@ -208,6 +219,8 @@ def _main():
         if tray:
             with contextlib.suppress(Exception):
                 tray.stop()
+        with contextlib.suppress(Exception):
+            stop_scheduler()
         try:
             p = get_server_proc()
             if p.running:
