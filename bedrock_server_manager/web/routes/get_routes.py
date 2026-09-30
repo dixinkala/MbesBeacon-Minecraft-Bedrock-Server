@@ -187,7 +187,10 @@ class GetRoutesMixin:
 
         since = int(q.get("since", ["0"])[0])
         text, count = AppContext.instance().console.read_since(since)
-        self._json({"lines": text, "count": count, "running": server_running()})
+        # 控制台被截断（MAX_LINES=2000）导致索引回退时，通知前端清空重建，
+        # 避免重放客户端已读过的旧日志
+        reset = since > 0 and count < since
+        self._json({"lines": text, "count": count, "running": server_running(), "reset": reset})
 
     @register_get_route("/api/console/export")
     def _get_console_export(self, q):

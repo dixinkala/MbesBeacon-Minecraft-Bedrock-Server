@@ -166,10 +166,14 @@ def list_backups(dir_path: str) -> list[dict]:
 
 def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
     """从备份恢复世界存档。会先停止服务器，备份当前 worlds（如果存在），然后恢复。
+    支持目录型备份（_worlds_backups/<name>）与 ZIP 压缩备份（<name>.zip）。
     返回 (ok, error_msg)。"""
     console = _get_console()
     get_server_proc = _get_server_proc()
-    if not backup_path or not os.path.isdir(backup_path):
+    if not backup_path or not os.path.exists(backup_path):
+        return False, "备份不存在"
+    is_zip = backup_path.lower().endswith(".zip") and os.path.isfile(backup_path)
+    if not (os.path.isdir(backup_path) or is_zip):
         return False, "备份目录不存在"
     if not server_dir or not os.path.isdir(server_dir):
         return False, "服务器目录不存在"
@@ -191,13 +195,29 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
         safe_log_exception("backup", f"操作失败: {e}", "warning")
     worlds_dir = os.path.join(server_dir, "worlds")
     tmp_dir = None
+    extract_dir = None
     try:
+        # ZIP 型备份：先安全解压到临时目录，校验其中包含 worlds 目录
+        if is_zip:
+            import tempfile
+
+            extract_dir = tempfile.mkdtemp(prefix="mbesbeacon_restore_")
+            from .install import extract_zip
+
+            extract_zip(backup_path, extract_dir)
+            extracted_worlds = os.path.join(extract_dir, "worlds")
+            if not os.path.isdir(extracted_worlds):
+                return False, "备份中未找到 worlds 目录，无法恢复"
+            source_worlds = extracted_worlds
+        else:
+            source_worlds = backup_path
+
         # 如果当前 worlds 存在，先重命名为临时备份
         if os.path.isdir(worlds_dir):
             tmp_dir = worlds_dir + "_restore_tmp_" + str(int(time.time()))
             os.rename(worlds_dir, tmp_dir)
         # 复制备份到 worlds
-        shutil.copytree(backup_path, worlds_dir)
+        shutil.copytree(source_worlds, worlds_dir)
         # 删除本次创建的临时备份
         if tmp_dir and os.path.isdir(tmp_dir):
             shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -219,6 +239,12 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
         except Exception as e:
             safe_log_exception("backup", f"操作失败: {e}", "warning")
         return False, f"恢复失败: {str(e)}"
+    finally:
+        # 清理解压临时目录
+        if extract_dir and os.path.isdir(extract_dir):
+            import shutil as _sh
+
+            _sh.rmtree(extract_dir, ignore_errors=True)
 
 
 def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool, str]:

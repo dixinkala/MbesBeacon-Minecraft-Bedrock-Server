@@ -9,7 +9,7 @@ import webbrowser
 
 from .app_context import AppContext
 from .app_logger import safe_log_exception
-from .constants import SERVER_EXE
+from .constants import APP_DATA_DIR, SERVER_EXE
 from .di import initialize_container, inject
 from .state import DEFAULT_THEME, THEME_FILE
 
@@ -28,8 +28,8 @@ def _get_server_proc():
     return ctx.server_proc, ctx.server_lock
 
 
-# 设置文件路径
-SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".bedrock_server_manager_settings.json")
+# 设置文件路径（统一到 APP_DATA_DIR，与 state.migrate_legacy_data 迁移目标一致）
+SETTINGS_FILE = os.path.join(APP_DATA_DIR, "settings.json")
 
 # detect_servers 缓存（避免高频状态轮询时反复扫描磁盘）
 _detect_cache = {"result": None, "time": 0}

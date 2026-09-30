@@ -234,6 +234,12 @@ def ban_ip(ip, reason="", server_dir=None):
         ip_ok, ip_err = validate_ip(ip)
         if not ip_ok:
             return False, ip_err
+        # 校验原因文本（禁换行，防止注入多条命令）
+        from .security import validate_reason
+
+        reason_ok, reason_err = validate_reason(reason)
+        if not reason_ok:
+            return False, reason_err
         d = server_dir or resolve_server_dir()
         if not d:
             return False, "未设置服务器目录"
