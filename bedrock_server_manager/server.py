@@ -190,6 +190,10 @@ class ServerProcess:
                         # 在单独线程中执行延迟重启，避免阻塞 _reader 线程
                         def _delayed_restart(delay):
                             time.sleep(delay)
+                            # 等待期间用户已点击"停止"，取消自动重启（防止服务器"复活"）
+                            if self._user_stopped:
+                                self._emit("[系统] 自动重启已取消（用户已停止服务器）\n")
+                                return
                             try:
                                 self.start()
                             except Exception as e:
@@ -227,9 +231,12 @@ class ServerProcess:
         self.proc.stdin.flush()
 
     def stop(self, wait=15):
+        # 无论进程是否在运行，都标记用户停止意图——
+        # 崩溃退避等待期间用户点击"停止"时，进程可能已退出，
+        # 此标记用于取消尚未触发的延迟自动重启（防止服务器"复活"）
+        self._user_stopped = True
         if not self.running:
             return
-        self._user_stopped = True
         try:
             self.send("stop")
         except Exception as e:

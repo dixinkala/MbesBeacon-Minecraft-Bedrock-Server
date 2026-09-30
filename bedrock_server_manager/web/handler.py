@@ -140,22 +140,28 @@ class Handler(
         self.send_header("X-Accel-Buffering", "no")
         self.end_headers()
         idx = since if since > 0 else 0
+
+        def _write_console(text, new_idx, reset=False):
+            payload = _json.dumps(
+                {"lines": text, "count": new_idx, "running": server_running(), "reset": reset}, ensure_ascii=False
+            )
+            self.wfile.write(f"id: {new_idx}\ndata: {payload}\n\n".encode())
+            self.wfile.flush()
+
         client_closed = False
         try:
             text, idx = AppContext.instance().console.read_since(idx)
             if text or idx > 0:
-                payload = _json.dumps({"lines": text, "count": idx, "running": server_running()}, ensure_ascii=False)
-                self.wfile.write(f"id: {idx}\ndata: {payload}\n\n".encode())
-                self.wfile.flush()
+                # 控制台被截断（MAX_LINES=2000）导致索引回退时，通知前端清空重建，
+                # 避免重放客户端已读过的旧日志
+                reset = idx < since if since > 0 else False
+                _write_console(text, idx, reset=reset)
             while not client_closed:
                 text, new_idx = AppContext.instance().console.wait_for_new(idx, timeout=1.0)
                 if text or new_idx != idx:
+                    reset = new_idx < idx  # 截断导致索引回退
                     idx = new_idx
-                    payload = _json.dumps(
-                        {"lines": text, "count": idx, "running": server_running()}, ensure_ascii=False
-                    )
-                    self.wfile.write(f"id: {idx}\ndata: {payload}\n\n".encode())
-                    self.wfile.flush()
+                    _write_console(text, idx, reset=reset)
                 else:
                     self.wfile.write(b": ping\n\n")
                     self.wfile.flush()
@@ -171,8 +177,15 @@ class Handler(
         time.sleep(0.5)
         try:
             from ..app_context import AppContext
+            from ..scheduler import stop_scheduler
 
             ctx = AppContext.instance()
+
+            # 0. 停止定时任务调度器
+            try:
+                stop_scheduler()
+            except Exception as e:
+                self._log(f"停止定时任务调度器失败: {e}")
 
             # 1. 停止服务器进程
             try:

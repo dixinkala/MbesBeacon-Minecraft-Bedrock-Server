@@ -93,6 +93,29 @@ def validate_custom_url(url: str) -> tuple:
         return False, "URL 解析失败", False
 
 
+def validate_reason(reason: str, max_len: int = 200) -> tuple:
+    """校验原因/公告消息文本：禁止换行与控制字符，限制长度。
+
+    kick/ban/ban-ip 的 reason 与定时公告 message 会被拼接到服务器命令中，
+    若包含换行可注入多条命令（如 "say x\\nstop"），必须拒绝。
+
+    Args:
+        reason: 待校验文本（可为空字符串或 None）
+        max_len: 最大允许长度
+
+    Returns:
+        tuple: (ok, error_msg)
+    """
+    if reason is None:
+        return True, ""
+    r = str(reason).strip()
+    if len(r) > max_len:
+        return False, f"文本长度不能超过 {max_len} 字符"
+    if "\n" in r or "\r" in r:
+        return False, "文本不能包含换行符"
+    return True, ""
+
+
 def audit_log(action, detail="", server_dir=None):
     """记录操作审计日志。"""
     try:
@@ -161,6 +184,11 @@ DANGEROUS_ENDPOINTS = {
         "confirm_key": "confirm_delete",
         "confirm_value": "DELETE",
         "message": "删除世界是不可逆操作，请输入 DELETE 确认",
+    },
+    "/api/worlds/import": {
+        "confirm_key": "confirm_import",
+        "confirm_value": "IMPORT",
+        "message": "导入世界会覆盖当前世界存档，请输入 IMPORT 确认",
     },
     "/api/server/stop": {
         "confirm_key": "confirm_stop",
