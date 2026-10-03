@@ -64,7 +64,7 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 # 程序自动打开浏览器管理界面 (http://127.0.0.1:19100)
 
 # 3. 一键安装服务器
-# 选择版本 → 选择目录 → 开始安装 → 自动启动
+# 选择安装目录 → 选择版本 → 开始安装 → 自动启动
 ```
 
 就是这么简单！无需命令行，无需手动配置，3分钟即可开服。
@@ -122,7 +122,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 |------|------|
 | **操作系统** | Windows 10 / Windows 11（仅支持 Windows 平台） |
 | **内存** | 建议 4GB 以上（服务器运行需要） |
-| **磁盘空间** | 至少 500MB 可用空间（含服务端下载和世界存档） |
+| **磁盘空间** | 至少 300MB 可用空间（安装时自动检查，不足则中止）；建议 500MB 以上（含服务端下载和世界存档） |
 | **网络** | 首次安装需要联网下载服务端；局域网联机需要同一 WiFi |
 | **Python** | 仅开发环境需要 3.10+，发布版 EXE 无需安装 |
 
@@ -150,7 +150,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 ```bash
 # 克隆项目
 git clone <repository-url>
-cd bedrock_server_builder
+cd MbesBeacon-Minecraft-Bedrock-Server
 
 # 安装依赖
 pip install -r requirements.txt
@@ -236,12 +236,12 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 **输出**（安装日志）：
 ```
 [10:30:15] 开始下载 Bedrock Server 1.21.0.03 ...
-[10:30:15] 下载地址: https://minecraft.azureedge.net/bin-win/bedrock-server-1.21.0.03.zip
+[10:30:15] 下载地址: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.0.03.zip
 [10:30:45] 下载完成，大小: 85.3 MB
 [10:30:45] 正在校验文件完整性 ...
 [10:30:46] ZIP 完整性校验通过
 [10:30:46] SHA256 哈希: a1b2c3d4...（首次记录）
-[10:30:46] PE 签名校验通过（Microsoft Corporation）
+[10:30:46] PE 签名校验通过（文件格式与数字签名有效）
 [10:30:46] 正在解压到 D:\MinecraftServer ...
 [10:30:50] 解压完成
 [10:30:50] 正在初始化配置 ...
@@ -326,7 +326,7 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 ## 项目结构
 
 ```
-bedrock_server_builder/
+MbesBeacon-Minecraft-Bedrock-Server/
 ├── bedrock_server_manager/     # 主源码包
 │   ├── __init__.py
 │   ├── main.py                 # 程序入口，单实例检测，HTTP 服务器启动
@@ -370,7 +370,7 @@ bedrock_server_builder/
 │           ├── commands.py     # 命令路由
 │           ├── players.py      # 玩家管理路由
 │           └── config.py       # 配置管理路由
-├── tests/                      # 测试套件（13个测试文件，293个测试用例）
+├── tests/                      # 测试套件（18个测试文件，433个测试用例）
 │   ├── __init__.py
 │   ├── test_unit.py            # 单元测试（配置/玩家/备份/安装/工具函数）
 │   ├── test_integration.py     # 集成测试（模块间协作、状态同步）
@@ -379,12 +379,19 @@ bedrock_server_builder/
 │   ├── test_scheduler_tray.py  # 计划任务/托盘测试
 │   ├── test_crash_restart.py   # 崩溃重启测试（指数退避、最大重试）
 │   ├── test_app_context.py     # AppContext 测试（单例、状态管理）
+│   ├── test_app_logger.py      # 应用日志测试
 │   ├── test_console.py         # 控制台测试（日志缓冲、SSE流）
+│   ├── test_di.py              # 依赖注入容器测试
+│   ├── test_p3_regression.py   # P3 门禁回归测试
+│   ├── test_performance.py     # 性能监控测试
 │   ├── test_ratelimit.py       # 速率限制测试（令牌桶算法）
-│   ├── test_verify.py          # 验证测试（SHA256计算、文件大小、ZIP完整性）
+│   ├── test_review_fixes.py    # 全面复查修复回归测试
 │   ├── test_security.py        # 安全测试（命令校验、API Token生成）
+│   ├── test_verify.py          # 验证测试（SHA256计算、文件大小、ZIP完整性）
+│   ├── test_worlds_export.py   # 世界存档导出测试
 │   └── test_modules.py         # 模块测试（世界管理、命令模块、应用日志）
 ├── dist/                       # 构建产物（MbesBeacon.exe）
+├── .github/                    # GitHub Actions CI 工作流
 ├── BedrockServerManager.spec   # PyInstaller 打包配置
 ├── build.bat                   # 构建启动器（调用 build.ps1）
 ├── build.ps1                   # PowerShell 构建脚本（含自动签名）
@@ -392,11 +399,16 @@ bedrock_server_builder/
 ├── sign_exe.ps1                # EXE 数字签名工具（PowerShell）
 ├── version_info.txt            # 版本信息文件
 ├── run.py                      # 开发环境运行入口
-├── requirements.txt            # Python 依赖
+├── smoke_test.py               # 冒烟测试脚本
+├── requirements.txt            # Python 运行时依赖
+├── requirements-dev.txt        # Python 开发/测试依赖
 ├── pyproject.toml              # 项目配置（pytest/ruff）
 ├── .pre-commit-config.yaml     # pre-commit 配置
 ├── .gitignore                  # Git 忽略文件
 ├── LICENSE                     # MIT 许可证
+├── CODE_OF_CONDUCT.md          # 行为准则
+├── CONTRIBUTING.md             # 贡献指南
+├── SECURITY.md                 # 安全政策
 └── README.md                   # 本文档
 ```
 
@@ -410,7 +422,7 @@ MbesBeacon 内置多项安全机制，确保服务器和本地数据安全：
 |----------|----------|
 | **API 认证** | 随机 32 位 Token + Origin/Referer 校验，防止 CSRF 攻击 |
 | **下载完整性校验** | ZIP 完整性 + SHA256 哈希（首次信任机制 TOFU）+ PE 签名校验 + 文件大小范围 |
-| **PE 签名验证** | 使用 WinVerifyTrust API 验证 bedrock_server.exe 是否为 Microsoft/Mojang 签名 |
+| **PE 签名验证** | 使用 WinVerifyTrust API 验证 bedrock_server.exe 的数字签名是否存在且有效（不校验签名者身份） |
 | **危险操作二次确认** | 删除服务器、恢复备份等操作需确认，防止误操作 |
 | **操作审计日志** | 记录所有危险操作（启动/停止/删除、配置修改、玩家管理、备份恢复） |
 | **API 速率限制** | 令牌桶算法，防止前端 bug 或恶意脚本频繁操作 |
