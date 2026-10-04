@@ -56,7 +56,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='MbesBeacon',
+    name='MbesBeacon1.0.23',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
