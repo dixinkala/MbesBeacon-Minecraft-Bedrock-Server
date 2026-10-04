@@ -1582,7 +1582,7 @@ async function checkAppUpdate(force = false) {
 function showAppUpdateModal(info) {
   const current = info.current_version || '0.1.0';
   const latest = info.latest_version || '未知';
-  const title = info.latest_title || '新版本可用';
+  const title = escapeHtml(info.latest_title || '新版本可用');
   const notes = info.release_notes || '';
   const downloadUrl = info.download_url || info.release_url || '#';
   const releaseUrl = info.release_url || '#';
@@ -1592,9 +1592,12 @@ function showAppUpdateModal(info) {
   if (notesDisplay.length > 500) {
     notesDisplay = notesDisplay.substring(0, 500) + '...';
   }
+  // 转义 HTML 特殊字符，防止发布说明中的 < > & 破坏弹窗渲染
+  notesDisplay = escapeHtml(notesDisplay);
 
   const modal = document.createElement('div');
   modal.className = 'modal-bg';
+  modal.style.display = 'flex';  // 覆盖 CSS 默认 display:none，确保弹窗可见
   modal.id = 'appUpdateModal';
   modal.innerHTML = `
     <div class="modal" style="max-width:560px;">
