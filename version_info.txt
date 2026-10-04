@@ -20,7 +20,7 @@ VSVersionInfo(
         StringStruct(u'FileVersion', u'1.0.23.0'),
         StringStruct(u'InternalName', u'MbesBeacon'),
         StringStruct(u'LegalCopyright', u'Copyright (C) 2026'),
-        StringStruct(u'OriginalFilename', u'MbesBeacon.exe'),
+        StringStruct(u'OriginalFilename', u'MbesBeacon1.0.23.exe'),
         StringStruct(u'ProductName', u'MbesBeacon'),
         StringStruct(u'ProductVersion', u'1.0.23.0')])
       ]),
