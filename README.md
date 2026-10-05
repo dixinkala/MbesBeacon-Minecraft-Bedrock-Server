@@ -1,5 +1,7 @@
 # MbesBeacon
 
+**Languages: 中文 | [English](README_EN.md)**
+
 <div align="center">
 
 **Minecraft Bedrock Edition Server Beacon — Minecraft 基岩版服务器管理器**
