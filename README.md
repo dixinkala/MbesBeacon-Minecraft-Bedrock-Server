@@ -39,7 +39,7 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 > 操作演示（实机录制 · 循环播放）
 
 <p align="center">
-  <a href="docs/demo.mp4"><img src="docs/demo_poster.png" alt="点击播放 MbesBeacon 操作演示" width="480"></a>
+  <img src="docs/demo.gif" alt="MbesBeacon 操作演示" width="480">
 </p>
 
 ---
