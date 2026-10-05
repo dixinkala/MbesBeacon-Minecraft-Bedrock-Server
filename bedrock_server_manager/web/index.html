@@ -1563,7 +1563,7 @@ $('delCancel').onclick=()=>{ $('deleteModal').style.display='none'; };
 $('delDo').onclick=async()=>{
   if(!$('ckDeleteConfirm').checked){ $('delMsg').textContent='请先勾选“我已确认执行删除操作”'; $('delMsg').className='msg err'; return; }
   const mode=$('delModeFull').checked?'full':'server_only';
-  const r=await jpost('/api/server/delete',{dir:curDir,mode:mode});
+  const r=await jpost('/api/server/delete',{dir:curDir,mode:mode,confirm_delete:'DELETE'});
   const m=$('delMsg');
   if(r.ok){
     m.textContent='✔ 已删除'; m.className='msg';
@@ -1886,7 +1886,7 @@ window.restoreBackup=async(i)=>{
   if(!confirm('⚠ 恢复备份确认\n\n即将恢复备份：'+b.time+'\n\n此操作会停止服务器并覆盖当前世界存档，建议先手动备份当前世界。\n\n确定继续吗？')) return;
   showAlert('正在恢复...','info');
   try{
-    const r=await jpost('/api/backups/restore',{path:b.path});
+    const r=await jpost('/api/backups/restore',{path:b.path,confirm_restore:'RESTORE'});
     if(r.ok){ showAlert('恢复成功，服务器已停止，请手动启动','success'); backupList=r.backups||[]; renderBackups(); }
     else showAlert(r.error||'恢复失败','error');
   }catch(e){ showAlert('恢复失败','error'); }
