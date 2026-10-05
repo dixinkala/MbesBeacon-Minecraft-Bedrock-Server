@@ -39,7 +39,7 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 > Live demo (recorded from the real app · looping)
 
 <p align="center">
-  <img src="docs/demo.gif" alt="MbesBeacon Live Demo" width="480">
+  <video src="docs/demo.mp4" controls width="480"></video>
 </p>
 
 ---
