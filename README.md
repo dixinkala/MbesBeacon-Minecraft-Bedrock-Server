@@ -9,6 +9,9 @@
 [![GitHub stars](https://img.shields.io/github/stars/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=yellow)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=green)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/network/members)
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
+[![Tests](https://img.shields.io/badge/tests-433%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -22,6 +25,16 @@
 MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专用服务器管理工具，采用"系统托盘 + Web 管理界面"混合架构，让服务器的安装、配置、运维变得简单直观。
 
 > ⭐ **如果这个项目对你有帮助，请给一个 Star！你的支持是我持续更新的动力！**
+
+---
+
+## 📸 界面预览
+
+> 首次启动引导 · 三步快速搭建服务器
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="MbesBeacon 界面预览" width="680">
+</p>
 
 ---
 
@@ -49,6 +62,7 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 - [项目结构](#项目结构)
 - [安全特性](#安全特性)
 - [贡献指南](#贡献指南)
+- [更新日志](#更新日志)
 - [常见问题](#常见问题)
 - [许可证](#许可证)
 
@@ -432,6 +446,12 @@ MbesBeacon 内置多项安全机制，确保服务器和本地数据安全：
 | **输入校验** | 玩家名正则校验、IP 地址格式校验、配置项数值范围校验 |
 | **单实例检测** | 命名互斥量防止多开冲突 |
 | **本地监听** | HTTP 服务器仅绑定 `127.0.0.1`，不对外暴露 |
+
+---
+
+## 更新日志
+
+完整的版本变更记录见 [CHANGELOG.md](CHANGELOG.md)（中英双语）。包含每个版本的 ✨ 新增、🔧 修改、🐛 修复与 🏗️ 架构改进明细。
 
 ---
 
