@@ -1,5 +1,7 @@
 # 贡献指南
 
+**Languages: 中文 | [English](CONTRIBUTING_EN.md)**
+
 首先，感谢你花时间为 MbesBeacon 做贡献！🎉
 
 我们欢迎任何形式的贡献，无论是提交 Bug 报告、功能建议，还是直接提交代码。

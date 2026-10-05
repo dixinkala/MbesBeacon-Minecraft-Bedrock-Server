@@ -1,5 +1,7 @@
 # 安全政策
 
+**Languages: 中文 | [English](SECURITY_EN.md)**
+
 感谢你关注 MbesBeacon 的安全。我们非常重视安全问题，并鼓励负责任的安全研究。
 
 ## 支持的版本
