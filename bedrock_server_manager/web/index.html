@@ -1202,8 +1202,15 @@ function updateWizardUI(){
 }
 window.wizardBrowseDir=async()=>{
   try{
-    const r=await jpost('/api/browse-dir',{});
+    const cur=$('wizardInstallDir').value||'';
+    const r=await jget('/api/browse-dir?initial='+encodeURIComponent(cur));
     if(r.ok && r.dir){ $('wizardInstallDir').value=r.dir; }
+    else if(r.cancelled){ /* 用户取消，无操作 */ }
+    else{
+      // 系统选择器不可用时回退到内置目录弹窗
+      dirModalTarget='wizardInstallDir';
+      await openDirModal();
+    }
   }catch(e){ showAlert('浏览目录失败','error'); }
 };
 window.wizardSelectVersion=async()=>{
@@ -1386,14 +1393,22 @@ async function openDirModal(callback){
   await loadDir('');
 }
 async function loadDir(p){
-  const r=await jget('/api/listdir?path='+encodeURIComponent(p||dirPath));
+  // p 为 undefined 时沿用当前目录；'' 表示"我的电脑"（空路径），不能被 falsy 替换掉
+  const target=(p===undefined)?dirPath:p;
+  const r=await jget('/api/listdir?path='+encodeURIComponent(target));
   if(!r.ok){ $('dirHint').textContent='无法访问: '+r.error; return; }
-  dirPath=r.path; $('dirCur').value=r.path;
+  dirPath=r.path||''; $('dirCur').value=dirPath||'我的电脑';
   const box=$('dirList'); box.innerHTML='';
   (r.dirs||[]).forEach(d=>{
+    const isDrive=/^[A-Za-z]:[\\\/]$/.test(d);
     const row=document.createElement('div');
-    row.textContent='📁 '+d+(r.is_server&&d==='.'?'':'');
-    row.onclick=()=>loadDir(dirPath+'\\'+d);
+    if(isDrive){
+      row.textContent='💽 '+d;
+      row.onclick=()=>loadDir(d);
+    }else{
+      row.textContent='📁 '+d;
+      row.onclick=()=>loadDir(dirPath+'\\'+d);
+    }
     box.appendChild(row);
   });
   $('dirHint').textContent=(r.is_server?'✓ 此目录已包含 bedrock_server.exe，可直接使用。':'此目录下没有 bedrock_server.exe（安装时会自动放入）。');
@@ -1410,16 +1425,27 @@ async function browseSystemDir(targetInput){
       }
       return true;
     }
+    if(r.cancelled){
+      // 用户在资源管理器中取消选择：不弹内置选择器
+      return false;
+    }
   }catch(e){}
-  // 回退到内部弹窗
+  // 仅系统选择器调用失败（非用户取消）时回退到内部弹窗
   dirModalTarget=targetInput;
   await openDirModal();
   return false;
 }
 $('btnBrowseServer').onclick=()=>browseSystemDir('selCurrentServer');
 $('btnBrowseInstall').onclick=()=>browseSystemDir('inDir');
-$('dirUp').onclick=()=>{ const up=dirPath.replace(/[\\\/][^\\\/]*$/,''); if(up&&up!==dirPath) loadDir(up); else loadDir(''); };
+$('dirUp').onclick=()=>{
+  if(!dirPath) return;                       // 已在"我的电脑"
+  const up=dirPath.replace(/[\\\/][^\\\/]*$/,'');
+  if(/^[A-Za-z]:$/.test(up)){ loadDir(''); } // 盘根（如 C:\）→ 我的电脑
+  else if(up && up!==dirPath) loadDir(up);
+  else loadDir('');
+};
 $('dirUse').onclick=()=>{
+  if(!dirPath){ showAlert('请先在列表中选择一个目录','warn'); return; }
   $(dirModalTarget).value=dirPath;
   $('dirModal').style.display='none';
   if(dirModalTarget==='selCurrentServer'){ selectServer(dirPath, false); }

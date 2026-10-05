@@ -132,7 +132,8 @@ class GetRoutesMixin:
         if selected:
             self._json({"ok": True, "dir": selected})
         else:
-            self._json({"ok": False, "error": "用户取消选择"})
+            # 用户取消或未选择：cancelled=true 供前端区分"取消"与"调用失败"
+            self._json({"ok": True, "dir": None, "cancelled": True})
 
     @register_get_route("/api/theme")
     def _get_theme(self, q):
@@ -287,10 +288,27 @@ class GetRoutesMixin:
     def _get_listdir(self, q):
 
         base = q.get("path", [""])[0]
-        if not base:
-            base = os.path.expanduser("~")
         if ".." in base.replace("\\", "/").split("/"):
             self._json({"ok": False, "error": "非法路径", "path": base, "parent": "", "dirs": [], "is_server": False})
+            return
+        # 当前系统可访问的盘符（如 C:\、D:\）
+        drives = []
+        for _i in range(ord("A"), ord("Z") + 1):
+            p = f"{chr(_i)}:\\"
+            if os.path.exists(p):
+                drives.append(p)
+        # 空路径 = "我的电脑"视图：列出全部盘符供跨盘切换
+        if not base:
+            self._json(
+                {
+                    "ok": True,
+                    "path": "",
+                    "parent": "",
+                    "dirs": drives,
+                    "drives": drives,
+                    "is_server": False,
+                }
+            )
             return
         base = os.path.abspath(base)
         _system_dirs = [
@@ -344,13 +362,22 @@ class GetRoutesMixin:
             "path": base,
             "parent": os.path.dirname(base) if base else "",
             "dirs": [],
+            "drives": drives,
             "is_server": False,
         }
         try:
+            subdirs = []
             for name in sorted(os.listdir(base)):
                 full = os.path.join(base, name)
                 if os.path.isdir(full):
-                    result["dirs"].append(name)
+                    subdirs.append(name)
+            # 盘根目录（如 D:\）时，把其他盘符置于列表顶部，方便跨盘切换
+            is_drive_root = len(base) == 3 and base[1:3] == ":\\"
+            if is_drive_root:
+                other = [d for d in drives if os.path.normcase(d) != os.path.normcase(base)]
+                result["dirs"] = other + subdirs
+            else:
+                result["dirs"] = subdirs
             result["is_server"] = os.path.isfile(os.path.join(base, SERVER_EXE))
             result["has_exe"] = result["is_server"]
         except Exception as e:
