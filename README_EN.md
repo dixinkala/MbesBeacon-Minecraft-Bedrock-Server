@@ -62,7 +62,6 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 - [Project Structure](#project-structure)
 - [Security Features](#security-features)
 - [Contributing](#contributing)
-- [Changelog](#changelog)
 - [FAQ](#faq)
 - [License](#license)
 
@@ -446,12 +445,6 @@ MbesBeacon ships with multiple security mechanisms to keep your server and local
 | **Input validation** | Player name regex, IP address format, config numeric range validation |
 | **Single-instance check** | Named mutex to prevent multiple instances |
 | **Local only** | HTTP server binds only to `127.0.0.1`, never exposed externally |
-
----
-
-## Changelog
-
-The complete version history is in [CHANGELOG.md](CHANGELOG.md) (bilingual). It lists ✨ Added, 🔧 Changed, 🐛 Fixed and 🏗️ Architecture items for every release.
 
 ---
 
