@@ -317,16 +317,16 @@ def get_system_lang() -> str:
         if (lang_id & 0x3FF) == 0x04:
             return "zh"
         return "en"
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log_exception("utils", f"系统语言检测失败(API): {e}")
     try:
         import locale
 
         code, _ = locale.getdefaultlocale()
         if code and code.lower().startswith("zh"):
             return "zh"
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log_exception("utils", f"系统语言检测失败(locale): {e}")
     return "en"
 
 
