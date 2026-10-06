@@ -33,7 +33,7 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 > First-run wizard · Set up your server in three steps
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="MbesBeacon UI Preview" width="680">
+  <img src="docs/screenshot_en.png" alt="MbesBeacon UI Preview (English)" width="680">
 </p>
 
 > Live demo (recorded from the real app · looping)
