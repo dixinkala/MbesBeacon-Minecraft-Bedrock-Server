@@ -11,7 +11,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-433%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-438%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -50,9 +50,9 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 |------------|-------------|------------|------------|
 | 自动下载官方服务端，支持所有历史版本 | 30+ 配置项可视化编辑，配置历史回滚 | 在线玩家列表，权限/踢出/封禁/白名单 | 手动/自动备份，一键恢复，保留策略 |
 
-| 📊 性能监控 | 📝 实时控制台 | 🕐 计划任务 | 🔒 安全可靠 |
+| 📊 性能监控 | 📝 实时控制台 | 🕐 计划任务 | 🌐 中英双语 |
 |------------|-------------|------------|------------|
-| 实时CPU/内存/玩家数监控 | SSE实时日志推送，命令自动补全 | 定时重启/备份/公告，自动化运维 | API Token认证，下载完整性校验，审计日志 |
+| 实时CPU/内存/玩家数监控 | SSE实时日志推送，命令自动补全 | 定时重启/备份/公告，自动化运维 | 跟随系统语言自动切换，支持手动切换中/英文 |
 
 ---
 
@@ -78,7 +78,7 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 ### 3步启动你的 Minecraft 基岩版服务器
 
 ```bash
-# 1. 下载 MbesBeacon.exe
+# 1. 下载 MbesBeacon1.0.23.exe
 # 从 Releases 页面下载最新版本
 
 # 2. 双击运行
@@ -125,6 +125,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 
 ### 特色功能
 
+- **中英双语界面**：首次启动自动检测系统语言（中文→中文界面，其他→英文界面）；点击标题栏语言按钮可随时切换，选择会记住
 - **系统托盘集成**：后台运行，托盘图标显示运行状态，右键菜单快速操作
 - **多主题支持**：10 套预设主题（Minecraft 暗色、草方块绿、红石红、钻石蓝等）+ 自定义强调色
 - **多服务器管理**：自动扫描已安装服务器，支持多服务器切换管理
@@ -153,7 +154,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 
 ### 方式一：直接运行 EXE（推荐普通用户）
 
-1. 下载 `MbesBeacon.exe`
+1. 下载 `MbesBeacon1.0.23.exe`（Releases 页面，文件名 = 软件名 + 版本号）
 2. 双击运行，程序会自动：
    - 创建系统托盘图标
    - 在本地 `127.0.0.1:19100` 启动 HTTP 管理服务器
@@ -190,7 +191,7 @@ pip install pyinstaller
 # set CERT_PASS=你的密码
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
-# 打包产物在 dist/MbesBeacon.exe
+# 打包产物在 dist/MbesBeacon1.0.23.exe（文件名 = 软件名 + 版本号）
 ```
 
 ---
@@ -199,11 +200,17 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 ### 快速开始
 
-1. **启动程序**：双击 `MbesBeacon.exe`，浏览器自动打开管理界面（`http://127.0.0.1:19100`）
+1. **启动程序**：双击 `MbesBeacon1.0.23.exe`，浏览器自动打开管理界面（`http://127.0.0.1:19100`）
 2. **安装服务器**：在「① 安装服务器」页面选择版本和安装目录，点击「开始下载并安装」
 3. **配置服务器**：在「② 服务器配置」页面修改服务器名称、端口、最大玩家数等，点击「保存配置」
 4. **启动服务器**：在「③ 服务器控制台」页面点击「启动服务器」，查看日志确认启动成功
 5. **联机游玩**：在 Minecraft 中「服务器」->「添加服务器」，填写 `127.0.0.1:19132`（默认端口）
+
+### 切换界面语言
+
+- 首次启动时程序自动检测系统语言：系统为中文时使用中文界面，其他语言时使用英文界面
+- 点击标题栏的语言按钮（中文界面显示「English」，英文界面显示「中文」）可随时切换
+- 切换后语言选择会被记住，下次启动不再询问
 
 ### 系统托盘操作
 
@@ -329,16 +336,22 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 **响应**（JSON）：
 ```json
 {
-  "ok": true,
   "app": "mbesbeacon",
+  "title": "MbesBeacon",
   "version": "1.0.23",
-  "installed": true,
   "server_dir": "D:\\MinecraftServer",
+  "installed": true,
   "installed_version": "1.21.0.03",
   "server_running": true,
-  "latest_version": "1.21.1.01",
-  "port": 19132,
-  "lan_ip": "192.168.1.100"
+  "install": {
+    "busy": false,
+    "progress": 0,
+    "stage": "",
+    "version": "",
+    "dir": ""
+  },
+  "latest": null,
+  "detected_servers": ["D:\\MinecraftServer"]
 }
 ```
 
@@ -391,7 +404,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # 命令路由
 │           ├── players.py      # 玩家管理路由
 │           └── config.py       # 配置管理路由
-├── tests/                      # 测试套件（18个测试文件，433个测试用例）
+├── tests/                      # 测试套件（19个测试文件，438个测试用例）
 │   ├── __init__.py
 │   ├── test_unit.py            # 单元测试（配置/玩家/备份/安装/工具函数）
 │   ├── test_integration.py     # 集成测试（模块间协作、状态同步）
@@ -401,6 +414,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_crash_restart.py   # 崩溃重启测试（指数退避、最大重试）
 │   ├── test_app_context.py     # AppContext 测试（单例、状态管理）
 │   ├── test_app_logger.py      # 应用日志测试
+│   ├── test_browse_dir.py      # 浏览目录/服务器选择测试
 │   ├── test_console.py         # 控制台测试（日志缓冲、SSE流）
 │   ├── test_di.py              # 依赖注入容器测试
 │   ├── test_p3_regression.py   # P3 门禁回归测试
@@ -411,7 +425,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_verify.py          # 验证测试（SHA256计算、文件大小、ZIP完整性）
 │   ├── test_worlds_export.py   # 世界存档导出测试
 │   └── test_modules.py         # 模块测试（世界管理、命令模块、应用日志）
-├── dist/                       # 构建产物（MbesBeacon.exe）
+├── dist/                       # 构建产物（MbesBeacon1.0.23.exe）
 ├── .github/                    # GitHub Actions CI 工作流
 ├── BedrockServerManager.spec   # PyInstaller 打包配置
 ├── build.bat                   # 构建启动器（调用 build.ps1）
