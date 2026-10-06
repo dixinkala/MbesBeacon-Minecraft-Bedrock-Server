@@ -126,6 +126,409 @@
   100% { transform: translateX(350%); }
 }
 </style>
+<script id="i18n">
+/* ===== i18n internationalization (zh / en) ===== */
+const I18N_EN = {
+"MbesBeacon — Minecraft 基岩版服务器管理器": "MbesBeacon — Minecraft Bedrock Server Manager",
+"Minecraft 基岩版服务器管理器": "Minecraft Bedrock Server Manager",
+"正在加载界面...": "Loading interface...",
+"检测中...": "Checking...",
+"🔄 服务器更新": "🔄 Server Update",
+"📦 软件更新": "📦 App Update",
+"🎨 界面风格": "🎨 Theme",
+"退出程序": "Exit",
+"关闭本程序": "Close this program",
+"检测 Minecraft 服务器新版本": "Check for Minecraft server updates",
+"检测 MbesBeacon 软件新版本": "Check for MbesBeacon app updates",
+"自定义界面风格": "Custom Theme",
+"① 安装服务器": "① Install Server",
+"② 服务器配置": "② Server Config",
+"③ 服务器控制台": "③ Server Console",
+"④ 玩家管理": "④ Players",
+"⑤ 世界管理": "⑤ Worlds",
+"⑥ 世界备份": "⑥ Backups",
+"⑦ 性能监控": "⑦ Monitor",
+"⑧ 包管理": "⑧ Packs",
+"⑨ 计划任务": "⑨ Scheduled Tasks",
+"⑩ 使用帮助": "⑩ Help",
+"服务器地址: --": "Server address: --",
+"服务器地址: ": "Server address: ",
+"复制地址": "Copy address",
+"👋 欢迎使用！三步搭建你的 Minecraft 基岩版服务器": "👋 Welcome! Three steps to set up your Minecraft Bedrock server",
+"第一步": "Step 1",
+"第二步": "Step 2",
+"第三步": "Step 3",
+"选择安装目录（下方「安装目录」输入框旁点击「浏览」）": "Choose an install directory (click Browse next to the Install Directory box)",
+"选择版本（点击「下载版本」输入框旁的 ▼ 按钮）": "Pick a version (click the ▼ button next to the Version box)",
+"点击「开始安装」，等待下载完成后自动启动": "Click Start Install and wait for the download to finish",
+"安装完成后可在「服务器控制台」管理服务器，在「玩家管理」管理玩家权限。": "After installation, manage the server in Console and player permissions in Players.",
+"三步快速搭建你的服务器": "Three quick steps to set up your server",
+"上一步": "Back",
+"下一步": "Next",
+"跳过向导": "Skip Wizard",
+"第一步：选择安装目录": "Step 1: Choose an install directory",
+"第二步：选择服务器版本": "Step 2: Choose a server version",
+"第三步：开始安装": "Step 3: Start installation",
+"选择一个空文件夹用于安装服务器（建议 D:\\MinecraftServer）": "Choose an empty folder to install the server (e.g. D:\\MinecraftServer)",
+"选择要安装的基岩版服务器版本（推荐最新稳定版）": "Choose a Bedrock server version (latest stable recommended)",
+"确认以下信息，点击开始安装，程序会自动下载并配置服务器": "Confirm the details and click Start Install. The program will download and configure the server automatically",
+"服务器版本：": "Server version: ",
+"开始安装": "Start Install",
+"开始下载并安装": "Download & Install",
+"服务端安装": "Server Install",
+"下载版本": "Version",
+"检测最新版本": "Check Latest",
+"版本类型": "Version Type",
+"稳定版": "Stable",
+"预览版（含稳定版）": "Preview (includes Stable)",
+"自定义地址": "Custom URL",
+"点击 ▼ 选择版本，或手动输入任意版本号": "Click ▼ to pick a version, or type any version number",
+"点击右侧按钮选择版本...": "Click the button on the right to pick a version...",
+"▼ 选择版本": "▼ Pick Version",
+"当前服务器": "Current Server",
+"（未管理服务器）": "(No server selected)",
+"（未设置）": "(Not set)",
+"📁 浏览": "📁 Browse",
+"安装目录": "Install Directory",
+"安装目录：": "Install directory: ",
+"输入新服务器安装目录（建议空文件夹）": "Enter a new install directory (an empty folder is recommended)",
+"安装完成后自动启动服务器": "Auto-start server after installation",
+"⚙ 服务器设置": "⚙ Server Settings",
+"网络异常时跳过SSL校验（谨慎）": "Skip SSL verification on network errors (use with caution)",
+"网络异常时跳过SSL校验": "Skip SSL verification on network errors",
+"可能导致下载被篡改的恶意服务器文件。仅在网络环境受信任时使用！": "This may allow tampered or malicious server files to be downloaded. Only use in a trusted network!",
+"可选：直接粘贴服务端 zip 下载链接（留空则使用上方版本自动下载）": "Optional: paste a server zip download link (leave empty to auto-download the version above)",
+"自定义下载地址": "Custom Download URL",
+"删除服务器": "Delete Server",
+"删除前建议先备份 worlds 文件夹（世界存档）。若服务器正在运行，会先自动停止。": "Back up the worlds folder first. The server will be stopped automatically if running.",
+"🗑 删除服务器...": "🗑 Delete Server...",
+"请选择删除方式（该操作不可撤销）：": "Choose how to delete (this cannot be undone):",
+"仅删除服务端程序（保留世界存档 worlds 和配置文件）": "Remove server program only (keep worlds and config files)",
+"彻底删除整个目录（连同世界存档一起删除）": "Remove the entire directory (including world saves)",
+"我已确认执行删除操作": "I confirm the delete operation",
+"确认删除": "Confirm Delete",
+"服务器参数（server.properties）": "Server Properties (server.properties)",
+"保存配置": "Save Config",
+"重新载入": "Reload",
+"恢复默认值": "Restore Defaults",
+"高级模式（显示全部30+配置项）": "Advanced mode (show all 30+ options)",
+"配置历史版本（点击回滚）": "Config history (click to roll back)",
+"📜 配置历史": "📜 Config History",
+"📋 操作审计日志": "📋 Audit Log",
+"🔄 刷新审计日志": "🔄 Refresh Audit Log",
+"暂无审计日志": "No audit log",
+"暂无配置历史": "No config history",
+"服务器控制": "Server Control",
+"▶ 启动服务器": "▶ Start Server",
+"■ 停止服务器": "■ Stop Server",
+"↻ 重启服务器": "↻ Restart Server",
+"发送指令": "Send Command",
+"输入指令后回车发送，例如：op 玩家名 / whitelist add 玩家名 / say 大家好 / kick 玩家名": "Type a command and press Enter. e.g. op <player> / whitelist add <player> / say Hello / kick <player>",
+"🔍 搜索日志...": "🔍 Search logs...",
+"自动滚动": "Auto-scroll",
+"自动刷新（5秒）": "Auto-refresh (5s)",
+"📋 复制日志": "📋 Copy Log",
+"💾 导出日志": "💾 Export Log",
+"🗑 清空": "🗑 Clear",
+"服务器未运行，无法发送指令": "Server is not running, cannot send command",
+"请输入指令": "Please enter a command",
+"在线玩家": "Online Players",
+"服务器未运行": "Server not running",
+"🔄 刷新玩家列表": "🔄 Refresh Players",
+"当前没有玩家在线": "No players online",
+"在线玩家：": "Online: ",
+"权限：": "Permission: ",
+"访客": "Visitor",
+"成员": "Member",
+"管理员": "Operator",
+"设置权限": "Set Permission",
+"踢出": "Kick",
+"封禁": "Ban",
+"输入玩家名手动封禁（需服务器运行中）": "Enter a player name to ban (server must be running)",
+"封禁原因（可选）": "Ban reason (optional)",
+"加入黑名单": "Ban (blacklist)",
+"黑名单管理": "Banlist",
+"已封禁玩家（解封需服务器运行中）": "Banned players (unban requires the server running)",
+"黑名单为空": "Banlist is empty",
+"移除": "Remove",
+"解封": "Unban",
+"原因：": "Reason: ",
+"（无原因）": "(no reason)",
+"白名单管理": "Allowlist",
+"已允许玩家（需在服务器配置中开启 allow-list 才生效）": "Allowed players (enable allow-list in Server Config first)",
+"输入玩家名添加到白名单": "Enter a player name to add to the allowlist",
+"➕ 添加": "➕ Add",
+"白名单为空": "Allowlist is empty",
+"加入白名单": "Add to allowlist",
+"输入IP地址手动封禁": "Enter an IP address to ban",
+"封禁IP": "Ban IP",
+"IP封禁列表为空": "No banned IPs",
+"🌐 IP 封禁管理": "🌐 IP Ban Management",
+"已封禁IP（解封需服务器运行中）": "Banned IPs (unban requires the server running)",
+"🌍 世界管理": "🌍 World Management",
+"管理服务器中的多个世界。切换世界后需重启服务器生效。当前活动世界会标记为「正在使用」。": "Manage multiple worlds. Switching worlds requires a server restart. The active world is marked In Use.",
+"正在使用": "In Use",
+"切换到此世界": "Switch to this world",
+"活动世界不可删除": "The active world cannot be deleted",
+"重命名": "Rename",
+"复制": "Copy",
+"删除": "Delete",
+"世界操作": "World Actions",
+"📤 导出存档": "📤 Export World",
+"📥 导入存档": "📥 Import World",
+"导出 worlds 目录为 ZIP 文件": "Export the worlds folder as a ZIP file",
+"从 ZIP 文件导入存档": "Import a world from a ZIP file",
+"请选择 ZIP 格式的存档文件": "Please select a ZIP world file",
+"请输入新世界名称：": "Enter a new world name:",
+"请输入副本名称：": "Enter a copy name:",
+"_副本": "_copy",
+"未找到世界。请先启动服务器生成世界，或检查 worlds 目录。": "No worlds found. Start the server to generate one, or check the worlds folder.",
+"加载世界列表失败": "Failed to load world list",
+"🗄 世界备份管理": "🗄 World Backup Management",
+"备份保存在服务器同级目录的 _worlds_backups 文件夹中。恢复备份会自动停止服务器，建议在玩家较少时操作。": "Backups are stored in the _worlds_backups folder next to the server. Restoring stops the server, so do it when few players are online.",
+"📦 立即备份": "📦 Backup Now",
+"🔄 刷新列表": "🔄 Refresh List",
+"点击「刷新列表」加载备份": "Click Refresh List to load backups",
+"暂无备份，点击「立即备份」创建第一个备份": "No backups. Click Backup Now to create the first one",
+"🔄 恢复": "🔄 Restore",
+"查看详情": "Details",
+"大小: b.size_mb MB 路径: b.name": "Size: %s MB Path: %s",
+"大小: ": "Size: ",
+" MB 路径: ": " MB Path: ",
+"📊 服务器性能监控": "📊 Server Performance Monitor",
+"CPU 占用": "CPU",
+"内存占用": "Memory",
+"运行状态": "Status",
+"运行中": "Running",
+"未运行": "Stopped",
+"人": "players",
+"📦 资源包 / 行为包管理": "📦 Resource / Behavior Pack Management",
+"将 .mcpack/.zip 文件放入服务器目录的 resource_packs 或 behavior_packs 文件夹": "Put .mcpack/.zip files into the resource_packs or behavior_packs folder in the server directory",
+"🔄 刷新包列表": "🔄 Refresh Packs",
+"点击「刷新包列表」加载已安装的包": "Click Refresh Packs to load installed packs",
+"📦 包列表加载失败：": "Failed to load packs: ",
+"未安装行为包": "No behavior packs installed",
+"未安装资源包": "No resource packs installed",
+"启用": "Enable",
+"⚙️ 行为包 (": "⚙️ Behavior Packs (",
+"📁 资源包 (": "📁 Resource Packs (",
+"⏰ 计划任务": "⏰ Scheduled Tasks",
+"支持定时重启服务器、定时备份世界、定时发送公告。任务在服务器运行时执行。": "Schedule server restarts, world backups, and announcements. Tasks run while the server is running.",
+"定时重启": "Scheduled Restart",
+"定时备份": "Scheduled Backup",
+"定时公告": "Scheduled Announcement",
+"每天指定时间": "Daily at a specific time",
+"每N小时": "Every N hours",
+"时间(04:00)或小时数(24)": "Time (04:00) or hours (24)",
+"请输入时间或小时数": "Enter a time or hours",
+"公告内容（仅公告类型需要）": "Announcement text (announcement tasks only)",
+"添加任务": "Add Task",
+"💾 保存任务配置": "💾 Save Tasks",
+"暂无计划任务": "No scheduled tasks",
+"计划任务已保存": "Scheduled tasks saved",
+"提示": "Notice",
+"确定": "OK",
+"确认": "Confirm",
+"关闭": "Close",
+"取消": "Cancel",
+"取消当前操作": "Cancel operation",
+"使用此目录": "Use this folder",
+"↑ 上一级": "↑ Up one level",
+"选择服务器目录": "Select Server Directory",
+"或手动输入服务器目录路径": "or type a server directory path",
+"浏览...": "Browse...",
+"请选择或输入服务器目录": "Please select or enter a server directory",
+"选择安装目录...": "Choose install directory...",
+"浏览选择安装目录": "Browse for install directory",
+"浏览选择服务器目录": "Browse for server directory",
+"🗂️ 选择要管理的服务器": "🗂️ Select a Server to Manage",
+"检测到以下已安装的 Minecraft 基岩版服务器，请选择一个进行管理：": "The following Bedrock servers were found. Pick one to manage:",
+"确认管理": "Confirm",
+"取消（不管理服务器）": "Cancel (manage no server)",
+"选择服务器失败：": "Failed to select server: ",
+"选择服务器异常：": "Error selecting server: ",
+"请先安装服务器并设置服务器目录。": "Please install a server and set the server directory first.",
+"请先选择或安装服务器": "Please select or install a server first",
+"程序已退出，可关闭此页面。": "The program has exited. You can close this page.",
+"关闭页面": "Close Page",
+"稍后提醒": "Remind Later",
+"选择预设主题（点击即应用并自动保存）": "Pick a preset theme (applied and saved instantly)",
+"自定义": "Custom",
+"启用自定义强调色/背景": "Enable custom accent/background",
+"强调色": "Accent",
+"应用强调色": "Apply Accent",
+"用于按钮、高亮、进度条等": "Used for buttons, highlights, progress bars, etc.",
+"背景模式": "Background Mode",
+"暗色": "Dark",
+"亮色": "Light",
+"保存风格": "Save Theme",
+"✔ 风格已保存": "✔ Theme saved",
+"应用并保存：": "Apply and save:",
+"Minecraft 暗色": "Minecraft Dark",
+"亮色·简洁": "Light Simple",
+"草方块绿": "Grass Green",
+"红石红": "Redstone Red",
+"钻石蓝": "Diamond Blue",
+"森林绿": "Forest Green",
+"海洋蓝": "Ocean Blue",
+"落日橙": "Sunset Orange",
+"紫色科技": "Purple Tech",
+"粉红少女": "Pink Girl",
+"🔄 检查服务器更新": "🔄 Check Server Update",
+"正在检测最新版本...": "Checking for the latest version...",
+"当前版本": "Current version",
+"当前版本：": "Current version: ",
+"最新版本": "Latest version",
+"最新版本：": "Latest version: ",
+"发布时间": "Published",
+"立即更新": "Update Now",
+"⬇️ 下载更新": "⬇️ Download Update",
+"更新将自动停止服务器、删除旧服务端程序（保留世界存档 worlds 和配置），然后下载安装新版本。": "The update will stop the server, remove the old server files (keeping worlds and config), then download and install the new version.",
+"🎉 MbesBeacon 新版本可用": "🎉 MbesBeacon update available",
+"欢迎使用 MbesBeacon": "Welcome to MbesBeacon",
+"推荐": "Recommended",
+"服务器运行中": "Server running",
+"服务器未运行，无法获取在线玩家": "Server is not running, cannot fetch online players",
+"服务器未配置或请求失败": "Server not configured or request failed",
+"未知": "Unknown",
+"未知错误": "Unknown error",
+"删除失败": "Delete failed",
+"删除失败：": "Delete failed: ",
+"删除成功": "Deleted successfully",
+"已取消删除": "Delete cancelled",
+"封禁失败：": "Ban failed: ",
+"解封失败：": "Unban failed: ",
+"移除失败：": "Remove failed: ",
+"踢出失败：": "Kick failed: ",
+"添加失败：": "Add failed: ",
+"设置失败：": "Set failed: ",
+"保存失败": "Save failed",
+"保存失败：": "Save failed: ",
+"切换失败": "Switch failed",
+"加载失败:": "Load failed:",
+"加载备份列表失败": "Failed to load backup list",
+"备份成功": "Backed up successfully",
+"备份失败": "Backup failed",
+"正在备份...": "Backing up...",
+"恢复成功，服务器已停止，请手动启动": "Restore successful. The server was stopped; please start it manually",
+"恢复失败": "Restore failed",
+"正在恢复...": "Restoring...",
+"备份已删除": "Backup deleted",
+"确定要删除备份": "Delete backup ",
+"确定要立即备份世界存档吗？\n\n备份将保存在 _worlds_backups 目录中。": "Back up the world now?\n\nBackups are stored in the _worlds_backups folder.",
+"复制成功": "Copied successfully",
+"复制失败": "Copy failed",
+"已复制:": "Copied: ",
+"存档导出成功！": "World exported successfully!",
+"导出失败:": "Export failed:",
+"导出存档失败:": "World export failed:",
+"正在导出存档，请稍候...": "Exporting world, please wait...",
+"存档导入成功！": "World imported successfully!",
+"导入失败:": "Import failed:",
+"已取消导入": "Import cancelled",
+"已切换到世界：": "Switched to world: ",
+"确定要切换到世界「": "Switch to world \"",
+"」吗？\n\n切换后需重启服务器生效。": "\"?\n\nA server restart is required for the switch to take effect.",
+"配置已回滚": "Config rolled back",
+"回滚失败：": "Rollback failed: ",
+"确定回滚到此配置版本？当前配置将被覆盖。": "Roll back to this config version? The current config will be overwritten.",
+"重命名成功": "Renamed successfully",
+"重命名失败": "Rename failed",
+"成功": "Success",
+"错误": "Error",
+"警告": "Warning",
+"文件读取失败": "Failed to read file",
+"正在读取文件...": "Reading file...",
+"，请重启服务器": ". Please restart the server",
+"，输入原因（可留空）：": ". Enter a reason (optional):",
+"消息: ": "Message: ",
+"专用网络": "Private networks",
+"Windows 已保护你的电脑": "Windows protected your PC",
+"小时": "hours",
+"每": "Every ",
+"每天": "Daily",
+"请输入玩家名": "Please enter a player name",
+"请输入IP地址": "Please enter an IP address",
+"⚠ 危险指令确认\n\n你即将执行：": "⚠ Dangerous Command Confirmation\n\nYou are about to run: ",
+"吗？\n\n此操作不可恢复！": "?\n\nThis cannot be undone!",
+"⚠ 删除世界确认\n\n即将删除世界：": "⚠ Delete World Confirmation\n\nAbout to delete world: ",
+"⚠ 恢复备份确认\n\n即将恢复备份：": "⚠ Restore Backup Confirmation\n\nAbout to restore backup: ",
+"⚠ 导入存档确认\n\n即将导入存档：": "⚠ Import World Confirmation\n\nAbout to import world: ",
+"\n\n此操作会停止服务器并覆盖当前世界存档，建议先手动备份当前世界。\n\n确定继续吗？": "\n\nThis will stop the server and overwrite the current world. Back it up first.\n\nContinue?",
+"\n\n此操作会覆盖当前 worlds 目录，程序会自动备份当前存档。\n\n请输入 IMPORT 确认继续：": "\n\nThis will overwrite the current worlds folder. The program will back up the current world first.\n\nType IMPORT to continue:",
+"\n\n此操作可能影响服务器运行，确定继续吗？": "\n\nThis may affect the running server. Continue?",
+"确认跳过 SSL 验证？": "Skip SSL verification?",
+"跳过 SSL 证书验证将降低下载安全性，可能导致下载被篡改的文件。仅在网络环境受信任时继续。": "Skipping SSL certificate verification lowers download security and may allow tampered files. Only continue in a trusted network."
+};
+const I18N_HELP_EN = "【MbesBeacon — Minecraft Bedrock Server Manager Help】\n\n═══════════════════════════════════════\n🚀 Quick Start\n═══════════════════════════════════════\n  【First Time】\n    A 3-step wizard pops up: ① choose install folder → ② pick version → ③ start install\n    The server starts automatically after installation; manage it in 「③ Console」\n\n  【Existing Server】\n    On startup the program scans Desktop, Documents, Downloads, C/D/E drives, etc. for installed servers\n    · 1 server: managed automatically, no dialog\n    · Multiple servers: a dialog asks which one to manage\n    · 0 servers: shows the guide banner; install manually\n    If none is found, click 「📁 Browse」 next to Current Server to pick a folder manually\n\n  【Playing Together】\n    Once the server is running, in game go to 「Server」→「Add Server」, enter IP+port (default 19132)\n    The server address is shown at the top; click 📋 to copy it\n\n═══════════════════════════════════════\n🎨 Theme\n═══════════════════════════════════════\n  【Preset Themes】\n    The 「🎨 Theme」 button in the header customizes the look:\n    · 10 presets: Minecraft Dark, Light Simple, Grass Green, Redstone Red, Diamond Blue,\n      Forest Green, Ocean Blue, Sunset Orange, Purple Tech, Pink Girl\n    · Picking a preset syncs the background mode automatically (light→light, dark→dark)\n    · Custom accent: pick any color with the color picker\n    · Dark/light background modes can be toggled manually\n    · Settings are saved automatically and restored on next launch\n\n  【System Tray】\n    · The program minimizes to the system tray; the icon shows run state\n    · Right-click menu: Open Manager, Start/Stop Server, Exit\n    · Closing the browser page does not stop the server; reopen via the tray icon\n    · Stop the server before exiting to avoid world corruption\n\n  【Shortcuts】\n    · Ctrl+S: save config\n    · Ctrl+R: restart server\n    · Ctrl+F: console search\n    · Backtick key (top-left, under Esc): focus the console command input\n    · ↑/↓: switch command history / autocomplete options\n    · Tab: command autocomplete\n\n═══════════════════════════════════════\n📦 ① Install Server\n═══════════════════════════════════════\n  【Current Server】\n    · The dropdown lists all detected servers; pick one to switch management\n    · The 「📁 Browse」 button opens the system folder picker\n    · An empty dropdown means no server was detected; install one first\n\n  【Install New Server】\n    1. Install directory: type a path or click 「📁 Browse」 to pick an empty folder (e.g. D:\\MinecraftServer)\n    2. Version: click the ▼ on the right to open the list, or type a version number (e.g. 1.21.0.03)\n       · The list is fetched from the Bedrock-OSS community repo and includes all stable and preview versions\n       · 「Check Latest」 fetches the latest stable from the Mojang official API\n       · If offline, falls back to the built-in common version list\n    3. Version type: Stable (default) / Preview (beta, may have bugs)\n    4. Disk space check: checks free space (≥300MB required) before installing; aborts with a warning if insufficient\n    5. Click 「Download & Install」: auto download → integrity check → extract → configure\n\n  【Custom Download URL】\n    · Paste a server zip link from forums/resource sites/mirrors\n    · Non-official sources show a security warning; confirm the source is trusted\n    · Leave empty to auto-download the selected version from the official CDN\n\n  【Download Integrity Check】\n    After downloading, multiple checks run to ensure the file is not tampered or corrupted:\n    · Size check: file size in a sane range (30-500MB)\n    · ZIP integrity: verifies the ZIP structure extracts cleanly\n    · SHA256 (TOFU first-trust):\n      - First download of a version records its SHA256 to a local cache\n      - Later downloads of the same version compare hashes; mismatch aborts install with a warning\n      - Cache is stored in %APPDATA%\\MbesBeacon\\cache\\hashes.json\n      - Note: the first download's hash cannot be verified for authenticity; get it from an official source\n    · PE signature check: verifies bedrock_server.exe is digitally signed by Microsoft/Mojang\n    · Any failed check aborts the install, deletes the corrupt file, and shows details\n\n  【Check for Updates】\n    Two kinds of updates: server updates (Minecraft Bedrock server) and app updates (MbesBeacon itself).\n\n    【Server Update】\n    · After selecting/managing a server, one automatic check runs; a dialog shows if an update exists; silent if already latest\n    · 「🔄 Server Update」 in the header checks manually anytime\n    · Update flow: stop server → back up world → remove old files → download and install new version\n    · Worlds are backed up to _worlds_backups before updating (keeps last 10)\n    · Start the server manually after the update\n\n    【App Update】\n    · On startup MbesBeacon checks for its own new version (from GitHub Releases)\n    · After the page loads, an automatic check runs 3 seconds later; a dialog shows if new; silent if latest\n    · 「📦 App Update」 in the header checks manually anytime\n    · The dialog shows: current version, latest version, published date, release notes\n    · Click 「Download Update」 to go to the GitHub Release page and download the latest EXE\n    · Update-check results are cached for 1 hour to avoid frequent requests\n    · The main path uses the GitHub web Release page (no anonymous API quota), avoiding \"rate limit exceeded\"; the API is a fallback that fails gracefully when rate-limited\n\n  【Delete Server】\n    The red \"Delete Server\" card at the bottom of the page:\n    · Remove server program only: keeps worlds, server.properties, allowlist etc., handy for reinstalling a different version\n    · Remove entire directory: deletes everything including worlds, unrecoverable\n    · Worlds are backed up automatically before deletion; check \"I confirm the delete operation\"\n    · A running server is stopped automatically first\n\n═══════════════════════════════════════\n⚙ ② Server Config\n═══════════════════════════════════════\n  Edit common server.properties settings: server name, gamemode, difficulty, allow cheats, max players,\n  online mode, allow-list, port, world seed, view distance, language, etc.\n\n  · Save Config: click after editing; a server restart is required to take effect\n  · Reload: re-reads config from the file; prompts when no server is installed\n  · Format preserved: comments, blank lines and unlisted custom keys are kept, never overwritten\n  · Validation: port, max players, view distance etc. are range-checked; invalid values prompt immediately\n  · Rollback: config changes are auto-saved as history; roll back to any version\n  · Advanced mode: shows all 30+ options; unlisted ones use a generic key=value editor\n  · With online mode off, offline accounts can join; with allow-list on, only listed players can join\n\n═══════════════════════════════════════\n🖥 ③ Server Console\n═══════════════════════════════════════\n  【Basics】\n    · Start/Stop/Restart: buttons; stop sends the stop command for a graceful exit (saves the world)\n    · Send Command: type and press Enter or click the button; prompts when empty or the server is not running\n    · Dangerous commands (e.g. stop) require a confirmation first\n\n  【Live Logs】\n    · SSE push, latency <300ms, auto-scrolls to the bottom\n    · Keeps the last 2000 lines to bound memory usage\n    · Log highlighting: ERROR/WARN in red, player connections in green, keyword colors\n    · Clear console: one-click clear\n    · Export log: exports the console log to a .txt file\n    · Log search: Ctrl+F, with filtering\n\n  【Command Enhancements】\n    · Autocomplete: shows available commands as you type; ↑↓ to select, Tab to complete\n    · History: ↑↓ cycles through past commands\n    · Common command quick buttons: one-click common commands\n\n  【Common Commands】\n    op/deop <player>              grant/revoke operator\n    whitelist add/remove <player> add/remove allowlist\n    say <message>                 broadcast to all players\n    kick/ban <player> <reason>    kick/ban a player\n    pardon <player>               unban a player\n    list                          list online players\n    stop                          stop the server\n\n═══════════════════════════════════════\n👥 ④ Players\n═══════════════════════════════════════\n  【Online Players】(server must be running)\n    · Click 「🔄 Refresh Players」 to list current online players\n    · Each player card shows the name and current permission level\n    · Per player you can:\n      - Set permission: visitor / member / operator\n      - Kick: enter a reason (optional)\n      - Ban (blacklist): enter a reason (optional)\n\n  【Allowlist】\n    · Lists allowed players; click Remove to delete from the allowlist\n    · Add players by name at the bottom (no need to be online)\n    · Uses server commands when running; edits allowlist.json directly when stopped\n    · Enable allow-list in 「② Server Config」 first\n\n  【Banlist】\n    · Lists banned players (with reasons); click Unban to lift a ban\n    · Add players manually at the bottom by name + reason (no need to be online)\n    · All actions use native server commands; logs appear in the console\n\n  【IP Bans】\n    · Ban/unban by IP address against players who switch accounts to harass\n    · Reads banned-ips.json and lists banned IPs\n    · Add IP bans manually with a reason\n\n═══════════════════════════════════════\n🌍 ⑤ World Management\n═══════════════════════════════════════\n  · Lists all worlds under the server's worlds folder; the active world is marked In Use\n  · Switch world: pick another world as active (changes level-name); requires a server restart\n  · Rename world: renames the world folder\n  · Copy world: duplicates a world (for backup or testing)\n  · Delete world: removes the world folder after confirmation\n  · World info: name, gamemode, difficulty, etc.\n\n  【Import/Export World】\n    · Export (📤): packs the worlds folder into a ZIP downloaded locally\n      - File name: {server}_worlds_{timestamp}.zip\n      - Use for backup, migration or sharing\n    · Import (📥): imports a world from a ZIP file\n      - Pick a ZIP world file\n      - The current worlds folder is backed up to worlds_backup_{timestamp} first\n      - Type IMPORT to confirm, preventing mistakes\n      - ZIP integrity and path safety are verified automatically\n      - The world list refreshes after import\n    · Note: do import/export while the server is stopped\n\n═══════════════════════════════════════\n🗄 ⑥ World Backups\n═══════════════════════════════════════\n  · Backup Now: manually backs up the worlds folder to _worlds_backups\n  · Backup list: shows all backups with time and size\n  · Restore: picks a backup to restore; stops the server and backs up the current world first\n  · Delete backup: removes old backup files\n  · Auto backup: runs before deleting/updating a server\n  · Retention: keeps the latest 10 backups by default, configurable\n  · Location: the _worlds_backups folder next to the server\n\n═══════════════════════════════════════\n📊 ⑦ Performance Monitor\n═══════════════════════════════════════\n  【Live Metrics】\n    · CPU: server process CPU usage (non-blocking; returns 0 on first call)\n    · Memory: server process memory (MB)\n    · Online players: current count\n    · Status: whether the server is running\n    · Auto-refresh: every 5 seconds by default, can be turned off\n    · TPS: Bedrock servers do not report TPS by default; shows 0 (reserved)\n\n  【Audit Log】\n    · Records all dangerous operations: start/stop/delete server, config changes, player management, backup restore\n    · Includes timestamp, operation type and parameters for tracing\n\n═══════════════════════════════════════\n📦 ⑧ Pack Management\n═══════════════════════════════════════\n  · Resource/behavior packs: view installed resource and behavior packs\n    · Enable/disable: edits valid_known_packs.json to control pack state\n    · Install: put .mcpack/.zip files into resource_packs or behavior_packs in the server directory\n    · Refresh: re-scans installed packs\n\n═══════════════════════════════════════\n⏰ ⑨ Scheduled Tasks\n═══════════════════════════════════════\n  · Scheduled restart: restart the server at a daily set time (e.g. off-peak at night)\n  · Scheduled backup: back up the world every N hours or at a daily set time\n  · Scheduled announcement: send say commands (broadcast) on schedule\n  · Task list: shows all tasks; enable/disable/delete\n  · Tasks run only while the server is running; skipped when stopped\n  · Add task: pick type, time and content; saved and active immediately\n  · Catch-up: missed daily tasks run on startup if the program was off at the target time\n\n═══════════════════════════════════════\n🌐 Playing Online\n═══════════════════════════════════════\n  【LAN Play】\n    On the same WiFi, friends in game go to 「Server」→「Add Server」 and enter your LAN IP + port (default 19132)\n\n  【Public Play】\n    Set up port forwarding on the router (UDP 19132), or use an intranet-penetration tool\n\n  【Firewall】\n    Windows may show a firewall prompt on first start; check \"Private networks\" and allow\n\n  【Find Your IP】\n    The server address is shown at the top of the interface; click 📋 to copy\n    Or run ipconfig in a Windows command prompt and look at the IPv4 address\n\n  【Port Conflict】\n    The program checks whether the target port is occupied before starting; prompts you to change the config if so\n\n═══════════════════════════════════════\n❓ FAQ\n═══════════════════════════════════════\n  【Startup & Running】\n  Q: First run shows \"Windows protected your PC\"?\n  A: That is a Windows SmartScreen warning. This software is signed with a self-signed certificate.\n     If the warning still appears, click 「More info」→「Run anyway」.\n     This tool is an open-source local utility; it runs only on your machine and uploads no data.\n\n  Q: Is the server still running after I close the manager page?\n  A: Yes. Closing the browser page does not affect the server. Double-click the exe again or use the tray icon to reopen.\n\n  Q: How do I fully exit (including the server)?\n  A: Stop the server in the console first, then click 「Exit」 in the header.\n\n  Q: The tray icon is missing?\n  A: Check the hidden tray area (▲ arrow at the bottom-right of the taskbar) and drag the MbesBeacon icon out to pin it.\n\n  【Multiplayer & Network】\n  Q: Friends cannot join my server?\n  A: Check ① the firewall allows UDP 19132 ② you are on the same LAN / port forwarding is correct\n     ③ the server is started ④ whether online mode needs to be off.\n\n  Q: Server download fails / SSL error?\n  A: ① Tick \"Skip SSL verification on network errors\" and retry; ② paste a third-party link under Custom URL;\n     ③ check whether your network can reach minecraft.net.\n\n  Q: Version list does not load / shows few versions?\n  A: The list comes from the Bedrock-OSS community GitHub repo; it falls back to built-in common versions offline.\n     Check GitHub connectivity, or type the version number manually.\n\n  Q: My wanted version is not in the list?\n  A: Type any version number manually; the program tries the official source.\n     If the official source lacks it, paste a third-party link under Custom URL.\n\n  【Config & Data】\n  Q: Where is user data stored?\n  A: All user data is stored under %APPDATA%\\MbesBeacon\\:\n     · settings.json - app settings (server directory, installed version, etc.)\n     · theme.json - theme config\n     · logs\\ - app logs, crash logs, tray logs\n     · cache\\hashes.json - download file hash cache\n     · cache\\app_update_cache.json - app update check cache (1 hour)\n     To back up or migrate, just copy this folder.\n\n  Q: Config changes have no effect?\n  A: Config takes effect after a server restart. Click Stop then Start in the console.\n\n  Q: Where are world saves? How to back up?\n  A: In the worlds folder in the server directory. Before deleting/updating a server the program auto-backs up to\n     the _worlds_backups folder (keeps the latest 10); you can also back up manually on the 「⑥ Backups」 page.\n\n  Q: Port is occupied?\n  A: Change server-port in 「② Server Config」 to another port (e.g. 19133), save and restart.\n     The program checks port usage before starting.\n\n  Q: How to update the server to the latest version?\n  A: After selecting a server an update check runs automatically; or click 「🔄 Server Update」 in the header. For the app, click 「📦 App Update」. When a new version is found,\n     click 「Update Now」; the program stops the server, cleans old files (keeping worlds and config) and installs the new version.\n\n  【Multiple Servers】\n  Q: My server was not detected at startup?\n  A: On the 「① Install Server」 page click 「📁 Browse」 next to Current Server and pick the server directory;\n     the program manages it automatically and saves it to history.\n\n  Q: Can I manage multiple servers at once?\n  A: Yes. A dialog asks which server to manage when several are detected; you can also switch anytime via the Current Server dropdown.\n     A running server is stopped automatically when switching.\n\n  Q: Will switching/deleting servers lose world saves?\n  A: No. Each server has its own directory and worlds folder; switching/deleting (program-only mode) does not affect saves.\n     Full-delete mode removes the whole directory including worlds; confirm before doing it.\n";
+(function(){
+  let lang = null;
+  try{ lang = localStorage.getItem('mbesbeacon_lang'); }catch(e){}
+  if(!lang){ lang = (navigator.language||'zh-CN').toLowerCase().startsWith('zh') ? 'zh' : 'en'; try{ localStorage.setItem('mbesbeacon_lang', lang); }catch(e){} }
+  window.MBS_LANG = lang;
+  const keys = Object.keys(I18N_EN).sort((a,b)=>b.length-a.length);
+  function tr(s){
+    if(typeof s!=='string' || !s || MBS_LANG!=='en') return s;
+    let out=s;
+    for(const k of keys){ if(out.indexOf(k)>=0){ out=out.split(k).join(I18N_EN[k]); } }
+    return out;
+  }
+  window.tt = tr;
+  window.getHelp = function(){ return MBS_LANG==='en' ? I18N_HELP_EN : HELP; };
+  function trSubtree(root){
+    const walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const ns=[]; while(walker.nextNode()) ns.push(walker.currentNode);
+    ns.forEach(n=>{
+      const p=n.parentElement;
+      if(p && (p.closest && p.closest('.log,.console,#installLog,#helpText'))) return;
+      if(p && p.id==='helpText') return;
+      const t=n.nodeValue;
+      if(!t || !/[\u4e00-\u9fff]/.test(t)) return;
+      const out=tr(t);
+      if(out!==t) n.nodeValue=out;
+    });
+  }
+  window.applyI18n = function(){
+    if(MBS_LANG!=='en') return;
+    if(I18N_EN[document.title]) document.title = I18N_EN[document.title];
+    document.querySelectorAll('[placeholder],[title],[alt]').forEach(el=>{
+      ['placeholder','title','alt'].forEach(a=>{
+        const v=el.getAttribute(a);
+        if(v && I18N_EN[v]) el.setAttribute(a, I18N_EN[v]);
+      });
+    });
+    const ht=document.getElementById('helpText');
+    if(ht && ht.textContent===HELP) ht.textContent = I18N_HELP_EN;
+    trSubtree(document.body);
+  };
+  window.setLang = function(l){
+    if(l==='zh'){ try{ localStorage.setItem('mbesbeacon_lang','zh'); }catch(e){} location.reload(); }
+    else{
+      MBS_LANG='en';
+      try{ localStorage.setItem('mbesbeacon_lang','en'); }catch(e){}
+      applyI18n();
+      initLangUI();
+    }
+  };
+  window.initLangUI = function(){
+    const b=document.getElementById('btnLang');
+    if(b){ b.textContent = MBS_LANG==='zh' ? '🌐 中文' : '🌐 English'; b.onclick=()=>{ setLang(MBS_LANG==='zh' ? 'en' : 'zh'); }; }
+    if(MBS_LANG==='en'){
+      const mo=new MutationObserver(muts=>{
+        for(const m of muts){
+          if(m.type!=='childList') continue;
+          for(const n of m.addedNodes){
+            if(n.nodeType===3){ const p=n.parentElement; if(p && !(p.closest && p.closest('.log,.console,#installLog,#helpText')) && !(p.id==='helpText')){ const t=n.nodeValue; if(t && /[\u4e00-\u9fff]/.test(t)){ const out=tr(t); if(out!==t) n.nodeValue=out; } } }
+            else if(n.nodeType===1 && n.querySelector){ trSubtree(n); }
+          }
+        }
+      });
+      mo.observe(document.body,{childList:true,subtree:true});
+    }
+  };
+})();
+</script>
+
 <div class="wrap">
   <header>
     <div class="logo">⛏️</div>
@@ -138,6 +541,7 @@
     <button class="btn" id="btnCheckUpdate" title="检测 Minecraft 服务器新版本">🔄 服务器更新</button>
     <button class="btn" id="btnCheckAppUpdate" title="检测 MbesBeacon 软件新版本">📦 软件更新</button>
     <button class="btn" id="btnTheme" title="自定义界面风格">🎨 界面风格</button>
+    <button class="btn" id="btnLang" title="中文 / English">🌐 中文</button>
 
     <button class="btn danger" id="btnExit" title="关闭本程序">退出程序</button>
 
@@ -2117,7 +2521,7 @@ $('btnAllowAdd').onclick=async()=>{
 };
 
 // ---- 帮助 / 退出 ----
-$('helpText').textContent=HELP;
+$('helpText').textContent=getHelp();
 $('btnExit').onclick=async()=>{ await jpost('/api/exit'); setTimeout(()=>{ document.body.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:18px;margin-bottom:20px">程序已退出，可关闭此页面。</div><button onclick="window.close()" style="padding:8px 24px;border-radius:6px;border:1px solid #2a333f;background:#1e252e;color:#e6edf3;cursor:pointer;font-size:14px">关闭页面</button></div>'; },200); };
 
 // ---- 当前服务器下拉选择 ----
@@ -2593,6 +2997,10 @@ async function importWorlds(input) {
 
 // ---- 初始化时加载连接信息 ----
 setTimeout(loadConnInfo,2000);
+
+// ---- i18n 初始化（语言应用与切换） ----
+applyI18n();
+initLangUI();
 </script>
 </body>
 </html>
