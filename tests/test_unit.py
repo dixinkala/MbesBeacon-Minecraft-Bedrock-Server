@@ -400,5 +400,16 @@ class TestDetectFileEncoding(unittest.TestCase):
         self.assertEqual(enc, "utf-8")
 
 
+class TestGetSystemLang(unittest.TestCase):
+    """Windows 系统语言检测"""
+
+    def test_returns_valid_lang(self):
+        lang = bsm.get_system_lang()
+        self.assertIn(lang, ("zh", "en"))
+
+    def test_returns_str(self):
+        self.assertIsInstance(bsm.get_system_lang(), str)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
