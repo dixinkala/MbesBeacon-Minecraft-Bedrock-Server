@@ -209,9 +209,7 @@ def _main():
         else:
             notify_title = "Minecraft 基岩版服务器管理器"
             notify_body = f"管理界面已启动：{url}"
-        threading.Timer(
-            1.5, lambda: tray.notify(notify_title, notify_body) if tray else None
-        ).start()
+        threading.Timer(1.5, lambda: tray.notify(notify_title, notify_body) if tray else None).start()
     except Exception:
         tray = None
         threading.Timer(0.8, lambda: open_browser_with_retry(url)).start()

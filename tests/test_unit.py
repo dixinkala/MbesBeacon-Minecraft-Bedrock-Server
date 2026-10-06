@@ -428,8 +428,10 @@ class TestUiLang(unittest.TestCase):
             self.assertIn(bsm.get_ui_lang(), ("zh", "en"))
 
     def test_set_ui_lang_valid(self):
-        with mock.patch("bedrock_server_manager.utils._get_settings", return_value={}) as m, \
-             mock.patch("bedrock_server_manager.utils.save_settings", return_value=True):
+        with (
+            mock.patch("bedrock_server_manager.utils._get_settings", return_value={}) as m,
+            mock.patch("bedrock_server_manager.utils.save_settings", return_value=True),
+        ):
             self.assertTrue(bsm.set_ui_lang("zh"))
             self.assertEqual(m.return_value["lang"], "zh")
 

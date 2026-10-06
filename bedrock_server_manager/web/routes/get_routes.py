@@ -36,7 +36,6 @@ from ...utils import (
     browse_directory,
     detect_servers,
     get_lan_ip,
-    get_system_lang,
     get_ui_lang,
     installed,
     load_theme,
