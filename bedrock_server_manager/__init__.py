@@ -184,6 +184,7 @@ from .utils import (  # noqa: F401
     detect_servers,
     get_lan_ip,
     get_system_lang,
+    get_ui_lang,
     installed,
     load_settings,
     load_theme,
@@ -192,6 +193,7 @@ from .utils import (  # noqa: F401
     resolve_server_dir,
     save_settings,
     save_theme,
+    set_ui_lang,
     sync_log_file,
 )
 from .verify import (  # noqa: F401

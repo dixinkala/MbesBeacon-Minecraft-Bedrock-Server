@@ -23,7 +23,7 @@ from .scheduler import start_scheduler, stop_scheduler
 from .server import get_server_proc, server_running
 from .state import migrate_legacy_data
 from .tray import SystemTray
-from .utils import installed, load_settings, open_browser_with_retry, resolve_server_dir
+from .utils import get_ui_lang, installed, load_settings, open_browser_with_retry, resolve_server_dir
 from .web.handler import Handler
 
 
@@ -203,8 +203,14 @@ def _main():
         tray = SystemTray(url, on_open=lambda: webbrowser.open(url), on_toggle=_tray_toggle, on_exit=_tray_exit)
         tray.start()
         threading.Timer(0.8, lambda: open_browser_with_retry(url)).start()
+        if get_ui_lang() == "en":
+            notify_title = "MbesBeacon — Minecraft Bedrock Server Manager"
+            notify_body = f"Manager is running: {url}"
+        else:
+            notify_title = "Minecraft 基岩版服务器管理器"
+            notify_body = f"管理界面已启动：{url}"
         threading.Timer(
-            1.5, lambda: tray.notify("Minecraft 基岩版服务器管理器", f"管理界面已启动：{url}") if tray else None
+            1.5, lambda: tray.notify(notify_title, notify_body) if tray else None
         ).start()
     except Exception:
         tray = None

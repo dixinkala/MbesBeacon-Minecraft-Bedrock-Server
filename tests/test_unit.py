@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import unittest.mock as mock
 import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -409,6 +410,61 @@ class TestGetSystemLang(unittest.TestCase):
 
     def test_returns_str(self):
         self.assertIsInstance(bsm.get_system_lang(), str)
+
+
+class TestUiLang(unittest.TestCase):
+    """UI 语言持久化（手动选择优先于系统语言）"""
+
+    def test_get_ui_lang_prefers_manual(self):
+        with mock.patch("bedrock_server_manager.utils._get_settings", return_value={"lang": "en"}):
+            self.assertEqual(bsm.get_ui_lang(), "en")
+
+    def test_get_ui_lang_falls_back_to_system(self):
+        with mock.patch("bedrock_server_manager.utils._get_settings", return_value={}):
+            self.assertIn(bsm.get_ui_lang(), ("zh", "en"))
+
+    def test_get_ui_lang_ignores_invalid(self):
+        with mock.patch("bedrock_server_manager.utils._get_settings", return_value={"lang": "fr"}):
+            self.assertIn(bsm.get_ui_lang(), ("zh", "en"))
+
+    def test_set_ui_lang_valid(self):
+        with mock.patch("bedrock_server_manager.utils._get_settings", return_value={}) as m, \
+             mock.patch("bedrock_server_manager.utils.save_settings", return_value=True):
+            self.assertTrue(bsm.set_ui_lang("zh"))
+            self.assertEqual(m.return_value["lang"], "zh")
+
+    def test_set_ui_lang_invalid(self):
+        with mock.patch("bedrock_server_manager.utils._get_settings", return_value={}):
+            self.assertFalse(bsm.set_ui_lang("fr"))
+
+
+class TestTrayI18n(unittest.TestCase):
+    """托盘菜单 / tooltip 中英文本"""
+
+    KEYS = ("menu_open", "menu_start", "menu_stop", "menu_exit", "tooltip")
+
+    def test_zh_texts_present(self):
+        from bedrock_server_manager.tray import tray_i18n_text
+
+        for key in self.KEYS:
+            self.assertNotEqual(tray_i18n_text(key, "zh"), key, f"zh 缺失: {key}")
+
+    def test_en_texts_present(self):
+        from bedrock_server_manager.tray import tray_i18n_text
+
+        for key in self.KEYS:
+            self.assertNotEqual(tray_i18n_text(key, "en"), key, f"en 缺失: {key}")
+
+    def test_unknown_key_passthrough(self):
+        from bedrock_server_manager.tray import tray_i18n_text
+
+        self.assertEqual(tray_i18n_text("no_such_key", "en"), "no_such_key")
+
+    def test_default_lang_reads_ui_lang(self):
+        from bedrock_server_manager.tray import tray_i18n_text
+
+        with mock.patch("bedrock_server_manager.tray.get_ui_lang", return_value="en"):
+            self.assertEqual(tray_i18n_text("menu_exit"), "Exit")
 
 
 if __name__ == "__main__":

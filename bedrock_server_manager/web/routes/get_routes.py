@@ -37,6 +37,7 @@ from ...utils import (
     detect_servers,
     get_lan_ip,
     get_system_lang,
+    get_ui_lang,
     installed,
     load_theme,
     props_path,
@@ -143,9 +144,9 @@ class GetRoutesMixin:
 
     @register_get_route("/api/lang")
     def _get_lang(self, q):
-        """返回 Windows 系统 UI 语言（zh / en），供前端首启语言判定。"""
+        """返回当前 UI 语言（zh / en）：手动选择优先，否则跟随 Windows 系统语言。"""
 
-        self._json({"ok": True, "lang": get_system_lang()})
+        self._json({"ok": True, "lang": get_ui_lang()})
 
     @register_get_route("/api/latest")
     def _get_latest(self, q):

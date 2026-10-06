@@ -14,6 +14,32 @@ import webbrowser
 from .app_logger import safe_log_exception
 from .constants import LOGS_DIR
 from .server import server_running
+from .utils import get_ui_lang
+
+# 托盘界面文本（右键菜单 / 气泡提示 / tooltip），随当前 UI 语言切换
+_TRAY_TEXTS = {
+    "zh": {
+        "menu_open": "打开管理界面",
+        "menu_start": "启动服务器",
+        "menu_stop": "停止服务器",
+        "menu_exit": "退出程序",
+        "tooltip": "MbesBeacon — Minecraft 基岩版服务器管理器",
+    },
+    "en": {
+        "menu_open": "Open Manager",
+        "menu_start": "Start Server",
+        "menu_stop": "Stop Server",
+        "menu_exit": "Exit",
+        "tooltip": "MbesBeacon — Minecraft Bedrock Server Manager",
+    },
+}
+
+
+def tray_i18n_text(key: str, lang: str | None = None) -> str:
+    """按当前 UI 语言取托盘文本；lang 缺省时自动读取当前语言，未知 key 原样返回。"""
+    lang = lang or get_ui_lang()
+    texts = _TRAY_TEXTS.get(lang) or _TRAY_TEXTS["zh"]
+    return texts.get(key, key)
 
 
 def _log(msg):
@@ -207,11 +233,11 @@ class SystemTray:
             MFT_STRING = 0x0000
             MFT_SEPARATOR = 0x00000800
 
-            r1 = u.AppendMenuW(menu, MFT_STRING, self.ID_OPEN, "打开管理界面")
-            toggle_text = "停止服务器" if server_running() else "启动服务器"
+            r1 = u.AppendMenuW(menu, MFT_STRING, self.ID_OPEN, tray_i18n_text("menu_open"))
+            toggle_text = tray_i18n_text("menu_stop") if server_running() else tray_i18n_text("menu_start")
             r2 = u.AppendMenuW(menu, MFT_STRING, self.ID_TOGGLE, toggle_text)
             r3 = u.AppendMenuW(menu, MFT_SEPARATOR, 0, "")
-            r4 = u.AppendMenuW(menu, MFT_STRING, self.ID_EXIT, "退出程序")
+            r4 = u.AppendMenuW(menu, MFT_STRING, self.ID_EXIT, tray_i18n_text("menu_exit"))
             _log(f"添加菜单项: open={r1}, toggle={r2}, sep={r3}, exit={r4}")
 
             # 获取光标位置
@@ -412,7 +438,7 @@ class SystemTray:
             nid.uFlags = 0x00000001 | 0x00000002 | 0x00000004  # NIF_MESSAGE | NIF_ICON | NIF_TIP
             nid.uCallbackMessage = self.WM_TRAYICON
             nid.hIcon = self._hicon
-            nid.szTip = "MbesBeacon — Minecraft 基岩版服务器管理器"
+            nid.szTip = tray_i18n_text("tooltip")
             result = shell32.Shell_NotifyIconW(0x00000000, ctypes.byref(nid))  # NIM_ADD
             _log(f"添加托盘图标, Shell_NotifyIconW 返回={result}, 错误码={kernel32.GetLastError()}")
             if not result:
