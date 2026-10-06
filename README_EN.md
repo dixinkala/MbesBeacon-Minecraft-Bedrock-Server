@@ -9,7 +9,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-433%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-438%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -78,7 +78,7 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 ### Start your Minecraft Bedrock server in 3 steps
 
 ```bash
-# 1. Download MbesBeacon.exe
+# 1. Download MbesBeacon1.0.23.exe
 # Get the latest version from the Releases page
 
 # 2. Double-click to run
@@ -125,6 +125,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 
 ### Special Features
 
+- **Bilingual UI (i18n)**: Detects the system language on first launch (Chinese system → Chinese UI, anything else → English UI); the language button in the header switches anytime and the choice is remembered
 - **System tray integration**: Runs in the background, tray icon shows running status, right-click menu for quick actions
 - **Multiple themes**: 10 preset themes (Minecraft dark, grass green, redstone red, diamond blue, etc.) + custom accent colors
 - **Multi-server management**: Automatically scans for installed servers, switch between multiple servers
@@ -153,7 +154,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 
 ### Method 1: Run the EXE directly (recommended for most users)
 
-1. Download `MbesBeacon.exe`
+1. Download `MbesBeacon1.0.23.exe` (from the Releases page; file name = app name + version)
 2. Double-click to run. The program will automatically:
    - Create a system tray icon
    - Start the HTTP management server on local `127.0.0.1:19100`
@@ -190,7 +191,7 @@ pip install pyinstaller
 # set CERT_PASS=your_password
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
-# The build output is at dist/MbesBeacon.exe
+# The build output is at dist/MbesBeacon1.0.23.exe (file name = app name + version)
 ```
 
 ---
@@ -199,11 +200,17 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 ### Quick Start
 
-1. **Launch**: Double-click `MbesBeacon.exe`; the browser opens the management UI automatically (`http://127.0.0.1:19100`)
+1. **Launch**: Double-click `MbesBeacon1.0.23.exe`; the browser opens the management UI automatically (`http://127.0.0.1:19100`)
 2. **Install a server**: On the "① Install Server" page, choose a version and install directory, click "Download & Install"
 3. **Configure**: On the "② Server Config" page, edit server name, port, max players, etc., click "Save Config"
 4. **Start**: On the "③ Server Console" page, click "Start Server" and check the log to confirm startup
 5. **Play**: In Minecraft, "Play" → "Servers" → "Add Server", enter `127.0.0.1:19132` (default port)
+
+### Switching the UI Language
+
+- On first launch the program detects the system language: Chinese system → Chinese UI, any other language → English UI
+- Click the language button in the header (shows "English" in the Chinese UI, "中文" in the English UI) to switch anytime
+- The chosen language is remembered for the next launch
 
 ### System Tray
 
@@ -329,16 +336,22 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 **Response** (JSON):
 ```json
 {
-  "ok": true,
   "app": "mbesbeacon",
+  "title": "MbesBeacon",
   "version": "1.0.23",
-  "installed": true,
   "server_dir": "D:\\MinecraftServer",
+  "installed": true,
   "installed_version": "1.21.0.03",
   "server_running": true,
-  "latest_version": "1.21.1.01",
-  "port": 19132,
-  "lan_ip": "192.168.1.100"
+  "install": {
+    "busy": false,
+    "progress": 0,
+    "stage": "",
+    "version": "",
+    "dir": ""
+  },
+  "latest": null,
+  "detected_servers": ["D:\\MinecraftServer"]
 }
 ```
 
@@ -391,7 +404,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # Command routes
 │           ├── players.py      # Player management routes
 │           └── config.py       # Config management routes
-├── tests/                      # Test suite (18 test files, 433 test cases)
+├── tests/                      # Test suite (19 test files, 438 test cases)
 │   ├── __init__.py
 │   ├── test_unit.py            # Unit tests (config/players/backup/install/utils)
 │   ├── test_integration.py     # Integration tests (module cooperation, state sync)
@@ -401,6 +414,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_crash_restart.py   # Crash restart tests (exponential backoff, max retries)
 │   ├── test_app_context.py     # AppContext tests (singleton, state management)
 │   ├── test_app_logger.py      # App log tests
+│   ├── test_browse_dir.py      # Browse directory / server selection tests
 │   ├── test_console.py         # Console tests (log buffer, SSE stream)
 │   ├── test_di.py              # DI container tests
 │   ├── test_p3_regression.py   # P3 gate regression tests
@@ -411,7 +425,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_verify.py          # Verification tests (SHA256, file size, ZIP integrity)
 │   ├── test_worlds_export.py   # World save export tests
 │   └── test_modules.py         # Module tests (world management, commands, app log)
-├── dist/                       # Build output (MbesBeacon.exe)
+├── dist/                       # Build output (MbesBeacon1.0.23.exe)
 ├── .github/                    # GitHub Actions CI workflows
 ├── BedrockServerManager.spec   # PyInstaller build config
 ├── build.bat                   # Build launcher (calls build.ps1)
