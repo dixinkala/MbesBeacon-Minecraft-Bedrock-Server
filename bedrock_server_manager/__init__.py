@@ -183,6 +183,7 @@ from .utils import (  # noqa: F401
     check_disk_space,
     detect_servers,
     get_lan_ip,
+    get_system_lang,
     installed,
     load_settings,
     load_theme,

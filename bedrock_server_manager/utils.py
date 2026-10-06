@@ -302,5 +302,33 @@ def save_theme(theme: str) -> bool:
         return False
 
 
+def get_system_lang() -> str:
+    """检测 Windows 系统 UI 语言。
+
+    中文系统返回 'zh'，其他（含英文、日文等）返回 'en'。
+    优先读取 Windows 用户界面语言（GetUserDefaultUILanguage），
+    失败时回退到 locale 推断。
+    """
+    try:
+        import ctypes
+
+        lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+        # PRIMARYLANGID(lang_id) = lang_id & 0x3FF，0x04 为 LANG_CHINESE
+        if (lang_id & 0x3FF) == 0x04:
+            return "zh"
+        return "en"
+    except Exception:
+        pass
+    try:
+        import locale
+
+        code, _ = locale.getdefaultlocale()
+        if code and code.lower().startswith("zh"):
+            return "zh"
+    except Exception:
+        pass
+    return "en"
+
+
 # 初始化依赖注入容器（确保在模块加载时完成）
 initialize_container()
