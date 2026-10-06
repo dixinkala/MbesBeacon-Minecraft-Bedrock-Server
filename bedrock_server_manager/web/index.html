@@ -608,10 +608,16 @@ const I18N_HELP_EN = "【MbesBeacon — Minecraft Bedrock Server Manager Help】
     trSubtree(document.body);
   };
   window.setLang = function(l){
-    if(l==='zh'){ try{ localStorage.setItem('mbesbeacon_lang','zh'); localStorage.setItem('mbesbeacon_lang_manual','1'); }catch(e){} location.reload(); }
+    const _syncLang=(lng)=>{
+      const meta=document.querySelector('meta[name="api-token"]');
+      const token=meta?meta.content:'';
+      fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json', ...(token?{'X-API-Token':token}:{})},body:JSON.stringify({lang:lng})}).catch(()=>{});
+    };
+    if(l==='zh'){ try{ localStorage.setItem('mbesbeacon_lang','zh'); localStorage.setItem('mbesbeacon_lang_manual','1'); }catch(e){} _syncLang('zh'); location.reload(); }
     else{
       MBS_LANG='en';
       try{ localStorage.setItem('mbesbeacon_lang','en'); localStorage.setItem('mbesbeacon_lang_manual','1'); }catch(e){}
+      _syncLang('en');
       applyI18n();
       initLangUI();
     }
