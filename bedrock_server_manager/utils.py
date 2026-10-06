@@ -210,12 +210,18 @@ def open_browser_with_retry(url, max_attempts=3):
         import base64
         import subprocess
 
+        if get_ui_lang() == "en":
+            toast_title = "MbesBeacon — Minecraft Bedrock Server Manager"
+            toast_body = f"Manager is running. Open: {url}"
+        else:
+            toast_title = "Minecraft 基岩版服务器管理器"
+            toast_body = f"管理界面已启动，请访问: {url}"
         ps_script = (
             "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime] | Out-Null;"
             "$t=[Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02);"
             '$x=$t.GetElementsByTagName("text");'
-            '$x.Item(0).AppendChild($t.CreateTextNode("Minecraft 基岩版服务器管理器"))|Out-Null;'
-            '$x.Item(1).AppendChild($t.CreateTextNode("管理界面已启动，请访问: ' + url + '"))|Out-Null;'
+            f'$x.Item(0).AppendChild($t.CreateTextNode("{toast_title}"))|Out-Null;'
+            f'$x.Item(1).AppendChild($t.CreateTextNode("{toast_body}"))|Out-Null;'
             "$n=[Windows.UI.Notifications.ToastNotification]::new($t);"
             '[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("MCServerManager").Show($n);'
         )
@@ -328,6 +334,27 @@ def get_system_lang() -> str:
     except Exception as e:
         safe_log_exception("utils", f"系统语言检测失败(locale): {e}")
     return "en"
+
+
+def get_ui_lang() -> str:
+    """当前 UI 语言：用户手动选择（settings.lang）优先，否则跟随 Windows 系统语言。"""
+    s = _get_settings()
+    if s and s.get("lang") in ("zh", "en"):
+        return s["lang"]
+    return get_system_lang()
+
+
+def set_ui_lang(lang: str) -> bool:
+    """持久化用户手动选择的 UI 语言到 settings（供托盘/通知等后端读取）。
+
+    仅接受 'zh' / 'en'，非法值返回 False 不写入。
+    """
+    if lang not in ("zh", "en"):
+        return False
+    s = _get_settings()
+    s["lang"] = lang
+    save_settings()
+    return True
 
 
 # 初始化依赖注入容器（确保在模块加载时完成）

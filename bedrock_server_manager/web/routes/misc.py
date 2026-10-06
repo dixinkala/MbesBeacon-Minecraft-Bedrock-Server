@@ -9,7 +9,7 @@ from ...players import list_installed_packs
 from ...scheduler import load_scheduled_tasks, save_scheduled_tasks
 from ...security import read_audit_log
 from ...state import DEFAULT_THEME
-from ...utils import save_theme
+from ...utils import save_theme, set_ui_lang
 from ..route_decorator import register_get_route, register_route
 
 
@@ -38,6 +38,17 @@ class MiscRoutesMixin:
         AppContext.instance().settings["theme"] = new_theme
         save_theme(new_theme)
         self._json({"ok": True})
+
+    @register_route("/api/lang")
+    def _route_lang(self, data):
+        """持久化用户手动选择的 UI 语言（zh/en），供托盘/通知等后端读取。"""
+
+        lang = data.get("lang")
+        if lang not in ("zh", "en"):
+            self._json({"ok": False, "error": "语言必须是 zh 或 en"})
+            return
+        set_ui_lang(lang)
+        self._json({"ok": True, "lang": lang})
 
     @register_route("/api/audit")
     def _route_audit(self, data):
