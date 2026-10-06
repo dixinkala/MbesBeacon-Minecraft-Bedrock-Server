@@ -78,7 +78,7 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 ### 3步启动你的 Minecraft 基岩版服务器
 
 ```bash
-# 1. 下载 MbesBeacon1.0.23.exe
+# 1. 下载 MbesBeacon.exe
 # 从 Releases 页面下载最新版本
 
 # 2. 双击运行
@@ -154,7 +154,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 
 ### 方式一：直接运行 EXE（推荐普通用户）
 
-1. 下载 `MbesBeacon1.0.23.exe`（Releases 页面，文件名 = 软件名 + 版本号）
+1. 下载 `MbesBeacon.exe`
 2. 双击运行，程序会自动：
    - 创建系统托盘图标
    - 在本地 `127.0.0.1:19100` 启动 HTTP 管理服务器
@@ -191,7 +191,7 @@ pip install pyinstaller
 # set CERT_PASS=你的密码
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
-# 打包产物在 dist/MbesBeacon1.0.23.exe（文件名 = 软件名 + 版本号）
+# 打包产物在 dist/MbesBeacon.exe
 ```
 
 ---
@@ -200,7 +200,7 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 ### 快速开始
 
-1. **启动程序**：双击 `MbesBeacon1.0.23.exe`，浏览器自动打开管理界面（`http://127.0.0.1:19100`）
+1. **启动程序**：双击 `MbesBeacon.exe`，浏览器自动打开管理界面（`http://127.0.0.1:19100`）
 2. **安装服务器**：在「① 安装服务器」页面选择版本和安装目录，点击「开始下载并安装」
 3. **配置服务器**：在「② 服务器配置」页面修改服务器名称、端口、最大玩家数等，点击「保存配置」
 4. **启动服务器**：在「③ 服务器控制台」页面点击「启动服务器」，查看日志确认启动成功
@@ -425,7 +425,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_verify.py          # 验证测试（SHA256计算、文件大小、ZIP完整性）
 │   ├── test_worlds_export.py   # 世界存档导出测试
 │   └── test_modules.py         # 模块测试（世界管理、命令模块、应用日志）
-├── dist/                       # 构建产物（MbesBeacon1.0.23.exe）
+├── dist/                       # 构建产物（MbesBeacon.exe）
 ├── .github/                    # GitHub Actions CI 工作流
 ├── BedrockServerManager.spec   # PyInstaller 打包配置
 ├── build.bat                   # 构建启动器（调用 build.ps1）

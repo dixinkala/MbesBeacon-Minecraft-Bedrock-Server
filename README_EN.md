@@ -78,7 +78,7 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 ### Start your Minecraft Bedrock server in 3 steps
 
 ```bash
-# 1. Download MbesBeacon1.0.23.exe
+# 1. Download MbesBeacon.exe
 # Get the latest version from the Releases page
 
 # 2. Double-click to run
@@ -154,7 +154,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 
 ### Method 1: Run the EXE directly (recommended for most users)
 
-1. Download `MbesBeacon1.0.23.exe` (from the Releases page; file name = app name + version)
+1. Download `MbesBeacon.exe`
 2. Double-click to run. The program will automatically:
    - Create a system tray icon
    - Start the HTTP management server on local `127.0.0.1:19100`
@@ -191,7 +191,7 @@ pip install pyinstaller
 # set CERT_PASS=your_password
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
-# The build output is at dist/MbesBeacon1.0.23.exe (file name = app name + version)
+# The build output is at dist/MbesBeacon.exe
 ```
 
 ---
@@ -200,7 +200,7 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 ### Quick Start
 
-1. **Launch**: Double-click `MbesBeacon1.0.23.exe`; the browser opens the management UI automatically (`http://127.0.0.1:19100`)
+1. **Launch**: Double-click `MbesBeacon.exe`; the browser opens the management UI automatically (`http://127.0.0.1:19100`)
 2. **Install a server**: On the "① Install Server" page, choose a version and install directory, click "Download & Install"
 3. **Configure**: On the "② Server Config" page, edit server name, port, max players, etc., click "Save Config"
 4. **Start**: On the "③ Server Console" page, click "Start Server" and check the log to confirm startup
@@ -425,7 +425,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_verify.py          # Verification tests (SHA256, file size, ZIP integrity)
 │   ├── test_worlds_export.py   # World save export tests
 │   └── test_modules.py         # Module tests (world management, commands, app log)
-├── dist/                       # Build output (MbesBeacon1.0.23.exe)
+├── dist/                       # Build output (MbesBeacon.exe)
 ├── .github/                    # GitHub Actions CI workflows
 ├── BedrockServerManager.spec   # PyInstaller build config
 ├── build.bat                   # Build launcher (calls build.ps1)
