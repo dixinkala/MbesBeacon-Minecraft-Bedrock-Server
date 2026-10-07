@@ -31,7 +31,7 @@
 
 如果你发现了 Bug，请提交 [Issue](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/issues/new?template=bug_report.md)，并包含以下信息：
 
-- 操作系统版本（Windows 10/11）
+- 操作系统版本（Windows 10/11 或 Ubuntu 20.04+，Linux 请附 `uname -a`）
 - MbesBeacon 版本号
 - 复现步骤
 - 预期行为 vs 实际行为
@@ -56,7 +56,7 @@
 ### 前置要求
 
 - Python 3.10+
-- Windows 10/11（本项目仅支持 Windows 平台）
+- Windows 10/11 或 Ubuntu 20.04+（支持 Windows 与 Linux 平台）
 - Git
 
 ### 安装步骤
@@ -68,7 +68,8 @@ cd MbesBeacon-Minecraft-Bedrock-Server
 
 # 2. 创建虚拟环境（推荐）
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Linux/macOS
 
 # 3. 安装依赖
 pip install -r requirements.txt
@@ -195,7 +196,7 @@ Fixes #456
 
 ### 必含信息
 
-- [ ] 操作系统版本（Windows 10 22H2 / Windows 11 23H2 等）
+- [ ] 操作系统版本（Windows 10 22H2 / Windows 11 23H2 或 Ubuntu 20.04+）
 - [ ] MbesBeacon 版本号（v1.0.21 等）
 - [ ] 复现步骤（详细到每一步操作）
 - [ ] 预期行为
