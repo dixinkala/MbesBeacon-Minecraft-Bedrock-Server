@@ -9,7 +9,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-449%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-471%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -131,7 +131,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 - **Multi-server management**: Automatically scans for installed servers, switch between multiple servers
 - **Server version update detection**: Auto-detects new server versions, one-click update (with automatic world backup)
 - **App update detection**: Auto-detects new MbesBeacon releases, manual check supported, distinct from server updates
-- **Download integrity verification**: ZIP integrity + SHA256 hash (trust-on-first-use) + PE signature check + file size check
+- **Download integrity verification**: ZIP integrity + SHA256 hash (trust-on-first-use) + signature check (PE on Windows / ELF on Linux) + file size check
 - **Resumable downloads**: HTTP Range support, resume after interruption
 - **Crash auto-restart**: Automatically restarts the server after an unexpected crash, exponential backoff + max retry count
 - **Port conflict detection**: Automatically checks whether the target port is in use before starting
@@ -245,7 +245,7 @@ After launch, the program minimizes to the system tray:
 
 ### Multi-server Management
 
-- On startup the program automatically scans locations such as Desktop, Documents, Downloads, and C/D/E drives for installed servers
+- On startup the program automatically scans common locations for installed servers (Windows: Desktop, Documents, Downloads, and C/D/E drives; Linux: common directories under the user's home)
 - **1 server**: manages it automatically, no dialog
 - **Multiple servers**: a dialog asks which server to manage
 - **0 servers**: shows a guide banner, install manually
@@ -280,21 +280,20 @@ On the "⑥ World Backup" page:
 - Version: `1.21.0.03` (stable)
 - Option: auto-start the server after install
 
-**Output** (install log):
+**Output** (install log, shown in English when the UI language is English; the Chinese UI shows the corresponding Chinese lines):
 ```
-[10:30:15] Start downloading Bedrock Server 1.21.0.03 ...
-[10:30:15] Download URL: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.0.03.zip
-[10:30:45] Download complete, size: 85.3 MB
-[10:30:45] Verifying file integrity ...
-[10:30:46] ZIP integrity check passed
-[10:30:46] SHA256 hash: a1b2c3d4... (first-recorded)
-[10:30:46] PE signature check passed (file format and digital signature valid)
-[10:30:46] Extracting to D:\MinecraftServer ...
-[10:30:50] Extraction complete
-[10:30:50] Initializing config ...
-[10:30:50] Installation complete!
-[10:30:50] Starting server ...
-[10:30:52] Server started, listening on port 19132
+>>> Starting Minecraft Bedrock Server installation
+Specified version: 1.21.0.03
+Trying download source: Official API
+Download URL: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.0.03.zip
+Download complete (source: Official API): bedrock-server-1.21.0.03.zip (85.3 MB)
+Loaded 57 official version hashes for verification
+Download integrity check passed (size: 85.3 MB, SHA256: a1b2c3d4...)
+Extracting to: D:\MinecraftServer
+Extraction complete
+✔ Server installation complete! Version 1.21.0.03
+  Server program: D:\MinecraftServer\bedrock_server.exe
+>>> Auto-starting server...
 ```
 
 ### Example 2: Server console output
@@ -323,27 +322,24 @@ On the "⑥ World Backup" page:
 **Output**:
 - Console log: `[10:40:00] [INFO] Steve has been made an operator`
 - Player card permission display updates to: `Operator (operator)`
-- Audit log entry: `[2026-09-03 10:40:00] PERMISSION_CHANGE player=Steve level=operator`
+- Audit log entry (JSON line format in `audit.log` in the server directory):
+  `{"time": "2026-09-03 10:40:00", "action": "PERMISSION_CHANGE", "detail": "player=Steve level=operator"}`
 
 ### Example 4: World backup
 
 **Input**: Click "Back Up Now" on the "⑥ World Backup" page
 
-**Output**:
+**Output** (console log):
 ```
-[10:45:00] Start backing up world saves ...
-[10:45:00] Source directory: D:\MinecraftServer\worlds
-[10:45:01] Target directory: D:\_worlds_backups\backup_20260903_104500
-[10:45:05] Backup complete, size: 12.5 MB
-[10:45:05] Current backup count: 3/10
+[System] World save auto-backed up to: D:\_worlds_backups\MyServer_worlds_20260903_104500
 ```
 
-The backup list shows:
+The backup list shows (keeps the latest 10 by default):
 
 | Backup name | Time | Size | Actions |
 |----------|------|------|----------|
-| backup_20260903_104500 | 2026-09-03 10:45 | 12.5 MB | Restore / Delete |
-| backup_20260902_203000 | 2026-09-02 20:30 | 12.3 MB | Restore / Delete |
+| MyServer_worlds_20260903_104500 | 2026-09-03 10:45 | 12.5 MB | Restore / Delete |
+| MyServer_worlds_20260902_203000 | 2026-09-02 20:30 | 12.3 MB | Restore / Delete |
 
 ### Example 5: API calls (advanced users)
 
@@ -364,10 +360,12 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
   "server_running": true,
   "install": {
     "busy": false,
-    "progress": 0,
-    "stage": "",
-    "version": "",
-    "dir": ""
+    "phase": "",
+    "percent": 0,
+    "text": "",
+    "log": [],
+    "done": false,
+    "error": ""
   },
   "latest": null,
   "detected_servers": ["D:\\MinecraftServer"]
@@ -423,7 +421,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # Command routes
 │           ├── players.py      # Player management routes
 │           └── config.py       # Config management routes
-├── tests/                      # Test suite (19 test files, 449 test cases)
+├── tests/                      # Test suite (20 test files, 471 test cases)
 │   ├── __init__.py
 │   ├── test_unit.py            # Unit tests (config/players/backup/install/utils)
 │   ├── test_integration.py     # Integration tests (module cooperation, state sync)
@@ -437,6 +435,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_console.py         # Console tests (log buffer, SSE stream)
 │   ├── test_di.py              # DI container tests
 │   ├── test_p3_regression.py   # P3 gate regression tests
+│   ├── test_packs.py           # Pack management tests (resource/behavior pack enable/disable, import/delete)
 │   ├── test_performance.py     # Performance monitoring tests
 │   ├── test_ratelimit.py       # Rate limit tests (token bucket)
 │   ├── test_review_fixes.py    # Full review fix regression tests
@@ -475,14 +474,14 @@ MbesBeacon ships with multiple security mechanisms to keep your server and local
 | Mechanism | Implementation |
 |----------|----------|
 | **API auth** | Random 32-char Token + Origin/Referer validation to prevent CSRF |
-| **Download integrity** | ZIP integrity + SHA256 hash (TOFU) + PE signature check + file size range |
-| **PE signature check** | Uses WinVerifyTrust to verify the bedrock_server.exe digital signature exists and is valid (does not validate the signer identity) |
+| **Download integrity** | ZIP integrity + SHA256 hash (TOFU) + signature check (PE on Windows / ELF on Linux) + file size range |
+| **Signature check** | Windows uses the WinVerifyTrust API to verify the bedrock_server.exe digital signature exists and is valid (does not validate the signer identity); Linux verifies the ELF magic and executable permission |
 | **Confirm for dangerous actions** | Deleting a server, restoring a backup, etc. require confirmation to prevent accidents |
 | **Operation audit log** | Records all dangerous operations (start/stop/delete, config changes, player management, backup restore) |
 | **API rate limiting** | Token bucket algorithm, prevents front-end bugs or malicious scripts from hammering the API |
 | **ZIP path traversal protection** | Checks target path boundaries before extraction to prevent Zip Slip |
 | **Input validation** | Player name regex, IP address format, config numeric range validation |
-| **Single-instance check** | Named mutex to prevent multiple instances |
+| **Single-instance check** | Named mutex on Windows / file lock (flock) on Linux to prevent multiple instances |
 | **Local only** | HTTP server binds only to `127.0.0.1`, never exposed externally |
 
 ---
