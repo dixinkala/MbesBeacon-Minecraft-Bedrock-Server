@@ -190,6 +190,11 @@ DANGEROUS_ENDPOINTS = {
         "confirm_value": "IMPORT",
         "message": "导入世界会覆盖当前世界存档，请输入 IMPORT 确认",
     },
+    "/api/packs/delete": {
+        "confirm_key": "confirm_delete",
+        "confirm_value": "DELETE",
+        "message": "删除包是不可逆操作，请输入 DELETE 确认",
+    },
     "/api/server/stop": {
         "confirm_key": "confirm_stop",
         "confirm_value": "STOP",

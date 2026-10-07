@@ -119,7 +119,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 | **⑤ World Management** | Multi-world switching; world rename/copy/delete; world import/export (ZIP); world info display |
 | **⑥ World Backup** | Manual backup; automatic backup (before delete/update); backup list management; one-click restore; retention policy (10 by default) |
 | **⑦ Performance Monitor** | Real-time CPU/memory usage; online player count; running status; auto-refresh (5s); operation audit log |
-| **⑧ Pack Management** | Resource pack/behavior pack list; refresh pack list; install tip (put .mcpack/.zip files into the corresponding folder in the server directory) |
+| **⑧ Pack Management** | List resource/behavior packs (name/version/enabled state); enable/disable (writes to the active world config and registers in known-pack list, restart to apply); import .zip/.mcpack packs; delete packs (type DELETE to confirm) |
 | **⑨ Scheduled Tasks** | Scheduled server restart; scheduled world backup; scheduled announcements; task enable/disable/delete; catch-up execution |
 | **⑩ Usage Help** | Complete built-in documentation covering every feature in detail |
 
