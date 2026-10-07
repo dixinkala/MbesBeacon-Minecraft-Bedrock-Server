@@ -61,11 +61,15 @@ class TestDeleteBackupFixes(unittest.TestCase):
 
     def test_delete_outside_root_rejected(self):
         """备份根目录之外的路径仍被拒绝（安全校验回归）。"""
+        from unittest.mock import patch
+
         from bedrock_server_manager.backup import delete_backup
 
         outside = os.path.join(self.tmpdir, "outside_dir")
         os.makedirs(outside)
-        ok, err = delete_backup(outside, self.server_dir)
+        # 固定中文语言，验证中文错误消息（消息随 UI 语言变化）
+        with patch("bedrock_server_manager.utils.get_ui_lang", return_value="zh"):
+            ok, err = delete_backup(outside, self.server_dir)
         self.assertFalse(ok)
         self.assertIn("非法路径", err)
         self.assertTrue(os.path.isdir(outside))
@@ -456,7 +460,10 @@ class TestDiskSpaceCheckWired(unittest.TestCase):
         try:
             # 设置真实 InstallState（_NullInstallState.busy 无 setter）
             AppContext.instance().install_state = install.InstallState()
-            with patch("bedrock_server_manager.utils.check_disk_space", return_value=(False, 10.0, 300)):
+            with (
+                patch("bedrock_server_manager.utils.check_disk_space", return_value=(False, 10.0, 300)),
+                patch("bedrock_server_manager.utils.get_ui_lang", return_value="zh"),
+            ):
                 install.do_install(tmpdir, "1.21.100.6", False)
             st = AppContext.instance().install_state
             self.assertIn("磁盘空间不足", st.error)
