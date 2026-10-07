@@ -11,7 +11,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-449%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-471%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -132,7 +132,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 - **多服务器管理**：自动扫描已安装服务器，支持多服务器切换管理
 - **服务器版本更新检测**：自动检测服务器新版本，一键更新（自动备份存档）
 - **应用程序更新检测**：自动检测 MbesBeacon 软件新版本，支持手动检查更新，与服务器更新区分
-- **下载完整性校验**：ZIP 完整性 + SHA256 哈希（首次信任机制）+ PE 签名校验 + 文件大小校验
+- **下载完整性校验**：ZIP 完整性 + SHA256 哈希（首次信任机制）+ 数字签名校验（Windows：PE 签名；Linux：ELF 校验）+ 文件大小校验
 - **断点续传下载**：支持 HTTP Range 请求，大文件中断后可续传
 - **崩溃自动重启**：服务器意外崩溃时自动重启，指数退避 + 最大重试次数
 - **端口占用检测**：启动前自动检测目标端口是否被占用
@@ -246,7 +246,7 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 ### 多服务器管理
 
-- 程序启动时自动扫描桌面、文档、下载、C/D/E 盘等位置，查找所有已安装服务器
+- 程序启动时自动扫描常见位置查找已安装服务器（Windows：桌面、文档、下载及 C/D/E 盘等；Linux：用户主目录下常见目录）
 - **1 个服务器**：自动管理，不弹窗
 - **多个服务器**：弹窗选择要管理的服务器
 - **0 个服务器**：显示引导横幅，手动安装
@@ -281,21 +281,20 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 - 版本：`1.21.0.03`（稳定版）
 - 选项：安装完成后自动启动服务器
 
-**输出**（安装日志）：
+**输出**（安装日志，界面语言为中文时的真实输出；英文界面下为对应英文）：
 ```
-[10:30:15] 开始下载 Bedrock Server 1.21.0.03 ...
-[10:30:15] 下载地址: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.0.03.zip
-[10:30:45] 下载完成，大小: 85.3 MB
-[10:30:45] 正在校验文件完整性 ...
-[10:30:46] ZIP 完整性校验通过
-[10:30:46] SHA256 哈希: a1b2c3d4...（首次记录）
-[10:30:46] PE 签名校验通过（文件格式与数字签名有效）
-[10:30:46] 正在解压到 D:\MinecraftServer ...
-[10:30:50] 解压完成
-[10:30:50] 正在初始化配置 ...
-[10:30:50] 安装完成！
-[10:30:50] 正在启动服务器 ...
-[10:30:52] 服务器启动成功，监听端口 19132
+>>> 开始安装 Minecraft 基岩版服务器
+指定版本: 1.21.0.03
+尝试下载源: 官方 API
+下载地址: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.0.03.zip
+下载完成 (源: 官方 API): bedrock-server-1.21.0.03.zip (85.3 MB)
+已加载 57 个官方版本哈希用于校验
+下载完整性校验通过（文件大小: 85.3 MB, SHA256: a1b2c3d4...）
+正在解压到: D:\MinecraftServer
+解压完成
+✔ 服务器安装完成！版本 1.21.0.03
+  服务器程序: D:\MinecraftServer\bedrock_server.exe
+>>> 自动启动服务器...
 ```
 
 ### 示例 2：服务器控制台输出
@@ -324,27 +323,24 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 **输出**：
 - 控制台日志：`[10:40:00] [INFO] Steve has been made an operator`
 - 玩家卡片权限显示更新为：`管理员 (operator)`
-- 操作审计日志记录：`[2026-09-03 10:40:00] PERMISSION_CHANGE player=Steve level=operator`
+- 操作审计日志（服务器目录下 `audit.log`，JSON 行格式）：
+  `{"time": "2026-09-03 10:40:00", "action": "PERMISSION_CHANGE", "detail": "player=Steve level=operator"}`
 
 ### 示例 4：世界备份
 
 **输入**：在「⑥ 世界备份」页面点击「立即备份」
 
-**输出**：
+**输出**（控制台日志）：
 ```
-[10:45:00] 开始备份世界存档 ...
-[10:45:00] 源目录: D:\MinecraftServer\worlds
-[10:45:01] 目标目录: D:\_worlds_backups\backup_20260903_104500
-[10:45:05] 备份完成，大小: 12.5 MB
-[10:45:05] 当前备份数量: 3/10
+[系统] 已自动备份世界存档到: D:\_worlds_backups\MyServer_worlds_20260903_104500
 ```
 
-备份列表显示：
+备份列表显示（默认保留最近 10 个备份）：
 
 | 备份名称 | 时间 | 大小 | 操作 |
 |----------|------|------|------|
-| backup_20260903_104500 | 2026-09-03 10:45 | 12.5 MB | 恢复 / 删除 |
-| backup_20260902_203000 | 2026-09-02 20:30 | 12.3 MB | 恢复 / 删除 |
+| MyServer_worlds_20260903_104500 | 2026-09-03 10:45 | 12.5 MB | 恢复 / 删除 |
+| MyServer_worlds_20260902_203000 | 2026-09-02 20:30 | 12.3 MB | 恢复 / 删除 |
 
 ### 示例 5：API 接口调用（高级用户）
 
@@ -365,10 +361,12 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
   "server_running": true,
   "install": {
     "busy": false,
-    "progress": 0,
-    "stage": "",
-    "version": "",
-    "dir": ""
+    "phase": "",
+    "percent": 0,
+    "text": "",
+    "log": [],
+    "done": false,
+    "error": ""
   },
   "latest": null,
   "detected_servers": ["D:\\MinecraftServer"]
@@ -424,7 +422,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # 命令路由
 │           ├── players.py      # 玩家管理路由
 │           └── config.py       # 配置管理路由
-├── tests/                      # 测试套件（19个测试文件，449个测试用例）
+├── tests/                      # 测试套件（20个测试文件，471个测试用例）
 │   ├── __init__.py
 │   ├── test_unit.py            # 单元测试（配置/玩家/备份/安装/工具函数）
 │   ├── test_integration.py     # 集成测试（模块间协作、状态同步）
@@ -438,6 +436,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_console.py         # 控制台测试（日志缓冲、SSE流）
 │   ├── test_di.py              # 依赖注入容器测试
 │   ├── test_p3_regression.py   # P3 门禁回归测试
+│   ├── test_packs.py           # 包管理测试（资源包/行为包启用禁用、导入删除）
 │   ├── test_performance.py     # 性能监控测试
 │   ├── test_ratelimit.py       # 速率限制测试（令牌桶算法）
 │   ├── test_review_fixes.py    # 全面复查修复回归测试
@@ -476,14 +475,14 @@ MbesBeacon 内置多项安全机制，确保服务器和本地数据安全：
 | 安全机制 | 实现方式 |
 |----------|----------|
 | **API 认证** | 随机 32 位 Token + Origin/Referer 校验，防止 CSRF 攻击 |
-| **下载完整性校验** | ZIP 完整性 + SHA256 哈希（首次信任机制 TOFU）+ PE 签名校验 + 文件大小范围 |
-| **PE 签名验证** | 使用 WinVerifyTrust API 验证 bedrock_server.exe 的数字签名是否存在且有效（不校验签名者身份） |
+| **下载完整性校验** | ZIP 完整性 + SHA256 哈希（首次信任机制 TOFU）+ 数字签名校验（Windows：PE 签名；Linux：ELF 校验）+ 文件大小范围 |
+| **签名验证** | Windows 使用 WinVerifyTrust API 验证 bedrock_server.exe 的数字签名是否存在且有效（不校验签名者身份）；Linux 校验 ELF 魔数与可执行权限 |
 | **危险操作二次确认** | 删除服务器、恢复备份等操作需确认，防止误操作 |
 | **操作审计日志** | 记录所有危险操作（启动/停止/删除、配置修改、玩家管理、备份恢复） |
 | **API 速率限制** | 令牌桶算法，防止前端 bug 或恶意脚本频繁操作 |
 | **ZIP 路径遍历防护** | 解压前检查目标路径边界，防止 Zip Slip 攻击 |
 | **输入校验** | 玩家名正则校验、IP 地址格式校验、配置项数值范围校验 |
-| **单实例检测** | 命名互斥量防止多开冲突 |
+| **单实例检测** | Windows 命名互斥量 / Linux 文件锁（flock），防止多开冲突 |
 | **本地监听** | HTTP 服务器仅绑定 `127.0.0.1`，不对外暴露 |
 
 ---
