@@ -1,10 +1,11 @@
 """
-系统托盘模块：SystemTray，使用 Win32 API 实现托盘图标和菜单。
+系统托盘模块：SystemTray。
+Windows: 使用 Win32 API 实现托盘图标和菜单。
+Linux: 使用 pystray 实现；无桌面环境或依赖缺失时静默降级为无托盘（不影响 Web 管理）。
 """
 
 import contextlib
 import ctypes
-import ctypes.wintypes
 import os
 import sys
 import threading
@@ -12,9 +13,13 @@ import traceback
 import webbrowser
 
 from .app_logger import safe_log_exception
-from .constants import LOGS_DIR
+from .constants import IS_WINDOWS, LOGS_DIR
 from .server import server_running
 from .utils import get_ui_lang
+
+# Windows 专用类型：ctypes.wintypes 仅存在于 Windows；Linux 下不导入（避免 ImportError）
+if IS_WINDOWS:
+    import ctypes.wintypes  # noqa: E402  (平台条件导入)
 
 # 托盘界面文本（右键菜单 / 气泡提示 / tooltip），随当前 UI 语言切换
 _TRAY_TEXTS = {
@@ -473,18 +478,82 @@ class SystemTray:
             _log(f"移除托盘图标异常: {e}")
 
     def start(self):
-        """在后台线程启动托盘。"""
+        """在后台线程启动托盘（平台相关：Windows 用 Win32；Linux 用 pystray）。"""
         if self._thread and self._thread.is_alive():
             _log("托盘线程已在运行")
+            return
+        if not IS_WINDOWS:
+            # Linux：尝试 pystray；无桌面环境 / 依赖缺失时降级为无托盘（不影响 Web 管理）
+            ok = self._start_linux()
+            if not ok:
+                _log("Linux 系统托盘不可用，已降级为无托盘模式（浏览器管理不受影响）")
             return
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         _log("托盘线程已启动")
 
+    def _start_linux(self) -> bool:
+        """Linux 平台：使用 pystray 启动托盘图标（后台线程，不阻塞主流程）。
+
+        需要 pystray 与 Pillow 依赖且存在桌面环境（AppIndicator/GTK）。
+        任何一步失败均返回 False，由调用方降级处理。
+        """
+        try:
+            import pystray
+        except ImportError:
+            _log("pystray 未安装（pip install pystray pillow），系统托盘不可用")
+            return False
+        try:
+            from PIL import Image
+        except ImportError:
+            _log("Pillow 未安装（pip install pystray pillow），系统托盘不可用")
+            return False
+        try:
+            # 加载应用图标（复用 Windows 使用的 .ico 资源）
+            icon_path = None
+            if getattr(sys, "frozen", False):
+                base_dir = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+                icon_path = os.path.join(base_dir, "assets", "mbesbeacon_icon.ico")
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                icon_path = os.path.join(base_dir, "assets", "mbesbeacon_icon.ico")
+            if icon_path and os.path.exists(icon_path):
+                img = Image.open(icon_path)
+            else:
+                # 兜底：纯色图标
+                img = Image.new("RGB", (32, 32), (63, 185, 80))
+
+            def _toggle_text(_item=None):
+                return tray_i18n_text("menu_stop") if server_running() else tray_i18n_text("menu_start")
+
+            menu = pystray.Menu(
+                pystray.MenuItem(tray_i18n_text("menu_open"), lambda: self.on_open(), default=True),
+                pystray.MenuItem(_toggle_text, lambda: self.on_toggle() if self.on_toggle else None),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem(tray_i18n_text("menu_exit"), lambda: self.on_exit() if self.on_exit else None),
+            )
+            self._pystray_icon = pystray.Icon("MbesBeacon", img, tray_i18n_text("tooltip"), menu)
+            # run_detached：在独立后台线程运行，不阻塞调用线程
+            self._pystray_icon.run_detached()
+            self._running = True
+            _log("Linux 托盘已启动 (pystray)")
+            return True
+        except Exception as e:
+            _log(f"Linux 托盘启动失败（可能无桌面环境）: {e}")
+            self._running = False
+            return False
+
     def stop(self):
-        """停止托盘并移除图标。"""
+        """停止托盘并移除图标（平台相关）。"""
         _log("停止托盘")
         self._running = False
+        if not IS_WINDOWS:
+            # Linux：停止 pystray 图标（若已启动）
+            with contextlib.suppress(Exception):
+                icon = getattr(self, "_pystray_icon", None)
+                if icon is not None:
+                    icon.stop()
+            return
         try:
             if self._hwnd:
                 ctypes.windll.user32.PostMessageW(self._hwnd, 0x0010, 0, 0)
@@ -493,7 +562,16 @@ class SystemTray:
         self._remove_icon()
 
     def notify(self, title, message):
-        """显示托盘气泡通知。"""
+        """显示托盘气泡通知（平台相关）。"""
+        if not IS_WINDOWS:
+            # Linux：pystray 支持 notify；不可用时静默跳过
+            try:
+                icon = getattr(self, "_pystray_icon", None)
+                if icon is not None:
+                    icon.notify(message, title=title)
+            except Exception as e:
+                _log(f"显示通知异常(linux): {e}")
+            return
         try:
             if hasattr(self, "_nid") and self._nid:
                 self._nid.uFlags = 0x00000010  # NIF_INFO

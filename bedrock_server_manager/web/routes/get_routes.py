@@ -15,7 +15,7 @@ from ...config import (
     load_properties,
     properties_to_dict,
 )
-from ...constants import APP_MARKER, APP_TITLE, APP_VERSION, SERVER_EXE
+from ...constants import APP_MARKER, APP_TITLE, APP_VERSION, IS_WINDOWS, SERVER_EXE
 from ...install import (
     DOWNLOAD_SOURCES,
     FALLBACK_VERSIONS,
@@ -55,6 +55,11 @@ class GetRoutesMixin:
         from ..handler import get_index_html  # 必要的延迟导入，避免循环依赖
 
         html = get_index_html().replace("__API_TOKEN__", AppContext.instance().api_token)
+        # 平台信息注入：帮助文本平台化（数据目录显示文案 / Windows 平台标志）
+        if IS_WINDOWS:
+            html = html.replace("__IS_WINDOWS__", "true").replace("__DATA_DIR_TEXT__", "%APPDATA%\\MbesBeacon")
+        else:
+            html = html.replace("__IS_WINDOWS__", "false").replace("__DATA_DIR_TEXT__", "~/.local/share/MbesBeacon")
         self._send(200, html, "text/html; charset=utf-8")
 
     @register_get_route("/api/health")
@@ -298,33 +303,54 @@ class GetRoutesMixin:
         if ".." in base.replace("\\", "/").split("/"):
             self._json({"ok": False, "error": "非法路径", "path": base, "parent": "", "dirs": [], "is_server": False})
             return
-        # 当前系统可访问的盘符（如 C:\、D:\）
+        # 当前系统可访问的盘符（Windows 专属；Linux 无盘符概念）
         drives = []
-        for _i in range(ord("A"), ord("Z") + 1):
-            p = f"{chr(_i)}:\\"
-            if os.path.exists(p):
-                drives.append(p)
-        # 空路径 = "我的电脑"视图：列出全部盘符供跨盘切换
+        if IS_WINDOWS:
+            for _i in range(ord("A"), ord("Z") + 1):
+                p = f"{chr(_i)}:\\"
+                if os.path.exists(p):
+                    drives.append(p)
+        # 空路径 = "我的电脑"视图：Windows 列出全部盘符；Linux 从文件系统根 "/" 开始
         if not base:
-            self._json(
-                {
-                    "ok": True,
-                    "path": "",
-                    "parent": "",
-                    "dirs": drives,
-                    "drives": drives,
-                    "is_server": False,
-                }
-            )
-            return
+            if IS_WINDOWS:
+                self._json(
+                    {
+                        "ok": True,
+                        "path": "",
+                        "parent": "",
+                        "dirs": drives,
+                        "drives": drives,
+                        "is_server": False,
+                    }
+                )
+                return
+            base = "/"
         base = os.path.abspath(base)
-        _system_dirs = [
-            "C:\\Windows",
-            "C:\\Program Files",
-            "C:\\Program Files (x86)",
-            "C:\\ProgramData",
-            "C:\\System Volume Information",
-        ]
+        if IS_WINDOWS:
+            _system_dirs = [
+                "C:\\Windows",
+                "C:\\Program Files",
+                "C:\\Program Files (x86)",
+                "C:\\ProgramData",
+                "C:\\System Volume Information",
+            ]
+        else:
+            _system_dirs = [
+                "/etc",
+                "/usr",
+                "/root",
+                "/proc",
+                "/sys",
+                "/boot",
+                "/var",
+                "/bin",
+                "/sbin",
+                "/lib",
+                "/lib64",
+                "/dev",
+                "/run",
+                "/snap",
+            ]
         base_lower = base.lower()
         for sd in _system_dirs:
             if base_lower.startswith(sd.lower()):
@@ -339,16 +365,27 @@ class GetRoutesMixin:
                     }
                 )
                 return
-        _sensitive_user_dirs = (
-            ".ssh",
-            ".aws",
-            ".gnupg",
-            ".kube",
-            "AppData\\Roaming\\Microsoft\\Credentials",
-            "AppData\\Local\\Microsoft\\Credentials",
-            "AppData\\Roaming\\Microsoft\\Crypto",
-            "AppData\\Roaming\\Microsoft\\SystemCertificates",
-        )
+        if IS_WINDOWS:
+            _sensitive_user_dirs = (
+                ".ssh",
+                ".aws",
+                ".gnupg",
+                ".kube",
+                "AppData\\Roaming\\Microsoft\\Credentials",
+                "AppData\\Local\\Microsoft\\Credentials",
+                "AppData\\Roaming\\Microsoft\\Crypto",
+                "AppData\\Roaming\\Microsoft\\SystemCertificates",
+            )
+        else:
+            _sensitive_user_dirs = (
+                ".ssh",
+                ".aws",
+                ".gnupg",
+                ".kube",
+                ".config/git",
+                ".local/share/keyrings",
+                ".gnupg/private-keys-v1.d",
+            )
         home_lower = os.path.expanduser("~").lower()
         for sd in _sensitive_user_dirs:
             sensitive = os.path.normcase(os.path.join(home_lower, sd))
@@ -378,8 +415,8 @@ class GetRoutesMixin:
                 full = os.path.join(base, name)
                 if os.path.isdir(full):
                     subdirs.append(name)
-            # 盘根目录（如 D:\）时，把其他盘符置于列表顶部，方便跨盘切换
-            is_drive_root = len(base) == 3 and base[1:3] == ":\\"
+            # Windows：盘根目录（如 D:\）时，把其他盘符置于列表顶部，方便跨盘切换
+            is_drive_root = IS_WINDOWS and len(base) == 3 and base[1:3] == ":\\"
             if is_drive_root:
                 other = [d for d in drives if os.path.normcase(d) != os.path.normcase(base)]
                 result["dirs"] = other + subdirs

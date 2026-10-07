@@ -70,8 +70,8 @@ class TestE2EFullWorkflow(unittest.TestCase):
             f.write("white-list=false\n")
             f.write("online-mode=true\n")
 
-        with open(os.path.join(cls.server_dir, "bedrock_server.exe"), "wb") as f:
-            f.write(b"MZ" + b"\x00" * 100)
+        with open(os.path.join(cls.server_dir, bsm.SERVER_EXE), "wb") as f:
+            f.write(b"MZ" + b"\x00" * 100 if bsm.IS_WINDOWS else b"\x7fELF" + b"\x00" * 100)
 
         # 创建worlds目录
         worlds_dir = os.path.join(cls.server_dir, "worlds", "Bedrock level")
