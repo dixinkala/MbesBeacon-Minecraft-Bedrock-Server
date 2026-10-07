@@ -747,9 +747,10 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
         if not os.path.exists(exe):
             raise RuntimeError(f"安装失败：未在目录中找到 {SERVER_EXE}")
         # Linux 平台：确保服务端二进制具有可执行权限（部分镜像打包的 zip 可能丢失权限位）
+        # 仅授予属主读写执行（0o700），避免 world-readable 权限面
         if not IS_WINDOWS:
             try:
-                os.chmod(exe, 0o755)
+                os.chmod(exe, 0o700)
             except OSError as e:
                 install_state.log_line(f"警告: 设置可执行权限失败: {e}")
         install_state.set(phase="done", percent=100, text="安装完成", done=True)
