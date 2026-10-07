@@ -11,7 +11,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-438%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-449%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -119,7 +119,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 | **⑤ 世界管理** | 多世界切换；世界重命名/复制/删除；存档导入/导出（ZIP 格式）；世界信息展示 |
 | **⑥ 世界备份** | 手动备份；自动备份（删除/更新前触发）；备份列表管理；一键恢复；备份保留策略（默认10个） |
 | **⑦ 性能监控** | 实时 CPU/内存占用；在线玩家数；运行状态；自动刷新（5秒）；操作审计日志 |
-| **⑧ 包管理** | 资源包/行为包列表查看；启用/禁用包（编辑 `valid_known_packs.json`）；刷新包列表 |
+| **⑧ 包管理** | 资源包/行为包列表查看；刷新包列表；安装提示（将 .mcpack/.zip 放入服务器目录对应文件夹） |
 | **⑨ 计划任务** | 定时重启服务器；定时备份世界；定时发送公告；任务启用/禁用/删除；补执行机制 |
 | **⑩ 使用帮助** | 完整的内置使用文档，涵盖所有功能的详细说明 |
 
@@ -405,7 +405,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # 命令路由
 │           ├── players.py      # 玩家管理路由
 │           └── config.py       # 配置管理路由
-├── tests/                      # 测试套件（19个测试文件，438个测试用例）
+├── tests/                      # 测试套件（19个测试文件，449个测试用例）
 │   ├── __init__.py
 │   ├── test_unit.py            # 单元测试（配置/玩家/备份/安装/工具函数）
 │   ├── test_integration.py     # 集成测试（模块间协作、状态同步）
