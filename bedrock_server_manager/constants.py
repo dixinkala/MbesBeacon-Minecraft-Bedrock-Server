@@ -6,6 +6,7 @@
 
 import contextlib
 import os
+import sys
 
 # ---------------- 应用常量 ----------------
 APP_TITLE = "MbesBeacon"
@@ -13,16 +14,28 @@ APP_VERSION = "1.0.23"
 APP_MARKER = "mbesbeacon"
 DEFAULT_PORT = 19100
 
-# 服务器相关常量（仅支持 Windows 平台）
-SERVER_EXE = "bedrock_server.exe"
-IS_WINDOWS = True  # 仅支持 Windows 平台
+# ---------------- 平台检测 ----------------
+# 支持 Windows 与 Linux（Ubuntu 等）平台
+IS_WINDOWS = sys.platform == "win32"
+# 官方 CDN URL 中的平台标识：bin-win / bin-linux
+PLATFORM_TAG = "win" if IS_WINDOWS else "linux"
 
-# 下载源 API（仅 Windows 版本）
+# 服务器可执行文件名（平台相关）
+# Windows: bedrock_server.exe；Linux: bedrock_server（无扩展名，官方 Linux 产物）
+SERVER_EXE = "bedrock_server.exe" if IS_WINDOWS else "bedrock_server"
+
+# 下载源 API（官方下载链接 API，返回各平台下载地址）
 LINKS_API = "https://net-secondary.web.minecraft-services.net/api/v1.0/download/links"
-CDN_TEMPLATE = "https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-{version}.zip"
+# 官方 CDN 模板（bin-win / bin-linux 平台路径）
+CDN_TEMPLATE = f"https://www.minecraft.net/bedrockdedicatedserver/bin-{PLATFORM_TAG}/bedrock-server-{{version}}.zip"
 
 # 应用数据目录（统一所有用户数据到此目录）
-APP_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "MbesBeacon")
+# Windows: %APPDATA%\MbesBeacon；Linux: $XDG_DATA_HOME 或 ~/.local/share/MbesBeacon
+if IS_WINDOWS:
+    APP_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "MbesBeacon")
+else:
+    _xdg_data = os.environ.get("XDG_DATA_HOME", "") or os.path.join(os.path.expanduser("~"), ".local", "share")
+    APP_DATA_DIR = os.path.join(_xdg_data, "MbesBeacon")
 
 # 子目录定义
 LOGS_DIR = os.path.join(APP_DATA_DIR, "logs")
@@ -49,6 +62,7 @@ __all__ = [
     "DEFAULT_PORT",
     "SERVER_EXE",
     "IS_WINDOWS",
+    "PLATFORM_TAG",
     "LINKS_API",
     "CDN_TEMPLATE",
     "APP_DATA_DIR",

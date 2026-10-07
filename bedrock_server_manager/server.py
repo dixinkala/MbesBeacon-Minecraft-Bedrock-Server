@@ -29,7 +29,7 @@ def _get_server_proc_state():
 
 
 def _get_constants():
-    """获取服务器相关常量（仅 Windows 平台）。"""
+    """获取服务器相关常量（平台相关：Windows / Linux）。"""
     return SERVER_EXE, IS_WINDOWS
 
 
@@ -116,21 +116,29 @@ class ServerProcess:
                 if check_port_in_use(server_port):
                     self._emit(f"\n[系统] ⚠ 警告：端口 {server_port} 已被占用，服务器可能无法正常启动。\n")
                     self._emit(f"[系统] 请关闭占用端口 {server_port} 的程序，或在服务器配置中修改 server-port。\n")
-                flags = subprocess.CREATE_NO_WINDOW  # Windows 平台：不创建控制台窗口
+                flags = subprocess.CREATE_NO_WINDOW if IS_WINDOWS else 0  # Windows: 不创建控制台窗口；Linux: 无此标志
                 self._user_stopped = False
                 self._exit_code = None
                 self._start_time = time.time()
                 # 如果距离上次崩溃超过 CRASH_RESET_SECONDS，重置崩溃计数器
                 if self._last_crash_time and (time.time() - self._last_crash_time) > self.CRASH_RESET_SECONDS:
                     self._crash_restart_count = 0
-                self.proc = subprocess.Popen(
-                    [exe],
-                    cwd=self.server_dir,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    creationflags=flags,
-                )
+                try:
+                    self.proc = subprocess.Popen(
+                        [exe],
+                        cwd=self.server_dir,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        creationflags=flags,
+                    )
+                except PermissionError:
+                    # Linux 平台：二进制缺少可执行权限时给出明确提示
+                    if not IS_WINDOWS:
+                        raise RuntimeError(
+                            f"无法启动 {SERVER_EXE}：缺少可执行权限。请执行: chmod +x {exe}"
+                        ) from PermissionError
+                    raise
                 self.reader_thread = threading.Thread(target=self._reader, daemon=True)
                 self.reader_thread.start()
                 self.on_state(True)
