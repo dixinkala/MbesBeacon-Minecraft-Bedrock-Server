@@ -30,7 +30,7 @@
 - [ ] Manual testing (please describe the steps)
 
 **Test environment**:
-- OS: [e.g. Windows 11 23H2]
+- OS: [e.g. Windows 11 23H2 or Ubuntu 22.04]
 - Python version: [e.g. 3.11.5]
 
 ## 📸 Screenshots / Screen Recordings (if applicable)

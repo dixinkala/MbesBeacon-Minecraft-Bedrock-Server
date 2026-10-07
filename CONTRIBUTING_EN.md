@@ -31,7 +31,7 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md) code of cond
 
 If you found a bug, please file an [Issue](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/issues/new?template=bug_report.md) and include:
 
-- OS version (Windows 10/11)
+- OS version (Windows 10/11 or Ubuntu 20.04+; include `uname -a` on Linux)
 - MbesBeacon version
 - Reproduction steps
 - Expected vs. actual behavior
@@ -56,7 +56,7 @@ If you want to contribute code directly, please follow the [Pull Request Workflo
 ### Prerequisites
 
 - Python 3.10+
-- Windows 10/11 (this project supports Windows only)
+- Windows 10/11 or Ubuntu 20.04+ (Windows and Linux are supported)
 - Git
 
 ### Setup Steps
@@ -68,7 +68,8 @@ cd MbesBeacon-Minecraft-Bedrock-Server
 
 # 2. Create a virtual environment (recommended)
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Linux/macOS
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -195,7 +196,7 @@ When filing a bug report, describe the problem in as much detail as possible to 
 
 ### Required Information
 
-- [ ] OS version (e.g., Windows 10 22H2 / Windows 11 23H2)
+- [ ] OS version (e.g., Windows 10 22H2 / Windows 11 23H2 or Ubuntu 20.04+)
 - [ ] MbesBeacon version (e.g., v1.0.21)
 - [ ] Reproduction steps (down to each operation)
 - [ ] Expected behavior
