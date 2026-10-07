@@ -5,7 +5,6 @@ misc 相关路由处理方法
 import threading
 
 from ...app_context import AppContext
-from ...players import list_installed_packs
 from ...scheduler import load_scheduled_tasks, save_scheduled_tasks
 from ...security import read_audit_log
 from ...state import DEFAULT_THEME
@@ -55,11 +54,6 @@ class MiscRoutesMixin:
         limit = int(data.get("limit", 200))
         logs = read_audit_log(limit=limit)
         self._json({"ok": True, "logs": logs, "count": len(logs)})
-
-    @register_get_route("/api/packs")
-    def _route_packs_list(self, q):
-        packs = list_installed_packs()
-        self._json({"ok": True, "packs": packs})
 
     @register_get_route("/api/scheduled/list")
     def _route_scheduled_list(self, q):

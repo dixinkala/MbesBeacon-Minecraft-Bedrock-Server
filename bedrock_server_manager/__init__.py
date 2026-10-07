@@ -121,6 +121,13 @@ from .install import (  # noqa: F401
     select_server_dir,
 )
 from .main import _main, main  # noqa: F401
+from .packs import (  # noqa: F401
+    VALID_KNOWN_PACKS_FILE,
+    delete_pack,
+    import_pack,
+    read_valid_known_packs,
+    set_pack_enabled,
+)
 from .performance import (  # noqa: F401
     PerformanceMonitor,
     get_performance_monitor,
