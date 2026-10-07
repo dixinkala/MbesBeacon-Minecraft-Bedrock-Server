@@ -376,5 +376,21 @@ def set_ui_lang(lang: str) -> bool:
     return True
 
 
+def tr_msg(zh: str, en: str, *args) -> str:
+    """按当前 UI 语言返回后端消息文案（安装日志 / 备份输出等）。
+
+    zh 与 en 为对应语言的模板，占位符需一致（%s / %d / %.Nf 等）；
+    args 以 % 格式化填充模板；无参数时直接返回模板。
+    语言取 get_ui_lang()（用户手动选择优先，否则跟随系统语言）。
+    """
+    tpl = en if get_ui_lang() == "en" else zh
+    if not args:
+        return tpl
+    try:
+        return tpl % args
+    except Exception:
+        return tpl
+
+
 # 初始化依赖注入容器（确保在模块加载时完成）
 initialize_container()

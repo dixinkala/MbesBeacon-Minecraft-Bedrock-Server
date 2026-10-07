@@ -11,7 +11,7 @@ import zipfile
 from .app_context import AppContext
 from .app_logger import safe_log_exception
 from .server import get_server_proc
-from .utils import resolve_server_dir
+from .utils import resolve_server_dir, tr_msg
 
 
 def _get_console():
@@ -96,10 +96,12 @@ def backup_worlds(dir_path: str, max_backups: int = 5) -> str:
                 shutil.rmtree(old, ignore_errors=True)
         except Exception as e:
             safe_log_exception("backup", f"操作失败: {e}", "warning")
-        console.append(f"\n[系统] 已自动备份世界存档到: {backup_dir}\n")
+        console.append(
+            tr_msg("\n[系统] 已自动备份世界存档到: %s\n", "\n[System] World save auto-backed up to: %s\n", backup_dir)
+        )
         return backup_dir
     except Exception as e:
-        console.append(f"\n[系统] 世界存档备份失败: {e}\n")
+        console.append(tr_msg("\n[系统] 世界存档备份失败: %s\n", "\n[System] World save backup failed: %s\n", e))
         return ""
 
 
@@ -171,21 +173,25 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
     console = _get_console()
     get_server_proc = _get_server_proc()
     if not backup_path or not os.path.exists(backup_path):
-        return False, "备份不存在"
+        return False, tr_msg("备份不存在", "Backup does not exist")
     is_zip = backup_path.lower().endswith(".zip") and os.path.isfile(backup_path)
     if not (os.path.isdir(backup_path) or is_zip):
-        return False, "备份目录不存在"
+        return False, tr_msg("备份目录不存在", "Backup directory does not exist")
     if not server_dir or not os.path.isdir(server_dir):
-        return False, "服务器目录不存在"
+        return False, tr_msg("服务器目录不存在", "Server directory does not exist")
     # 安全校验：备份路径必须在备份根目录内
     backup_root = get_backup_root(server_dir)
     backup_abs = os.path.normpath(os.path.abspath(backup_path))
     root_abs = os.path.normpath(os.path.abspath(backup_root))
     if not (backup_abs == root_abs or backup_abs.startswith(root_abs + os.sep)):
-        return False, "非法路径，只能恢复备份目录内的存档"
+        return False, tr_msg(
+            "非法路径，只能恢复备份目录内的存档", "Invalid path: can only restore backups inside the backup directory"
+        )
     # 额外校验：路径必须包含 _worlds_backups
     if "_worlds_backups" not in backup_abs:
-        return False, "非法路径，只能恢复备份目录内的存档"
+        return False, tr_msg(
+            "非法路径，只能恢复备份目录内的存档", "Invalid path: can only restore backups inside the backup directory"
+        )
     # 停止服务器
     try:
         p = get_server_proc()
@@ -207,7 +213,9 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
             extract_zip(backup_path, extract_dir)
             extracted_worlds = os.path.join(extract_dir, "worlds")
             if not os.path.isdir(extracted_worlds):
-                return False, "备份中未找到 worlds 目录，无法恢复"
+                return False, tr_msg(
+                    "备份中未找到 worlds 目录，无法恢复", "No worlds directory found in backup, cannot restore"
+                )
             source_worlds = extracted_worlds
         else:
             source_worlds = backup_path
@@ -225,7 +233,13 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
         for d in os.listdir(server_dir):
             if d.startswith("worlds_restore_tmp_"):
                 shutil.rmtree(os.path.join(server_dir, d), ignore_errors=True)
-        console.append(f"\n[系统] 世界存档已从备份恢复: {os.path.basename(backup_path)}\n")
+        console.append(
+            tr_msg(
+                "\n[系统] 世界存档已从备份恢复: %s\n",
+                "\n[System] World save restored from backup: %s\n",
+                os.path.basename(backup_path),
+            )
+        )
         return True, ""
     except Exception as e:
         # 恢复失败，尝试回滚
@@ -238,7 +252,7 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
                     os.rename(os.path.join(server_dir, tmp_dirs[0]), worlds_dir)
         except Exception as e:
             safe_log_exception("backup", f"操作失败: {e}", "warning")
-        return False, f"恢复失败: {str(e)}"
+        return False, tr_msg("恢复失败: %s", "Restore failed: %s", str(e))
     finally:
         # 清理解压临时目录
         if extract_dir and os.path.isdir(extract_dir):
@@ -256,10 +270,12 @@ def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool
     """
     console = _get_console()
     if not backup_path or not (os.path.isdir(backup_path) or os.path.isfile(backup_path)):
-        return False, "备份不存在"
+        return False, tr_msg("备份不存在", "Backup does not exist")
     # 安全校验1：必须在 _worlds_backups 目录下
     if "_worlds_backups" not in backup_path:
-        return False, "非法路径，只能删除备份目录"
+        return False, tr_msg(
+            "非法路径，只能删除备份目录", "Invalid path: can only delete backups inside the backup directory"
+        )
     # 安全校验2：绝对路径边界检查（与 restore_backup 一致）
     try:
         if server_dir is None:
@@ -269,7 +285,10 @@ def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool
             backup_abs = os.path.normpath(os.path.abspath(backup_path))
             root_abs = os.path.normpath(os.path.abspath(backup_root))
             if not (backup_abs == root_abs or backup_abs.startswith(root_abs + os.sep)):
-                return False, "非法路径，只能删除备份目录内的存档"
+                return False, tr_msg(
+                    "非法路径，只能删除备份目录内的存档",
+                    "Invalid path: can only delete backups inside the backup directory",
+                )
     except Exception as e:
         safe_log_exception("backup", f"操作失败: {e}", "warning")
     try:
@@ -277,10 +296,12 @@ def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool
             shutil.rmtree(backup_path, ignore_errors=True)
         else:
             os.remove(backup_path)
-        console.append(f"\n[系统] 已删除备份: {os.path.basename(backup_path)}\n")
+        console.append(
+            tr_msg("\n[系统] 已删除备份: %s\n", "\n[System] Backup deleted: %s\n", os.path.basename(backup_path))
+        )
         return True, ""
     except Exception as e:
-        return False, f"删除失败: {str(e)}"
+        return False, tr_msg("删除失败: %s", "Delete failed: %s", str(e))
 
 
 def delete_server(dir_target, mode):
