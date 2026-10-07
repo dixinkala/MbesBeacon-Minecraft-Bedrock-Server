@@ -19,13 +19,14 @@ on:
 
 jobs:
   test:
-    name: 测试 (Python ${{ matrix.python-version }})
-    runs-on: windows-latest
+    name: 测试 (${{ matrix.os }} / Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
+        os: [windows-latest, ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:

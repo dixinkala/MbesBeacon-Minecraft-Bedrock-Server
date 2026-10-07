@@ -15,7 +15,7 @@ import zipfile
 
 from .app_context import AppContext
 from .app_logger import safe_log_exception
-from .constants import CDN_TEMPLATE, IS_WINDOWS, LINKS_API, SERVER_EXE
+from .constants import CDN_TEMPLATE, IS_WINDOWS, LINKS_API, PLATFORM_TAG, SERVER_EXE
 from .server import get_server_proc, server_running
 from .utils import add_server_dir_history, detect_servers, save_settings
 from .verify import load_official_hashes, verify_download_full
@@ -38,19 +38,24 @@ def _get_constants():
     return SERVER_EXE, IS_WINDOWS, LINKS_API, CDN_TEMPLATE
 
 
+def _format_download_template(template: str, version: str) -> str:
+    """将下载源模板格式化为实际 URL（填充 {version} 与 {platform}）。"""
+    return template.replace("{version}", version).replace("{platform}", PLATFORM_TAG)
+
+
 # 下载源配置
-# 注意：官方 CDN 支持所有历史版本下载，URL 格式为模板化
+# 注意：官方 CDN 支持所有历史版本下载，URL 格式为模板化（{platform} 为 win/linux）
 # 已移除不可用的 "官方备用 (minecraft.net/en-us)" 下载源（所有版本均返回404）
 DOWNLOAD_SOURCES = [
     {
         "name": "官方 CDN (www.minecraft.net)",
-        "template": "https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-{version}.zip",
+        "template": "https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip",
         "type": "official",
         "description": "Mojang 官方 CDN，支持所有历史版本下载，推荐使用",
     },
     {
         "name": "官方 CDN (minecraft.net)",
-        "template": "https://minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-{version}.zip",
+        "template": "https://minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip",
         "type": "official",
         "description": "Mojang 官方 CDN 备用域名（不带 www），部分网络环境下可能更稳定",
     },
@@ -58,7 +63,7 @@ DOWNLOAD_SOURCES = [
 
 # 已验证可下载的基岩版服务端版本（历史版本列表）
 # 官方 API 现在只返回最新版本，历史版本需从此列表获取
-# 下载使用 CDN 模板 URL: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-{version}.zip
+# 下载使用 CDN 模板 URL: https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip
 VERIFIED_VERSIONS = [
     # 1.26.x
     "1.26.44.3",
@@ -180,30 +185,33 @@ def _http_get(url, timeout=30, ignore_ssl=False):
 
 
 def get_latest_server_info(ignore_ssl=False):
-    """从官方 API 获取最新版服务器下载信息（仅 Windows 版本）。"""
+    """从官方 API 获取最新版服务器下载信息（按当前平台返回对应下载地址）。"""
     SERVER_EXE, IS_WINDOWS, LINKS_API, CDN_TEMPLATE = _get_constants()
+    # 官方 API 的 downloadType 字段：serverBedrockWindows / serverBedrockLinux（预览版带 Preview 后缀）
+    target_type = "serverBedrockWindows" if IS_WINDOWS else "serverBedrockLinux"
     data = json.loads(_http_get(LINKS_API, timeout=30, ignore_ssl=ignore_ssl).decode("utf-8", "ignore"))
     links = data.get("result", {}).get("links", [])
-    win_url = version = None
+    server_url = version = None
     for it in links:
         dt = it.get("downloadType", "")
         url = it.get("downloadUrl", "")
         m = re.search(r"bedrock-server-([0-9.]+)\.zip", url)
         if not m:
             continue
-        if dt == "serverBedrockWindows" and not win_url:
-            win_url, version = url, m.group(1)
-    if not win_url:
-        raise RuntimeError("未能从官方 API 解析到 Windows 服务端下载地址")
-    return {"version": version, "win_url": win_url}
+        if dt == target_type and not server_url:
+            server_url, version = url, m.group(1)
+    if not server_url:
+        # 兜底：未能匹配平台类型时，尝试从任意平台链接提取版本号并回退到 CDN 模板
+        raise RuntimeError(f"未能从官方 API 解析到 {'Windows' if IS_WINDOWS else 'Linux'} 服务端下载地址")
+    return {"version": version, "win_url": server_url, "url": server_url}
 
 
 def make_download_url(version, source_index=0):
-    """根据版本号生成下载 URL（仅 Windows 版本）。"""
+    """根据版本号生成下载 URL（按当前平台生成对应平台路径）。"""
 
     if source_index < len(DOWNLOAD_SOURCES):
         template = DOWNLOAD_SOURCES[source_index]["template"]
-        return template.replace("{version}", version).replace("{platform}", "win")
+        return _format_download_template(template, version)
     return CDN_TEMPLATE.format(version=version)
 
 
@@ -429,16 +437,17 @@ def fetch_versions_from_bds_oss(ignore_ssl=False, include_preview=False):
     """从 Bedrock-OSS/BDS-Versions GitHub 项目获取完整版本列表。
 
     该项目维护了从 1.6.0.15 到最新版的所有基岩版服务端版本，
-    下载使用官方 CDN: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-{version}.zip
+    下载使用官方 CDN: https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip
 
     Returns:
         tuple: (stable_versions, preview_versions) 两个列表
     """
     try:
         data = json.loads(_http_get(BDS_VERSIONS_JSON_URL, timeout=30, ignore_ssl=ignore_ssl).decode("utf-8", "ignore"))
-        windows = data.get("windows", {})
-        stable = windows.get("versions", [])
-        preview = windows.get("preview_versions", [])
+        # versions.json 按平台分组：windows / linux
+        platform_data = data.get("windows" if IS_WINDOWS else "linux", {})
+        stable = platform_data.get("versions", [])
+        preview = platform_data.get("preview_versions", [])
         # 去重并排序
         stable = sorted(set(stable), key=_version_key, reverse=True)
         preview = sorted(set(preview), key=_version_key, reverse=True)
@@ -456,7 +465,7 @@ def get_bedrock_versions(ignore_ssl=False, include_preview=False):
     3. 硬编码后备列表 - 网络不可用时使用
 
     所有版本均可通过官方 CDN 下载:
-    https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-{version}.zip
+    https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip
     """
 
     all_versions = []
@@ -470,16 +479,19 @@ def get_bedrock_versions(ignore_ssl=False, include_preview=False):
     if include_preview and preview_from_oss:
         all_versions.extend(preview_from_oss)
 
-    # 2. 从官方 API 获取最新版本（补充可能的最新版）
+    # 2. 从官方 API 获取最新版本（补充可能的最新版，仅取当前平台对应条目）
     try:
         data = json.loads(_http_get(LINKS_API, timeout=15, ignore_ssl=ignore_ssl).decode("utf-8", "ignore"))
         links = data.get("result", {}).get("links", [])
+        platform_key = "Windows" if IS_WINDOWS else "Linux"
         for it in links:
             url = it.get("downloadUrl", "")
             m = re.search(r"bedrock-server-([0-9.]+)\.zip", url)
             if m:
                 ver = m.group(1)
                 dt = it.get("downloadType", "")
+                if platform_key not in dt:
+                    continue
                 is_preview = "preview" in dt.lower() or "beta" in dt.lower()
                 if (include_preview or not is_preview) and ver not in all_versions:
                     all_versions.append(ver)
@@ -523,52 +535,53 @@ def detect_server_version(dir_path):
         key = os.path.normcase(os.path.abspath(dir_path))
         if key in versions_map and versions_map[key]:
             return versions_map[key]
-    # 2. 从 bedrock_server.exe 文件版本属性读取（Windows API）
-    exe_path = os.path.join(dir_path, SERVER_EXE)
-    if os.path.isfile(exe_path):
-        try:
-            import ctypes.wintypes
+    # 2. 从服务端文件版本属性读取（仅 Windows：使用 Win32 API 读取 PE 文件版本资源）
+    if IS_WINDOWS:
+        exe_path = os.path.join(dir_path, SERVER_EXE)
+        if os.path.isfile(exe_path):
+            try:
+                import ctypes.wintypes
 
-            size = ctypes.windll.version.GetFileVersionInfoSizeW(exe_path, None)
-            if size > 0:
-                buf = ctypes.create_string_buffer(size)
-                if ctypes.windll.version.GetFileVersionInfoW(exe_path, None, size, buf):
+                size = ctypes.windll.version.GetFileVersionInfoSizeW(exe_path, None)
+                if size > 0:
+                    buf = ctypes.create_string_buffer(size)
+                    if ctypes.windll.version.GetFileVersionInfoW(exe_path, None, size, buf):
 
-                    class LANGANDCODEPAGE(ctypes.Structure):
-                        _fields_ = [("wLanguage", ctypes.wintypes.WORD), ("wCodePage", ctypes.wintypes.WORD)]
+                        class LANGANDCODEPAGE(ctypes.Structure):
+                            _fields_ = [("wLanguage", ctypes.wintypes.WORD), ("wCodePage", ctypes.wintypes.WORD)]
 
-                    lang_addr = ctypes.c_uint()
-                    lang_len = ctypes.c_uint()
-                    lang_list = []
-                    if ctypes.windll.version.VerQueryValueW(
-                        buf, "\\VarFileInfo\\Translation", ctypes.byref(lang_addr), ctypes.byref(lang_len)
-                    ):
-                        lang_ptr = ctypes.cast(lang_addr, ctypes.POINTER(LANGANDCODEPAGE))
-                        for i in range(lang_len.value // ctypes.sizeof(LANGANDCODEPAGE)):
-                            lang_list.append((lang_ptr[i].wLanguage, lang_ptr[i].wCodePage))
-                    lang_list.append((0x0409, 0x04B0))
-                    lang_list.append((0x0804, 0x04B0))
-                    for wlang, wcp in lang_list:
-                        for field in ["ProductVersion", "FileVersion"]:
-                            try:
-                                sub_block = f"\\StringFileInfo\\{wlang:04x}{wcp:04x}\\{field}"
-                                val_addr = ctypes.c_uint()
-                                val_len = ctypes.c_uint()
-                                if ctypes.windll.version.VerQueryValueW(
-                                    buf, sub_block, ctypes.byref(val_addr), ctypes.byref(val_len)
-                                ):
-                                    ver = ctypes.wstring_at(val_addr, val_len - 1).strip()
-                                    if ver and re.match(r"^[\d.]+$", ver):
-                                        if not isinstance(versions_map, dict):
-                                            versions_map = {}
-                                        versions_map[os.path.normcase(os.path.abspath(dir_path))] = ver
-                                        settings["server_versions"] = versions_map
-                                        save_settings()
-                                        return ver
-                            except Exception:
-                                continue
-        except Exception as e:
-            safe_log_exception("install", f"操作失败: {e}", "warning")
+                        lang_addr = ctypes.c_uint()
+                        lang_len = ctypes.c_uint()
+                        lang_list = []
+                        if ctypes.windll.version.VerQueryValueW(
+                            buf, "\\VarFileInfo\\Translation", ctypes.byref(lang_addr), ctypes.byref(lang_len)
+                        ):
+                            lang_ptr = ctypes.cast(lang_addr, ctypes.POINTER(LANGANDCODEPAGE))
+                            for i in range(lang_len.value // ctypes.sizeof(LANGANDCODEPAGE)):
+                                lang_list.append((lang_ptr[i].wLanguage, lang_ptr[i].wCodePage))
+                        lang_list.append((0x0409, 0x04B0))
+                        lang_list.append((0x0804, 0x04B0))
+                        for wlang, wcp in lang_list:
+                            for field in ["ProductVersion", "FileVersion"]:
+                                try:
+                                    sub_block = f"\\StringFileInfo\\{wlang:04x}{wcp:04x}\\{field}"
+                                    val_addr = ctypes.c_uint()
+                                    val_len = ctypes.c_uint()
+                                    if ctypes.windll.version.VerQueryValueW(
+                                        buf, sub_block, ctypes.byref(val_addr), ctypes.byref(val_len)
+                                    ):
+                                        ver = ctypes.wstring_at(val_addr, val_len - 1).strip()
+                                        if ver and re.match(r"^[\d.]+$", ver):
+                                            if not isinstance(versions_map, dict):
+                                                versions_map = {}
+                                            versions_map[os.path.normcase(os.path.abspath(dir_path))] = ver
+                                            settings["server_versions"] = versions_map
+                                            save_settings()
+                                            return ver
+                                except Exception:
+                                    continue
+            except Exception as e:
+                safe_log_exception("install", f"操作失败: {e}", "warning")
     # 2.5 检查版本标识文件
     for vfile in ["release_notes.txt", "version.txt", "VERSION", "bedrock_server_version.txt"]:
         vpath = os.path.join(dir_path, vfile)
@@ -626,7 +639,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
             for i in range(len(DOWNLOAD_SOURCES)):
                 idx = (source_index + i) % len(DOWNLOAD_SOURCES)
                 src = DOWNLOAD_SOURCES[idx]
-                urls_to_try.append((src["name"], src["template"].format(version=version)))
+                urls_to_try.append((src["name"], _format_download_template(src["template"], version)))
         else:
             if not (settings.get("_latest") or {}).get("version"):
                 install_state.set(percent=1, text="正在获取最新版本信息...")
@@ -636,7 +649,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
             version = latest["version"]
             urls_to_try.append(("官方 API", latest["win_url"]))
             for src in DOWNLOAD_SOURCES[1:]:
-                urls_to_try.append((src["name"], src["template"].format(version=version)))
+                urls_to_try.append((src["name"], _format_download_template(src["template"], version)))
             install_state.log_line(f"最新稳定版: {version}")
         zip_path = os.path.join(dir_target, f"bedrock-server-{version}.zip")
         download_ok = False
@@ -733,6 +746,12 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
         exe = os.path.join(dir_target, SERVER_EXE)
         if not os.path.exists(exe):
             raise RuntimeError(f"安装失败：未在目录中找到 {SERVER_EXE}")
+        # Linux 平台：确保服务端二进制具有可执行权限（部分镜像打包的 zip 可能丢失权限位）
+        if not IS_WINDOWS:
+            try:
+                os.chmod(exe, 0o755)
+            except OSError as e:
+                install_state.log_line(f"警告: 设置可执行权限失败: {e}")
         install_state.set(phase="done", percent=100, text="安装完成", done=True)
         install_state.log_line(f"✔ 服务器安装完成！版本 {version}")
         install_state.log_line(f"  服务器程序: {exe}")

@@ -4,7 +4,6 @@
 """
 
 import contextlib
-import ctypes
 import io
 import json
 import os
@@ -18,13 +17,86 @@ from http.server import ThreadingHTTPServer
 from .app_context import AppContext
 from .app_logger import get_app_logger, safe_log_exception
 from .app_update import check_app_update_async
-from .constants import APP_MARKER, APP_TITLE, APP_VERSION, DEFAULT_PORT, LOGS_DIR
+from .constants import APP_DATA_DIR, APP_MARKER, APP_TITLE, APP_VERSION, DEFAULT_PORT, IS_WINDOWS, LOGS_DIR
 from .scheduler import start_scheduler, stop_scheduler
 from .server import get_server_proc, server_running
 from .state import migrate_legacy_data
 from .tray import SystemTray
 from .utils import get_ui_lang, installed, load_settings, open_browser_with_retry, resolve_server_dir
 from .web.handler import Handler
+
+
+def _acquire_single_instance():
+    """获取单实例锁（平台相关）。
+
+    Windows: 命名互斥量（CreateMutexW）。
+    Linux: 锁文件 flock（fcntl），随进程退出自动释放，无残留问题。
+
+    Returns:
+        tuple: (lock_handle, kernel32_or_None, stale_handle_or_None)
+            - lock_handle: 成功持有的锁句柄；获取失败时为 None
+            - kernel32: Windows 下的 kernel32 模块（用于释放），Linux 为 None
+            - stale_handle: Windows 下互斥量已存在时的旧句柄（用于释放），其余情况为 None
+    """
+    if IS_WINDOWS:
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32
+            mutex = kernel32.CreateMutexW(None, False, "Global\\MbesBeacon_Mutex")
+            last_error = kernel32.GetLastError()
+            if last_error == 183:  # ERROR_ALREADY_EXISTS：已有实例或残留互斥量
+                return None, kernel32, mutex
+            return mutex, kernel32, None
+        except Exception as e:
+            safe_log_exception("main", f"单实例互斥量创建失败: {e}", "warning")
+            return None, None, None
+    # Linux: 使用文件锁（flock），随进程退出自动释放，无残留问题
+    try:
+        import fcntl
+
+        lock_path = os.path.join(APP_DATA_DIR, "single_instance.lock")
+        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return fd, None, None
+        except OSError:
+            os.close(fd)
+            return None, None, None
+    except Exception as e:
+        safe_log_exception("main", f"单实例文件锁创建失败: {e}", "warning")
+        return None, None, None
+
+
+def _release_single_instance(lock_handle, kernel32):
+    """释放单实例锁（平台相关）。"""
+    if not lock_handle:
+        return
+    try:
+        if IS_WINDOWS:
+            kernel32.ReleaseMutex(lock_handle)
+            kernel32.CloseHandle(lock_handle)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_handle, fcntl.LOCK_UN)
+            os.close(lock_handle)
+    except Exception as e:
+        safe_log_exception("main", f"释放单实例锁失败: {e}", "warning")
+
+
+def _probe_running_instance():
+    """探测是否已有实例在运行；若在运行则打开其管理界面并返回 True。"""
+    for probe_port in range(DEFAULT_PORT, DEFAULT_PORT + 20):
+        try:
+            probe = urllib.request.urlopen(f"http://127.0.0.1:{probe_port}/api/status", timeout=1)
+            data = json.loads(probe.read().decode("utf-8", "ignore"))
+            if data.get("app") == APP_MARKER:
+                open_browser_with_retry(f"http://127.0.0.1:{probe_port}/")
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def _main():
@@ -55,66 +127,59 @@ def _main():
     if sys.stderr is None:
         sys.stderr = io.StringIO()
 
-    # 单实例检测：命名互斥量
-    mutex = None
-    try:
-        mutex_name = "Global\\MbesBeacon_Mutex"
-        kernel32 = ctypes.windll.kernel32
-        mutex = kernel32.CreateMutexW(None, False, mutex_name)
-        last_error = kernel32.GetLastError()
-        if last_error == 183:  # ERROR_ALREADY_EXISTS
-            # 检测到已有互斥量，先等待让首个实例完成 HTTP 服务器绑定（防止竞态条件）
-            import time
-
-            time.sleep(1.5)
-
-            # 多次探测是否真有实例在运行（每次间隔 0.5 秒，共 3 次）
-            for retry in range(3):
-                for probe_port in range(DEFAULT_PORT, DEFAULT_PORT + 20):
-                    try:
-                        probe = urllib.request.urlopen(f"http://127.0.0.1:{probe_port}/api/status", timeout=1)
-                        data = json.loads(probe.read().decode("utf-8", "ignore"))
-                        if data.get("app") == APP_MARKER:
-                            open_browser_with_retry(f"http://127.0.0.1:{probe_port}/")
-                            # 释放当前互斥量并退出
-                            if mutex:
-                                try:
-                                    kernel32.ReleaseMutex(mutex)
-                                    kernel32.CloseHandle(mutex)
-                                except Exception as e:
-                                    with contextlib.suppress(Exception):
-                                        get_app_logger().debug(f"main.py 异常: {e}")
-                            return
-                    except Exception:
-                        continue
-                if retry < 2:
-                    time.sleep(0.5)
-
-            # 多次探测后仍未找到运行中的实例，说明是残留互斥量，释放旧的并继续启动
-            try:
-                # 关闭当前互斥量句柄（旧互斥量会在所有句柄关闭后被系统回收）
-                kernel32.CloseHandle(mutex)
-                mutex = None
-                # 重新创建互斥量
-                mutex = kernel32.CreateMutexW(None, False, mutex_name)
-                # 记录日志
-                with contextlib.suppress(Exception):
-                    get_app_logger().info("检测到残留互斥量，已清理并重新创建")
-            except Exception as e:
-                with contextlib.suppress(Exception):
-                    get_app_logger().debug(f"main.py 异常: {e}")
-    except Exception as e:
-        safe_log_exception("main", f"操作失败: {e}", "warning")
-
-    # 回退方案：探测默认端口
-    try:
-        probe = urllib.request.urlopen(f"http://127.0.0.1:{DEFAULT_PORT}/api/status", timeout=2)
-        data = json.loads(probe.read().decode("utf-8", "ignore"))
-        if data.get("app") == APP_MARKER:
-            open_browser_with_retry(f"http://127.0.0.1:{DEFAULT_PORT}/")
+    # 单实例检测（Windows: 命名互斥量；Linux: 文件锁）
+    lock_handle, kernel32, stale_handle = _acquire_single_instance()
+    if stale_handle is not None:
+        # Windows：互斥量已存在——先等待让首个实例完成 HTTP 服务器绑定（防止竞态条件）
+        time.sleep(1.5)
+        # 多次探测是否真有实例在运行（每次间隔 0.5 秒，共 3 次）
+        found = False
+        for retry in range(3):
+            if _probe_running_instance():
+                found = True
+                break
+            if retry < 2:
+                time.sleep(0.5)
+        if found:
+            # 已有实例在运行：释放旧互斥量句柄并退出（由首个实例持有锁）
+            with contextlib.suppress(Exception):
+                kernel32.CloseHandle(stale_handle)
             return
-    except Exception as e:
-        safe_log_exception("main", f"操作失败: {e}", "warning")
+        # 多次探测后仍未找到运行中的实例，说明是残留互斥量：
+        # 释放旧句柄（系统回收互斥量）后重新创建，继续本次启动
+        with contextlib.suppress(Exception):
+            kernel32.CloseHandle(stale_handle)
+        lock_handle, kernel32, stale_handle = _acquire_single_instance()
+        with contextlib.suppress(Exception):
+            get_app_logger().info("检测到残留互斥量，已清理并重新创建")
+    elif lock_handle is None:
+        # Linux：锁被占用（已有实例运行）；或 Windows 创建异常
+        time.sleep(1.5)
+        found = False
+        for retry in range(3):
+            if _probe_running_instance():
+                found = True
+                break
+            if retry < 2:
+                time.sleep(0.5)
+        if found:
+            return
+        # 未探测到运行实例：Linux 文件锁随进程退出自动释放，正常不会到此；
+        # 若确实无法获取锁，回退到端口探测兜底
+        if _probe_running_instance():
+            return
+        safe_log_exception("main", "无法获取单实例锁，继续启动（风险：可能多实例运行）", "warning")
+
+    # 兜底：探测默认端口（锁获取异常时）
+    if lock_handle is None:
+        try:
+            probe = urllib.request.urlopen(f"http://127.0.0.1:{DEFAULT_PORT}/api/status", timeout=2)
+            data = json.loads(probe.read().decode("utf-8", "ignore"))
+            if data.get("app") == APP_MARKER:
+                open_browser_with_retry(f"http://127.0.0.1:{DEFAULT_PORT}/")
+                return
+        except Exception as e:
+            safe_log_exception("main", f"操作失败: {e}", "warning")
 
     # 绑定端口
     httpd = None
@@ -231,14 +296,8 @@ def _main():
                 p.stop(wait=8)
         except Exception as e:
             safe_log_exception("main", f"操作失败: {e}", "warning")
-        # 释放单实例互斥量
-        if mutex:
-            try:
-                kernel32 = ctypes.windll.kernel32
-                kernel32.ReleaseMutex(mutex)
-                kernel32.CloseHandle(mutex)
-            except Exception as e:
-                safe_log_exception("main", f"操作失败: {e}", "warning")
+        # 释放单实例锁（Windows: 互斥量；Linux: 文件锁）
+        _release_single_instance(lock_handle, kernel32)
 
 
 def main():
@@ -255,7 +314,7 @@ def main():
                 f.write("\n===== {} =====\n".format(time.strftime("%Y-%m-%d %H:%M:%S")))
                 f.write(f"App: {APP_TITLE} v{APP_VERSION}\n")
                 f.write("Python: {}\n".format(sys.version.replace("\n", " ")))
-                f.write("OS: Windows (win32 / nt)\n")  # 仅支持 Windows 平台
+                f.write(f"OS: {sys.platform} / {os.name}\n")
                 f.write("Server dir: %s\n" % (AppContext.instance().settings.get("server_dir", "") or "(未设置)"))
                 f.write(f"Installed: {installed()}\n")
                 f.write(f"Server running: {server_running()}\n")
@@ -267,12 +326,20 @@ def main():
             err_msg = traceback.format_exc()
             err_lines = [line for line in err_msg.strip().split("\n") if line.strip()]
             err_summary = err_lines[-1] if err_lines else "未知错误"
-            ctypes.windll.user32.MessageBoxW(
-                0,
-                f"程序启动失败：{err_summary}\n\n崩溃日志已保存至：\n{log_path}\n\n请将日志反馈给开发者。",
-                "Minecraft 基岩版服务器管理器 - 启动失败",
-                0x10,
-            )
+            if IS_WINDOWS:
+                # Windows：弹出原生消息框
+                import ctypes
+
+                ctypes.windll.user32.MessageBoxW(
+                    0,
+                    f"程序启动失败：{err_summary}\n\n崩溃日志已保存至：\n{log_path}\n\n请将日志反馈给开发者。",
+                    "Minecraft 基岩版服务器管理器 - 启动失败",
+                    0x10,
+                )
+            else:
+                # Linux（无桌面环境或终端启动）：输出到 stderr 与日志
+                print(f"[MbesBeacon] 程序启动失败：{err_summary}", file=sys.stderr)
+                print(f"[MbesBeacon] 崩溃日志已保存至：{log_path}", file=sys.stderr)
         except Exception as e:
             safe_log_exception("main", f"操作失败: {e}", "warning")
         raise

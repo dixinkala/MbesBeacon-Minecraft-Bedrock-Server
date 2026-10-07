@@ -9,7 +9,7 @@ import webbrowser
 
 from .app_context import AppContext
 from .app_logger import safe_log_exception
-from .constants import APP_DATA_DIR, SERVER_EXE
+from .constants import APP_DATA_DIR, IS_WINDOWS, SERVER_EXE
 from .di import initialize_container, inject
 from .state import DEFAULT_THEME, THEME_FILE
 
@@ -162,7 +162,7 @@ def detect_servers(force_refresh: bool = False) -> list[dict]:
     for d in settings.get("server_dir_history", []):
         _check_dir(d)
 
-    # 3. 常见扫描位置
+    # 3. 常见扫描位置（平台相关：Windows 扫描盘符目录，Linux 扫描常见服务器目录）
     home = os.path.expanduser("~")
     scan_roots = [
         os.getcwd(),
@@ -170,10 +170,21 @@ def detect_servers(force_refresh: bool = False) -> list[dict]:
         os.path.join(home, "Desktop"),
         os.path.join(home, "Documents"),
         os.path.join(home, "Downloads"),
-        "C:\\MinecraftServer",
-        "D:\\MinecraftServer",
-        "E:\\MinecraftServer",
     ]
+    if IS_WINDOWS:
+        scan_roots += [
+            "C:\\MinecraftServer",
+            "D:\\MinecraftServer",
+            "E:\\MinecraftServer",
+        ]
+    else:
+        scan_roots += [
+            os.path.join(home, "MinecraftServer"),
+            os.path.join(home, "minecraft-server"),
+            os.path.join(home, "mcserver"),
+            "/srv/minecraft",
+            "/opt/minecraft",
+        ]
     for root in scan_roots:
         _scan_subdirs(root, max_depth=2)
 
@@ -309,27 +320,35 @@ def save_theme(theme: str) -> bool:
 
 
 def get_system_lang() -> str:
-    """检测 Windows 系统 UI 语言。
+    """检测系统 UI 语言（平台相关）。
 
     中文系统返回 'zh'，其他（含英文、日文等）返回 'en'。
-    优先读取 Windows 用户界面语言（GetUserDefaultUILanguage），
-    失败时回退到 locale 推断。
+    Windows: 优先读取 Windows 用户界面语言（GetUserDefaultUILanguage）。
+    Linux: 读取 locale 环境变量（LC_ALL / LC_MESSAGES / LANG）。
     """
-    try:
-        import ctypes
+    if IS_WINDOWS:
+        try:
+            import ctypes
 
-        lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-        # PRIMARYLANGID(lang_id) = lang_id & 0x3FF，0x04 为 LANG_CHINESE
-        if (lang_id & 0x3FF) == 0x04:
-            return "zh"
-        return "en"
-    except Exception as e:
-        safe_log_exception("utils", f"系统语言检测失败(API): {e}")
+            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            # PRIMARYLANGID(lang_id) = lang_id & 0x3FF，0x04 为 LANG_CHINESE
+            if (lang_id & 0x3FF) == 0x04:
+                return "zh"
+            return "en"
+        except Exception as e:
+            safe_log_exception("utils", f"系统语言检测失败(API): {e}")
     try:
         import locale
 
-        code, _ = locale.getdefaultlocale()
-        if code and code.lower().startswith("zh"):
+        lang_code = ""
+        for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+            val = os.environ.get(var)
+            if val:
+                lang_code = val
+                break
+        if not lang_code:
+            lang_code, _ = locale.getdefaultlocale()
+        if lang_code and lang_code.lower().startswith("zh"):
             return "zh"
     except Exception as e:
         safe_log_exception("utils", f"系统语言检测失败(locale): {e}")

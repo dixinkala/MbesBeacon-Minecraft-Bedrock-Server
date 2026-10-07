@@ -17,7 +17,7 @@ import urllib.error
 import urllib.request
 
 from .app_logger import get_app_logger
-from .constants import APP_DATA_DIR, APP_VERSION
+from .constants import APP_DATA_DIR, APP_VERSION, IS_WINDOWS
 
 # GitHub 仓库信息
 GITHUB_REPO = "dixinkala/MbesBeacon-Minecraft-Bedrock-Server"
@@ -243,6 +243,18 @@ def _check_via_api(ignore_ssl=False, timeout=10):
     }
 
 
+def _platform_download_url(exe_url, release_url):
+    """按平台返回可直接下载的资产 URL。
+
+    Windows: 返回 .exe 资产链接（支持"立即更新"自动下载）。
+    Linux: 当前 Release 仅提供 Windows EXE，无 Linux 可执行资产，
+    返回空字符串，前端引导用户前往 Releases 页面手动下载更新。
+    """
+    if IS_WINDOWS:
+        return exe_url or release_url
+    return ""
+
+
 def check_app_update(force=False, ignore_ssl=False, timeout=10):
     """
     检查 MbesBeacon 软件更新。
@@ -291,6 +303,7 @@ def check_app_update(force=False, ignore_ssl=False, timeout=10):
         "download_url": "",
         "release_url": "",
         "published_at": "",
+        "platform": "win" if IS_WINDOWS else "linux",
     }
 
     errors = []
@@ -305,7 +318,7 @@ def check_app_update(force=False, ignore_ssl=False, timeout=10):
                 "release_notes": info["release_notes"],
                 "release_url": info["release_url"],
                 "published_at": info["published_at"],
-                "download_url": info["download_url"] or info["release_url"],
+                "download_url": _platform_download_url(info["download_url"], info["release_url"]),
             }
         )
         result["has_update"] = _is_newer(info["latest_version"], current_version)
@@ -336,7 +349,7 @@ def check_app_update(force=False, ignore_ssl=False, timeout=10):
                 "release_notes": info["release_notes"],
                 "release_url": info["release_url"],
                 "published_at": info["published_at"],
-                "download_url": info["download_url"] or info["release_url"],
+                "download_url": _platform_download_url(info["download_url"], info["release_url"]),
             }
         )
         result["has_update"] = _is_newer(info["latest_version"], current_version)

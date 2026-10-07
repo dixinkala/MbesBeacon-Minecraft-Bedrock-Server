@@ -15,6 +15,7 @@
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+[![Linux](https://img.shields.io/badge/Linux-Ubuntu%2020.04%2B-FCC624?style=for-the-badge&logo=ubuntu&logoColor=black)](https://ubuntu.com/)
 
 **一键搭建 · 图形化管理 · 安全可靠 · 开箱即用**
 
@@ -142,17 +143,17 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 
 | 项目 | 要求 |
 |------|------|
-| **操作系统** | Windows 10 / Windows 11（仅支持 Windows 平台） |
+| **操作系统** | Windows 10 / Windows 11 或 Ubuntu 20.04+（Linux） |
 | **内存** | 建议 4GB 以上（服务器运行需要） |
 | **磁盘空间** | 至少 300MB 可用空间（安装时自动检查，不足则中止）；建议 500MB 以上（含服务端下载和世界存档） |
 | **网络** | 首次安装需要联网下载服务端；局域网联机需要同一 WiFi |
-| **Python** | 仅开发环境需要 3.10+，发布版 EXE 无需安装 |
+| **Python** | Windows 发布版 EXE 无需安装；Linux 从源码运行需要 Python 3.10+ |
 
 ---
 
 ## 安装方法
 
-### 方式一：直接运行 EXE（推荐普通用户）
+### 方式一：直接运行 EXE（Windows 推荐）
 
 1. 下载 `MbesBeacon.exe`
 2. 双击运行，程序会自动：
@@ -167,7 +168,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 
 > **注意**：首次运行可能弹出 Windows SmartScreen 警告，点击「更多信息」->「仍要运行」即可。本工具为开源本地工具，仅在本机运行，不会上传任何数据。
 
-### 方式二：从源码运行（开发者）
+### 方式二：从源码运行（Windows / Linux 通用）
 
 ```bash
 # 克隆项目
@@ -181,7 +182,25 @@ pip install -r requirements.txt
 python run.py
 ```
 
-### 方式三：自行打包 EXE
+### 方式三：Linux (Ubuntu) 专用说明
+
+```bash
+# 1. 安装系统依赖（可选：系统托盘需要桌面环境 + pystray）
+sudo apt install python3 python3-pip
+pip install -r requirements.txt
+pip install pystray pillow   # 可选：启用系统托盘图标（无桌面环境可跳过，自动降级为无托盘）
+
+# 2. 运行（首次运行会检查依赖并自动打开浏览器）
+python run.py
+```
+
+- **数据目录**：用户数据统一保存在 `~/.local/share/MbesBeacon/`（Windows 为 `%APPDATA%\MbesBeacon\`）
+- **服务端可执行文件**：Linux 下为 `bedrock_server`（无扩展名），下载解压后自动赋予可执行权限
+- **无桌面环境（纯命令行服务器）**：程序正常运行，仅系统托盘自动禁用，Web 管理界面仍可访问
+- **防火墙**：如使用 `ufw`，放行 `19132/udp`：`sudo ufw allow 19132/udp`
+- **查本机 IP**：终端执行 `hostname -I` 或 `ip addr`
+
+### 方式四：自行打包 EXE（Windows）
 
 ```bash
 # 安装 PyInstaller
@@ -514,6 +533,15 @@ A：点标题栏「软件更新」手动检测 MbesBeacon 软件新版本。注�
 ### Q：系统托盘图标不显示怎么办？
 A：检查 Windows 托盘隐藏区域（任务栏右下角箭头），可将 MbesBeacon 图标拖到任务栏固定显示。
 
+### Q：Linux 下系统托盘不显示？
+A：Linux 托盘依赖 `pystray` 与 Pillow 以及桌面环境托盘区（如 GNOME 扩展 / AppIndicator）。请确认：已安装 `pip install pystray pillow`、当前处于图形桌面会话（非纯 SSH）。无桌面环境时程序自动降级为无托盘，不影响 Web 管理界面。
+
+### Q：Linux 下提示 `Permission denied` 无法启动服务器？
+A：下载的服务端解压后已自动赋予 `bedrock_server` 可执行权限；若手动拷贝过文件，请执行 `chmod +x bedrock_server`。
+
+### Q：Linux 下局域网好友进不来服务器？
+A：检查防火墙放行 UDP 19132：`sudo ufw allow 19132/udp`；查看本机 IP：`hostname -I`。
+
 ---
 
 ## 🤝 贡献指南
@@ -561,7 +589,7 @@ ruff check .
 ### 报告 Bug
 
 提交 Bug 时请包含：
-- 操作系统版本（Windows 10/11）
+- 操作系统版本（Windows 10/11 或 Ubuntu 版本，Linux 请附 `uname -a`）
 - MbesBeacon 版本号
 - 复现步骤
 - 预期行为 vs 实际行为

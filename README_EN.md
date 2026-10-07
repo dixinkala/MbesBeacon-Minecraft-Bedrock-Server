@@ -142,17 +142,17 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 
 | Item | Requirement |
 |------|------|
-| **OS** | Windows 10 / Windows 11 (Windows only) |
+| **OS** | Windows 10 / Windows 11 or Ubuntu 20.04+ (Linux) |
 | **Memory** | 4GB or more recommended (the server needs it) |
 | **Disk space** | At least 300MB free (auto-checked during install; aborts if insufficient); 500MB+ recommended (server download + world saves) |
 | **Network** | Internet needed for the first install; same Wi-Fi for LAN play |
-| **Python** | 3.10+ only needed for development; the released EXE needs no Python |
+| **Python** | Windows: 3.10+ only needed for development; the released EXE needs no Python. Linux: 3.10+ required to run from source |
 
 ---
 
 ## Installation
 
-### Method 1: Run the EXE directly (recommended for most users)
+### Method 1: Run the EXE directly (Windows, recommended)
 
 1. Download `MbesBeacon.exe`
 2. Double-click to run. The program will automatically:
@@ -167,7 +167,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 
 > **Note**: On first run Windows SmartScreen may warn "Windows protected your PC". Click "More info" → "Run anyway". This is an open-source local tool that runs only on your machine and uploads nothing.
 
-### Method 2: Run from source (developers)
+### Method 2: Run from source (Windows / Linux)
 
 ```bash
 # Clone the repository
@@ -181,7 +181,25 @@ pip install -r requirements.txt
 python run.py
 ```
 
-### Method 3: Build the EXE yourself
+### Method 3: Linux (Ubuntu) specifics
+
+```bash
+# 1. System deps (optional: system tray needs a desktop session + pystray)
+sudo apt install python3 python3-pip
+pip install -r requirements.txt
+pip install pystray pillow   # optional: enables the tray icon (skipped automatically on headless servers)
+
+# 2. Run (checks deps and opens the browser automatically)
+python run.py
+```
+
+- **Data directory**: user data lives in `~/.local/share/MbesBeacon/` (Windows: `%APPDATA%\MbesBeacon\`)
+- **Server executable**: `bedrock_server` on Linux (no extension); exec permission is set automatically after extraction
+- **Headless servers (no desktop)**: the program still runs; only the tray icon is auto-disabled; the Web UI keeps working
+- **Firewall**: with `ufw`, allow `19132/udp`: `sudo ufw allow 19132/udp`
+- **Find your IP**: run `hostname -I` or `ip addr`
+
+### Method 4: Build the EXE yourself (Windows)
 
 ```bash
 # Install PyInstaller
@@ -514,6 +532,15 @@ A: Click "Software Update" in the title bar to check for new MbesBeacon releases
 ### Q: The system tray icon is missing?
 A: Check the Windows tray overflow area (arrow at the bottom-right of the taskbar); you can drag the MbesBeacon icon onto the taskbar to pin it.
 
+### Q: No system tray icon on Linux?
+A: The Linux tray needs `pystray`, Pillow and a desktop tray area (e.g. GNOME extensions / AppIndicator). Make sure you ran `pip install pystray pillow` and are in a graphical session (not a plain SSH). On headless servers the tray is auto-disabled; the Web UI still works.
+
+### Q: "Permission denied" when starting the server on Linux?
+A: Exec permission is set automatically after extraction; if you copied files manually, run `chmod +x bedrock_server`.
+
+### Q: LAN friends cannot join on Linux?
+A: Allow UDP 19132 in the firewall: `sudo ufw allow 19132/udp`; find your IP with `hostname -I`.
+
 ---
 
 ## 🤝 Contributing
@@ -561,7 +588,7 @@ ruff check .
 ### Reporting bugs
 
 When filing a bug report, please include:
-- OS version (Windows 10/11)
+- OS version (Windows 10/11 or Ubuntu version; include `uname -a` on Linux)
 - MbesBeacon version
 - Reproduction steps
 - Expected vs. actual behavior

@@ -603,7 +603,63 @@ const I18N_HELP_EN = "【MbesBeacon — Minecraft Bedrock Server Manager Help】
     return out;
   }
   window.tt = tr;
-  window.getHelp = function(){ return MBS_LANG==='en' ? I18N_HELP_EN : HELP; };
+  // ===== 平台信息（由后端注入：__IS_WINDOWS__ / __DATA_DIR_TEXT__）=====
+  const IS_WIN = "__IS_WINDOWS__" === "true";
+  const DATA_DIR_TEXT = "__DATA_DIR_TEXT__";
+
+  /** 帮助文本平台化：替换 Windows 专属措辞为 Linux 对应内容。 */
+  function platformizeHelp(t) {
+    // 数据目录统一按平台显示。
+    // 注意：中文 HELP 为模板字符串（V8 吞掉 \\M 无效转义，显示无反斜杠），
+    // 英文 HELP 为普通字符串（\\M -> \M，显示单反斜杠），两种形态都要覆盖。
+    t = t.split("%APPDATA%\\MbesBeacon").join(DATA_DIR_TEXT)
+         .split("%APPDATA%MbesBeacon").join(DATA_DIR_TEXT);
+    if (IS_WIN) return t;
+    return t
+      // 扫描位置
+      .split("C/D/E盘").join("常见目录（~/MinecraftServer、/srv/minecraft 等）")
+      .split("C/D/E drives").join("common Linux dirs (~/MinecraftServer, /srv/minecraft, etc.)")
+      // 安装建议目录（同样覆盖模板/普通字符串两种反斜杠形态）
+      .split("建议 D:\\MinecraftServer").join("建议 ~/minecraft-server")
+      .split("建议 D:MinecraftServer").join("建议 ~/minecraft-server")
+      .split("(e.g. D:\\MinecraftServer)").join("(e.g. ~/minecraft-server)")
+      // 完整性校验
+      .split("· PE 签名校验：检查 bedrock_server.exe 的数字签名是否为 Microsoft/Mojang")
+      .join("· 可执行文件校验：检查 bedrock_server 是否为有效的 Linux ELF 可执行文件")
+      .split("· PE signature check: verifies bedrock_server.exe is digitally signed by Microsoft/Mojang")
+      .join("· Executable check: verifies the bedrock_server binary is a valid Linux ELF executable")
+      // 防火墙
+      .split("首次启动 Windows 会弹出防火墙提示，请勾选\"专用网络\"并允许")
+      .join("首次启动若系统防火墙提示，请放行 UDP 19132（Linux: ufw allow 19132/udp）")
+      .split("Windows may show a firewall prompt on first start; check \"Private networks\" and allow")
+      .join("On first start the system firewall may prompt; allow UDP 19132 (Linux: ufw allow 19132/udp)")
+      // 查 IP
+      .split("或 Windows 命令行输入 ipconfig，看 IPv4 地址")
+      .join("或 Linux 终端输入 hostname -I / ip addr 查看 IPv4 地址")
+      .split("Or run ipconfig in a Windows command prompt and look at the IPv4 address")
+      .join("Or run hostname -I / ip addr in a Linux terminal and look at the IPv4 address")
+      // SmartScreen FAQ
+      .split("Windows SmartScreen 警告").join("Linux 对未签名应用的提示")
+      .split("本软件已使用自签名证书数字签名").join("请确认从 GitHub Releases 官方链接下载")
+      .split("点击「更多信息」→「仍要运行」").join("运行 chmod +x 后启动")
+      .split("a Windows SmartScreen warning").join("a Linux unsigned-app notice")
+      .split("This software is signed with a self-signed certificate.").join("Make sure you downloaded it from the official GitHub Releases link.")
+      .split("click 「More info」→「Run anyway」").join("run chmod +x on the binary")
+      // 托盘措辞
+      .split("再次双击 exe 或通过系统托盘可重新打开").join("重新运行 MbesBeacon 或通过系统托盘重新打开")
+      .split("Double-click the exe again or use the tray icon to reopen.").join("Run MbesBeacon again or reopen via the tray icon.")
+      .split("检查 Windows 托盘隐藏区域（任务栏右下角 ▲ 箭头）")
+      .join("检查桌面环境托盘隐藏区域（如 GNOME 扩展 / 系统托盘 ▲ 区域）")
+      .split("Check the hidden tray area (▲ arrow at the bottom-right of the taskbar)")
+      .join("Check the desktop environment\'s hidden tray area (e.g. GNOME extension / system tray ▲)")
+      // 托盘段追加 Linux 说明
+      .split("    · 退出程序前请先停止服务器，避免世界存档损坏")
+      .join("    · 退出程序前请先停止服务器，避免世界存档损坏\n    · Linux 桌面环境（需 pystray + 桌面会话）支持托盘；无桌面环境时自动禁用（不影响网页管理）")
+      .split("    · Stop the server before exiting to avoid world corruption")
+      .join("    · Stop the server before exiting to avoid world corruption\n    · On Linux, the tray requires pystray and a desktop session; it is auto-disabled headless (web UI still works)");
+  }
+
+  window.getHelp = function(){ return platformizeHelp(MBS_LANG==='en' ? I18N_HELP_EN : HELP); };
   function trSubtree(root){
     const walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const ns=[]; while(walker.nextNode()) ns.push(walker.currentNode);

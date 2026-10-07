@@ -15,6 +15,7 @@ import unittest
 from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from bedrock_server_manager.constants import SERVER_EXE
 
 
 class TestCrashRestartLogic(unittest.TestCase):
@@ -27,7 +28,7 @@ class TestCrashRestartLogic(unittest.TestCase):
         self.server_dir = os.path.join(os.path.dirname(__file__), "test_server_crash")
         os.makedirs(self.server_dir, exist_ok=True)
         # 创建模拟的 bedrock_server.exe
-        with open(os.path.join(self.server_dir, "bedrock_server.exe"), "wb") as f:
+        with open(os.path.join(self.server_dir, SERVER_EXE), "wb") as f:
             f.write(b"MZ" + b"\x00" * 100)
 
         # mock 回调函数

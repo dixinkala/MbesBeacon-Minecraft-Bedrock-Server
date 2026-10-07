@@ -1,6 +1,6 @@
 """
 下载完整性校验模块：对下载的服务器文件进行多重校验，
-包括 ZIP 完整性、SHA256 哈希、文件大小合理性、PE 签名校验。
+包括 ZIP 完整性、SHA256 哈希、文件大小合理性、平台对应可执行文件校验（Windows: PE 签名 / Linux: ELF 格式）。
 """
 
 import contextlib
@@ -11,7 +11,7 @@ import zipfile
 from typing import Any
 
 from .app_logger import safe_log_exception
-from .constants import CACHE_DIR
+from .constants import CACHE_DIR, IS_WINDOWS, PLATFORM_TAG, SERVER_EXE
 
 # BDS 服务端文件大小合理范围（字节）
 # 注意：BDS 版本持续更新，文件大小可能增长，上限设置较宽松以避免误判
@@ -427,6 +427,9 @@ def verify_pe_signature(exe_path: str) -> tuple[bool, str]:
     """
     if not os.path.isfile(exe_path):
         return False, "文件不存在"
+    if not IS_WINDOWS:
+        # 非 Windows 平台无 PE 文件（Linux 使用 ELF 格式，由 verify_elf_executable 校验）
+        return False, "非 Windows 平台，无 PE 签名（Linux 使用 ELF 校验）"
     try:
         import struct
 
@@ -600,7 +603,7 @@ def verify_download_full(
         result["ok"] = False
         result["errors"].append(hash_msg)
 
-    # 4. 解压后校验 bedrock_server.exe
+    # 4. 解压后校验平台对应的服务端可执行文件
     if check_pe and zip_ok:
         try:
             import shutil
@@ -609,30 +612,60 @@ def verify_download_full(
             temp_dir = tempfile.mkdtemp(prefix="bds_verify_")
             try:
                 with zipfile.ZipFile(zip_path, "r") as zf:
-                    # 查找 bedrock_server.exe
-                    exe_names = [n for n in zf.namelist() if n.lower().endswith("bedrock_server.exe")]
+                    # 查找平台对应的服务端可执行文件（Windows: bedrock_server.exe / Linux: bedrock_server）
+                    exe_names = [n for n in zf.namelist() if n.lower().endswith(SERVER_EXE.lower())]
                     if exe_names:
                         exe_name = exe_names[0]
                         zf.extract(exe_name, temp_dir)
                         exe_path = os.path.join(temp_dir, exe_name)
-                        pe_ok, pe_msg = verify_pe_signature(exe_path)
-                        result["checks"]["pe_signature"] = {"ok": pe_ok, "message": pe_msg}
-                        if not pe_ok:
-                            result["warnings"].append(pe_msg)
+                        if IS_WINDOWS:
+                            exe_ok, exe_msg = verify_pe_signature(exe_path)
+                            result["checks"]["pe_signature"] = {"ok": exe_ok, "message": exe_msg}
+                        else:
+                            exe_ok, exe_msg = verify_elf_executable(exe_path)
+                            result["checks"]["executable"] = {"ok": exe_ok, "message": exe_msg}
+                        if not exe_ok:
+                            result["warnings"].append(exe_msg)
                     else:
                         result["checks"]["pe_signature"] = {
                             "ok": False,
-                            "message": "ZIP 中未找到 bedrock_server.exe",
+                            "message": f"ZIP 中未找到 {SERVER_EXE}",
                         }
                         result["ok"] = False
-                        result["errors"].append("ZIP 中未找到 bedrock_server.exe")
+                        result["errors"].append(f"ZIP 中未找到 {SERVER_EXE}")
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
         except Exception as e:
-            result["checks"]["pe_signature"] = {"ok": False, "message": f"PE 校验异常: {str(e)}"}
-            result["warnings"].append(f"PE 签名校验异常: {str(e)}")
+            result["checks"]["pe_signature"] = {"ok": False, "message": f"可执行文件校验异常: {str(e)}"}
+            result["warnings"].append(f"可执行文件校验异常: {str(e)}")
 
     return result
+
+
+def verify_elf_executable(exe_path: str) -> tuple[bool, str]:
+    """校验 Linux 平台的服务端可执行文件是否为有效的 ELF 二进制。
+
+    官方 Linux 版 bedrock_server 是 ELF 可执行文件（无数字签名概念），
+    此处检查 ELF 魔数与可执行权限，替代 Windows 的 PE 签名校验。
+
+    Args:
+        exe_path: 可执行文件路径
+
+    Returns:
+        tuple: (ok, message)
+    """
+    if not os.path.isfile(exe_path):
+        return False, "文件不存在"
+    try:
+        with open(exe_path, "rb") as f:
+            magic = f.read(4)
+        if magic != b"\x7fELF":
+            return False, f"不是有效的 ELF 可执行文件（{PLATFORM_TAG} 平台）"
+        if not os.access(exe_path, os.X_OK):
+            return False, "服务端二进制缺少可执行权限，请执行 chmod +x"
+        return True, "ELF 可执行文件格式有效"
+    except (PermissionError, OSError) as e:
+        return False, f"ELF 校验失败: {str(e)}"
 
 
 def get_known_hashes() -> dict[str, str]:

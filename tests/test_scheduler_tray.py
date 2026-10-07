@@ -16,6 +16,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from bedrock_server_manager.constants import SERVER_EXE
 
 
 class TestValidateScheduledTask(unittest.TestCase):
@@ -212,7 +213,7 @@ class TestScheduledTasksPersistence(unittest.TestCase):
         os.makedirs(self.server_dir)
 
         # 创建模拟的 bedrock_server.exe
-        with open(os.path.join(self.server_dir, "bedrock_server.exe"), "wb") as f:
+        with open(os.path.join(self.server_dir, SERVER_EXE), "wb") as f:
             f.write(b"MZ" + b"\x00" * 100)
 
     def tearDown(self):

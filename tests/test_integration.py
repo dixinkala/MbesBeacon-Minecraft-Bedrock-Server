@@ -78,7 +78,7 @@ class TestServerDirSelection(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.valid_dir = os.path.join(self.tmpdir, "valid")
         os.makedirs(self.valid_dir)
-        with open(os.path.join(self.valid_dir, "bedrock_server.exe"), "wb") as f:
+        with open(os.path.join(self.valid_dir, bsm.SERVER_EXE), "wb") as f:
             f.write(b"MZ")
 
     def tearDown(self):
@@ -100,7 +100,7 @@ class TestServerDirSelection(unittest.TestCase):
         os.makedirs(empty_dir)
         ok, err, info = bsm.select_server_dir(empty_dir)
         self.assertFalse(ok)
-        self.assertIn("bedrock_server.exe", err)
+        self.assertIn(bsm.SERVER_EXE, err)
 
     def test_select_empty_dir(self):
         ok, err, info = bsm.select_server_dir("")
@@ -346,7 +346,7 @@ class TestDetectServersIntegration(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.server_dir = os.path.join(self.tmpdir, "test_server")
         os.makedirs(self.server_dir)
-        with open(os.path.join(self.server_dir, "bedrock_server.exe"), "wb") as f:
+        with open(os.path.join(self.server_dir, bsm.SERVER_EXE), "wb") as f:
             f.write(b"MZ")
         # 直接设置 settings 中的 server_dir（比 patch resolve_server_dir 更可靠）
         from bedrock_server_manager.state import settings

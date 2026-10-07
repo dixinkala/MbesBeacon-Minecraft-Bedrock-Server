@@ -100,6 +100,7 @@ from .constants import (  # noqa: F401
     DEFAULT_PORT,
     IS_WINDOWS,
     LINKS_API,
+    PLATFORM_TAG,
     SERVER_EXE,
 )
 from .install import (  # noqa: F401

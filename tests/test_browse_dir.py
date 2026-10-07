@@ -11,6 +11,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+from bedrock_server_manager.constants import IS_WINDOWS
+
 
 class TestBrowseDirRoutes(unittest.TestCase):
     """测试浏览目录相关路由。"""
@@ -57,6 +59,7 @@ class TestBrowseDirRoutes(unittest.TestCase):
         self.assertIsNone(payload.get("dir"))
         self.assertTrue(payload.get("cancelled"))
 
+    @unittest.skipUnless(IS_WINDOWS, "Windows 专属：盘符视图")
     def test_listdir_empty_returns_drives(self):
         """空路径（我的电脑）应返回全部可用盘符。"""
         from bedrock_server_manager.web.routes.get_routes import GetRoutesMixin as Handler
@@ -71,6 +74,25 @@ class TestBrowseDirRoutes(unittest.TestCase):
             self.assertIn("D:\\", payload["drives"])
             self.assertEqual(payload["dirs"], payload["drives"])
 
+    @unittest.skipUnless(not IS_WINDOWS, "Linux 专属：根目录起始")
+    def test_listdir_empty_starts_at_root(self):
+        """Linux 空路径应从文件系统根 / 开始。"""
+        import os
+
+        from bedrock_server_manager.web.routes.get_routes import GetRoutesMixin as Handler
+
+        with (
+            patch("os.path.isdir", return_value=True),
+            patch("bedrock_server_manager.web.routes.get_routes.os.listdir", return_value=["home", "usr"]),
+        ):
+            handler = self._create_mock_handler()
+            Handler._get_listdir(handler, {"path": [""]})
+            payload = handler._json.call_args[0][0]
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["path"], os.path.abspath("/"))
+            self.assertIn("home", payload["dirs"])
+
+    @unittest.skipUnless(IS_WINDOWS, "Windows 专属：盘符切换")
     def test_listdir_drive_root_lists_other_drives(self):
         """盘根目录（如 C:\\）时其他盘符应置顶，方便跨盘切换。"""
         from bedrock_server_manager.web.routes.get_routes import GetRoutesMixin as Handler
