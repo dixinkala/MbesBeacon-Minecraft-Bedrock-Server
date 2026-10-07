@@ -56,7 +56,8 @@ def _acquire_single_instance():
         import fcntl
 
         lock_path = os.path.join(APP_DATA_DIR, "single_instance.lock")
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        # 锁文件仅属主可读写（0o600），避免 world-readable 权限面
+        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return fd, None, None
