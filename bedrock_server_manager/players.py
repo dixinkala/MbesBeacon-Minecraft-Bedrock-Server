@@ -300,24 +300,10 @@ def pardon_ip(ip, server_dir=None):
 
 
 def list_installed_packs(server_dir=None):
+    """已迁移至 packs.py（增强版：解析 manifest/valid_known/世界启用状态）。"""
+    from .packs import list_installed_packs as _list_installed_packs
 
-    try:
-        d = server_dir or resolve_server_dir()
-        if not d:
-            return {"resource_packs": [], "behavior_packs": [], "valid_known": []}
-        result = {"resource_packs": [], "behavior_packs": [], "valid_known": []}
-        for pack_type, dir_name in [("resource_packs", "resource_packs"), ("behavior_packs", "behavior_packs")]:
-            pack_dir = os.path.join(d, dir_name)
-            if os.path.isdir(pack_dir):
-                for name in os.listdir(pack_dir):
-                    full = os.path.join(pack_dir, name)
-                    if os.path.isdir(full):
-                        pack_info = {"name": name, "path": full, "enabled": False}
-                        result[pack_type].append(pack_info)
-        return result
-    except (json.JSONDecodeError, FileNotFoundError, PermissionError, OSError) as e:
-        safe_log_exception("players.py", f"读取包信息失败: {e}", "warning")
-        return {"resource_packs": [], "behavior_packs": [], "valid_known": []}
+    return _list_installed_packs(server_dir)
 
 
 def get_all_player_status(server_dir=None):

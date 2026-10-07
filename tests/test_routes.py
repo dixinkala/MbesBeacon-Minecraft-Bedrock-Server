@@ -90,6 +90,9 @@ class TestRouteRegistration(unittest.TestCase):
             "/api/ipban/remove",
             "/api/console/clear",
             "/api/config/rollback",
+            "/api/packs/toggle",
+            "/api/packs/import",
+            "/api/packs/delete",
         ]
         for route in expected_post_routes:
             self.assertIn(route, Handler._post_routes, f"POST 路由 {route} 未注册")

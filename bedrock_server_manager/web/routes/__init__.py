@@ -9,6 +9,7 @@ from .config import ConfigRoutesMixin
 from .console import ConsoleRoutesMixin
 from .get_routes import GetRoutesMixin
 from .misc import MiscRoutesMixin
+from .packs import PacksRoutesMixin
 from .players import PlayersRoutesMixin
 from .post_extra import PostExtraRoutesMixin
 from .server import ServerRoutesMixin
@@ -21,6 +22,7 @@ __all__ = [
     "ConsoleRoutesMixin",
     "GetRoutesMixin",
     "MiscRoutesMixin",
+    "PacksRoutesMixin",
     "PlayersRoutesMixin",
     "PostExtraRoutesMixin",
     "ServerRoutesMixin",
