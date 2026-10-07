@@ -125,8 +125,8 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 
 ### Special Features
 
-- **Bilingual UI (i18n)**: Detects the system language on first launch (Chinese system → Chinese UI, anything else → English UI); the language button in the header switches anytime and the choice is remembered
-- **System tray integration**: Runs in the background, tray icon shows running status, right-click menu for quick actions
+- **Bilingual UI (i18n)**: Detects the system language on first launch (Chinese system → Chinese UI, anything else → English UI); the language button in the header switches anytime and the choice is remembered; tray menu, balloon notifications and tooltip follow the chosen language
+- **System tray integration**: Runs in the background, tray icon shows running status, right-click menu for quick actions (menu language matches the UI language)
 - **Multiple themes**: 10 preset themes (Minecraft dark, grass green, redstone red, diamond blue, etc.) + custom accent colors
 - **Multi-server management**: Automatically scans for installed servers, switch between multiple servers
 - **Server version update detection**: Auto-detects new server versions, one-click update (with automatic world backup)
@@ -211,13 +211,14 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 - On first launch the program detects the system language: Chinese system → Chinese UI, any other language → English UI
 - Click the language button in the header (shows "English" in the Chinese UI, "中文" in the English UI) to switch anytime
 - The chosen language is remembered for the next launch
+- The language choice also applies to the system tray: right-click menu, balloon notifications and the tray tooltip are shown in the same language
 
 ### System Tray
 
 After launch, the program minimizes to the system tray:
 
 - **Left-click the icon**: Open the management UI
-- **Right-click the icon**: Show the menu
+- **Right-click the icon**: Show the menu (language matches the UI language)
   - Open management UI
   - Start server / Stop server (switches dynamically by state)
   - Exit program
