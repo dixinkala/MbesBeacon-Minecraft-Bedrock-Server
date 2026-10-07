@@ -17,7 +17,7 @@ from .app_context import AppContext
 from .app_logger import safe_log_exception
 from .constants import CDN_TEMPLATE, IS_WINDOWS, LINKS_API, PLATFORM_TAG, SERVER_EXE
 from .server import get_server_proc, server_running
-from .utils import add_server_dir_history, detect_servers, save_settings
+from .utils import add_server_dir_history, detect_servers, save_settings, tr_msg
 from .verify import load_official_hashes, verify_download_full
 
 
@@ -613,7 +613,7 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
     install_state.done = False
     install_state.error = ""
     install_state.log = []
-    install_state.set(phase="start", percent=0, text="开始安装...")
+    install_state.set(phase="start", percent=0, text=tr_msg("开始安装...", "Starting installation..."))
     try:
         os.makedirs(dir_target, exist_ok=True)
         # 安装前磁盘空间检查（服务端压缩包约 60-120MB，解压后需约 300MB）
@@ -622,44 +622,68 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
 
             ok_space, free_mb, required_mb = check_disk_space(dir_target, required_mb=300)
             if not ok_space:
-                install_state.log_line(f"错误: 磁盘空间不足（剩余 {free_mb:.0f} MB，需要 {required_mb} MB）")
-                raise RuntimeError(f"磁盘空间不足：剩余 {free_mb:.0f} MB，需要 {required_mb} MB，请清理磁盘后重试")
+                install_state.log_line(
+                    tr_msg(
+                        "错误: 磁盘空间不足（剩余 %.0f MB，需要 %.0f MB）",
+                        "Error: insufficient disk space (%.0f MB free, %.0f MB required)",
+                        free_mb,
+                        required_mb,
+                    )
+                )
+                raise RuntimeError(
+                    tr_msg(
+                        "磁盘空间不足：剩余 %.0f MB，需要 %.0f MB，请清理磁盘后重试",
+                        "Insufficient disk space: %.0f MB free, %.0f MB required; please free up space and retry",
+                        free_mb,
+                        required_mb,
+                    )
+                )
         except RuntimeError:
             raise
         except Exception as e:
-            install_state.log_line(f"警告: 磁盘空间检查失败，已跳过（{str(e)[:60]}）")
+            install_state.log_line(
+                tr_msg(
+                    "警告: 磁盘空间检查失败，已跳过（%.60s）",
+                    "Warning: disk space check failed, skipped (%.60s)",
+                    str(e),
+                )
+            )
         ignore_ssl = settings.get("ignore_ssl", False)
-        install_state.log_line(">>> 开始安装 Minecraft 基岩版服务器")
+        install_state.log_line(
+            tr_msg(">>> 开始安装 Minecraft 基岩版服务器", ">>> Starting Minecraft Bedrock Server installation")
+        )
         urls_to_try = []
         if custom_url and custom_url.strip():
             urls_to_try.append(("自定义地址", custom_url.strip()))
-            install_state.log_line("使用自定义下载地址")
+            install_state.log_line(tr_msg("使用自定义下载地址", "Using custom download URL"))
         elif version:
-            install_state.log_line(f"指定版本: {version}")
+            install_state.log_line(tr_msg("指定版本: %s", "Specified version: %s", version))
             for i in range(len(DOWNLOAD_SOURCES)):
                 idx = (source_index + i) % len(DOWNLOAD_SOURCES)
                 src = DOWNLOAD_SOURCES[idx]
                 urls_to_try.append((src["name"], _format_download_template(src["template"], version)))
         else:
             if not (settings.get("_latest") or {}).get("version"):
-                install_state.set(percent=1, text="正在获取最新版本信息...")
-                install_state.log_line("正在获取最新版本信息...")
+                install_state.set(percent=1, text=tr_msg("正在获取最新版本信息...", "Fetching latest version info..."))
+                install_state.log_line(tr_msg("正在获取最新版本信息...", "Fetching latest version info..."))
                 settings["_latest"] = get_latest_server_info(ignore_ssl=ignore_ssl)
             latest = settings["_latest"]
             version = latest["version"]
             urls_to_try.append(("官方 API", latest["win_url"]))
             for src in DOWNLOAD_SOURCES[1:]:
                 urls_to_try.append((src["name"], _format_download_template(src["template"], version)))
-            install_state.log_line(f"最新稳定版: {version}")
+            install_state.log_line(tr_msg("最新稳定版: %s", "Latest stable version: %s", version))
         zip_path = os.path.join(dir_target, f"bedrock-server-{version}.zip")
         download_ok = False
         last_error = ""
         for src_name, url in urls_to_try:
             if install_state.cancel.is_set():
                 break
-            install_state.log_line(f"尝试下载源: {src_name}")
-            install_state.log_line(f"下载地址: {url}")
-            install_state.set(phase="download", percent=3, text=f"正在从 {src_name} 下载...")
+            install_state.log_line(tr_msg("尝试下载源: %s", "Trying download source: %s", src_name))
+            install_state.log_line(tr_msg("下载地址: %s", "Download URL: %s", url))
+            install_state.set(
+                phase="download", percent=3, text=tr_msg("正在从 %s 下载...", "Downloading from %s...", src_name)
+            )
             try:
 
                 def cb(done, total):
@@ -667,15 +691,29 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                         pct = 3 + int(done / total * 77)
                         install_state.set(
                             percent=pct,
-                            text=f"下载中 {int(done / total * 100)}%  ({done // 1024} / {total // 1024} KB)",
+                            text=tr_msg(
+                                "下载中 %d%%  (%d / %d KB)",
+                                "Downloading %d%% (%d / %d KB)",
+                                int(done / total * 100),
+                                done // 1024,
+                                total // 1024,
+                            ),
                         )
                     else:
-                        install_state.set(percent=3, text=f"下载中... {done // 1024} KB")
+                        install_state.set(
+                            percent=3, text=tr_msg("下载中... %d KB", "Downloading... %d KB", done // 1024)
+                        )
 
                 download_file(url, zip_path, progress_cb=cb, cancel_flag=install_state.cancel, ignore_ssl=ignore_ssl)
                 download_ok = True
                 install_state.log_line(
-                    f"下载完成 (源: {src_name}): {os.path.basename(zip_path)} ({os.path.getsize(zip_path) / 1048576:.1f} MB)"
+                    tr_msg(
+                        "下载完成 (源: %s): %s (%.1f MB)",
+                        "Download complete (source: %s): %s (%.1f MB)",
+                        src_name,
+                        os.path.basename(zip_path),
+                        os.path.getsize(zip_path) / 1048576,
+                    )
                 )
                 # 下载完整性校验
                 try:
@@ -684,26 +722,54 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                     try:
                         official_count = load_official_hashes()
                         if official_count > 0:
-                            install_state.log_line(f"已加载 {official_count} 个官方版本哈希用于校验")
+                            install_state.log_line(
+                                tr_msg(
+                                    "已加载 %d 个官方版本哈希用于校验",
+                                    "Loaded %d official version hashes for verification",
+                                    official_count,
+                                )
+                            )
                             official_loaded = True
                     except Exception as e:
-                        install_state.log_line(f"警告: 官方哈希加载失败 ({str(e)[:60]})，将使用首次信任机制(TOFU)")
+                        install_state.log_line(
+                            tr_msg(
+                                "警告: 官方哈希加载失败 (%.60s)，将使用首次信任机制(TOFU)",
+                                "Warning: failed to load official hashes (%.60s); falling back to TOFU",
+                                str(e),
+                            )
+                        )
 
                     if not official_loaded:
-                        install_state.log_line("提示: 无法获取官方哈希，本次下载将记录SHA256供后续对比（首次信任机制）")
-                        install_state.log_line("建议: 如网络环境特殊，可在设置中检查网络连接或稍后重试")
+                        install_state.log_line(
+                            tr_msg(
+                                "提示: 无法获取官方哈希，本次下载将记录SHA256供后续对比（首次信任机制）",
+                                "Note: official hashes unavailable; SHA256 will be recorded for future comparison (TOFU)",
+                            )
+                        )
+                        install_state.log_line(
+                            tr_msg(
+                                "建议: 如网络环境特殊，可在设置中检查网络连接或稍后重试",
+                                "Tip: if network conditions are unusual, check connectivity in settings or retry later",
+                            )
+                        )
 
                     verify_result = verify_download_full(zip_path, version=version, check_pe=True)
                     if verify_result["ok"]:
                         install_state.log_line(
-                            "下载完整性校验通过（文件大小: {:.1f} MB, SHA256: {}...）".format(
+                            tr_msg(
+                                "下载完整性校验通过（文件大小: %.1f MB, SHA256: %s...）",
+                                "Download integrity check passed (size: %.1f MB, SHA256: %s...)",
                                 verify_result["checks"]["file_size"]["size_mb"],
                                 verify_result["checks"]["sha256"]["actual_hash"][:16],
                             )
                         )
                     else:
                         error_msg = "; ".join(verify_result["errors"])
-                        install_state.log_line(f"错误: 下载完整性校验失败: {error_msg}")
+                        install_state.log_line(
+                            tr_msg(
+                                "错误: 下载完整性校验失败: %s", "Error: download integrity check failed: %s", error_msg
+                            )
+                        )
                         # 校验失败时中止安装，删除损坏的文件
                         try:
                             if os.path.exists(zip_path):
@@ -712,16 +778,24 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                             # 删除损坏的 ZIP 失败可忽略
                             pass
                         raise RuntimeError(
-                            f"下载文件完整性校验失败: {error_msg}\n提示: 可尝试切换其他下载源或使用自定义地址"
+                            tr_msg(
+                                "下载文件完整性校验失败: %s\n提示: 可尝试切换其他下载源或使用自定义地址",
+                                "Download file integrity check failed: %s\nTip: try switching to another download source or use a custom URL",
+                                error_msg,
+                            )
                         )
                 except RuntimeError:
                     raise  # 重新抛出校验失败的异常
                 except Exception as ve:
-                    install_state.log_line(f"下载完整性校验跳过: {str(ve)[:80]}")
+                    install_state.log_line(
+                        tr_msg("下载完整性校验跳过: %.80s", "Download integrity check skipped: %.80s", str(ve))
+                    )
                 break
             except Exception as e:
                 last_error = str(e)
-                install_state.log_line(f"下载源 {src_name} 失败: {last_error[:100]}")
+                install_state.log_line(
+                    tr_msg("下载源 %s 失败: %.100s", "Download source %s failed: %.100s", src_name, last_error)
+                )
                 try:
                     if os.path.exists(zip_path):
                         os.remove(zip_path)
@@ -731,16 +805,22 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                 continue
         if not download_ok:
             raise RuntimeError(
-                f"所有下载源均失败。最后错误: {last_error}\n提示：可尝试在'下载源'中切换其他源，或使用'自定义下载地址'。"
+                tr_msg(
+                    "所有下载源均失败。最后错误: %s\n提示：可尝试在'下载源'中切换其他源，或使用'自定义下载地址'。",
+                    "All download sources failed. Last error: %s\nTip: try switching sources in 'Download source' or use a custom download URL.",
+                    last_error,
+                )
             )
-        install_state.set(phase="extract", percent=82, text="正在解压安装...")
-        install_state.log_line(f"正在解压到: {dir_target}")
+        install_state.set(phase="extract", percent=82, text=tr_msg("正在解压安装...", "Extracting..."))
+        install_state.log_line(tr_msg("正在解压到: %s", "Extracting to: %s", dir_target))
 
         def cb2(i, total):
-            install_state.set(percent=82 + int(i / total * 15), text=f"解压中 {i}/{total}")
+            install_state.set(
+                percent=82 + int(i / total * 15), text=tr_msg("解压中 %d/%d", "Extracting %d/%d", i, total)
+            )
 
         extract_zip(zip_path, dir_target, progress_cb=cb2, cancel_flag=install_state.cancel)
-        install_state.log_line("解压完成")
+        install_state.log_line(tr_msg("解压完成", "Extraction complete"))
         with contextlib.suppress(OSError):
             os.remove(zip_path)
         exe = os.path.join(dir_target, SERVER_EXE)
@@ -752,10 +832,14 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
             try:
                 os.chmod(exe, 0o700)
             except OSError as e:
-                install_state.log_line(f"警告: 设置可执行权限失败: {e}")
-        install_state.set(phase="done", percent=100, text="安装完成", done=True)
-        install_state.log_line(f"✔ 服务器安装完成！版本 {version}")
-        install_state.log_line(f"  服务器程序: {exe}")
+                install_state.log_line(
+                    tr_msg("警告: 设置可执行权限失败: %s", "Warning: failed to set executable permission: %s", e)
+                )
+        install_state.set(phase="done", percent=100, text=tr_msg("安装完成", "Installation complete"), done=True)
+        install_state.log_line(
+            tr_msg("✔ 服务器安装完成！版本 %s", "✔ Server installation complete! Version %s", version)
+        )
+        install_state.log_line(tr_msg("  服务器程序: %s", "  Server program: %s", exe))
         settings["server_dir"] = dir_target
         settings["installed_version"] = version
         versions_map = settings.get("server_versions", {})
@@ -766,18 +850,18 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
         add_server_dir_history(dir_target)
         save_settings()
         if autostart:
-            install_state.log_line(">>> 自动启动服务器...")
+            install_state.log_line(tr_msg(">>> 自动启动服务器...", ">>> Auto-starting server..."))
             try:
                 p = get_server_proc()
                 p.server_dir = dir_target
                 p.start()
             except Exception as e:
-                install_state.log_line(f"自动启动失败: {e}")
+                install_state.log_line(tr_msg("自动启动失败: %s", "Auto-start failed: %s", e))
     except InterruptedError:
-        install_state.set(phase="idle", percent=0, text="已取消")
-        install_state.log_line("已取消安装")
+        install_state.set(phase="idle", percent=0, text=tr_msg("已取消", "Cancelled"))
+        install_state.log_line(tr_msg("已取消安装", "Installation cancelled"))
     except Exception as e:
-        install_state.set(phase="error", error=str(e), text=f"安装失败: {e}")
-        install_state.log_line(f"安装失败: {e}")
+        install_state.set(phase="error", error=str(e), text=tr_msg("安装失败: %s", "Installation failed: %s", e))
+        install_state.log_line(tr_msg("安装失败: %s", "Installation failed: %s", e))
     finally:
         install_state.busy = False
