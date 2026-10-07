@@ -9,7 +9,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-438%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-449%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -119,14 +119,14 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 | **⑤ World Management** | Multi-world switching; world rename/copy/delete; world import/export (ZIP); world info display |
 | **⑥ World Backup** | Manual backup; automatic backup (before delete/update); backup list management; one-click restore; retention policy (10 by default) |
 | **⑦ Performance Monitor** | Real-time CPU/memory usage; online player count; running status; auto-refresh (5s); operation audit log |
-| **⑧ Pack Management** | Resource pack/behavior pack list; enable/disable packs (edit `valid_known_packs.json`); refresh pack list |
+| **⑧ Pack Management** | Resource pack/behavior pack list; refresh pack list; install tip (put .mcpack/.zip files into the corresponding folder in the server directory) |
 | **⑨ Scheduled Tasks** | Scheduled server restart; scheduled world backup; scheduled announcements; task enable/disable/delete; catch-up execution |
 | **⑩ Usage Help** | Complete built-in documentation covering every feature in detail |
 
 ### Special Features
 
-- **Bilingual UI (i18n)**: Detects the system language on first launch (Chinese system → Chinese UI, anything else → English UI); the language button in the header switches anytime and the choice is remembered
-- **System tray integration**: Runs in the background, tray icon shows running status, right-click menu for quick actions
+- **Bilingual UI (i18n)**: Detects the system language on first launch (Chinese system → Chinese UI, anything else → English UI); the language button in the header switches anytime and the choice is remembered; tray menu, balloon notifications and tooltip follow the chosen language
+- **System tray integration**: Runs in the background, tray icon shows running status, right-click menu for quick actions (menu language matches the UI language)
 - **Multiple themes**: 10 preset themes (Minecraft dark, grass green, redstone red, diamond blue, etc.) + custom accent colors
 - **Multi-server management**: Automatically scans for installed servers, switch between multiple servers
 - **Server version update detection**: Auto-detects new server versions, one-click update (with automatic world backup)
@@ -211,13 +211,14 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 - On first launch the program detects the system language: Chinese system → Chinese UI, any other language → English UI
 - Click the language button in the header (shows "English" in the Chinese UI, "中文" in the English UI) to switch anytime
 - The chosen language is remembered for the next launch
+- The language choice also applies to the system tray: right-click menu, balloon notifications and the tray tooltip are shown in the same language
 
 ### System Tray
 
 After launch, the program minimizes to the system tray:
 
 - **Left-click the icon**: Open the management UI
-- **Right-click the icon**: Show the menu
+- **Right-click the icon**: Show the menu (language matches the UI language)
   - Open management UI
   - Start server / Stop server (switches dynamically by state)
   - Exit program
@@ -404,7 +405,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # Command routes
 │           ├── players.py      # Player management routes
 │           └── config.py       # Config management routes
-├── tests/                      # Test suite (19 test files, 438 test cases)
+├── tests/                      # Test suite (19 test files, 449 test cases)
 │   ├── __init__.py
 │   ├── test_unit.py            # Unit tests (config/players/backup/install/utils)
 │   ├── test_integration.py     # Integration tests (module cooperation, state sync)
