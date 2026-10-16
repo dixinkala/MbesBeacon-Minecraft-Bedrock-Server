@@ -10,7 +10,7 @@ We only support the **latest release**. Please always use the latest version to 
 
 | Version | Supported |
 | --- | --- |
-| Latest (v1.0.23+) | ✅ Supported |
+| Latest (v1.0.24+) | ✅ Supported |
 | Older versions | ❌ Not supported, please upgrade |
 
 ## Reporting a Vulnerability
