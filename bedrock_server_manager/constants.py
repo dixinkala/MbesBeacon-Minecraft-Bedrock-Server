@@ -10,7 +10,7 @@ import sys
 
 # ---------------- 应用常量 ----------------
 APP_TITLE = "MbesBeacon"
-APP_VERSION = "1.0.23"
+APP_VERSION = "1.0.24"
 APP_MARKER = "mbesbeacon"
 DEFAULT_PORT = 19100
 
