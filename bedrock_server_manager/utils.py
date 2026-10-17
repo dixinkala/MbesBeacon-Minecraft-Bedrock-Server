@@ -243,24 +243,84 @@ def open_browser_with_retry(url, max_attempts=3):
     return False
 
 
-def browse_directory(initial_dir=""):
-    """弹出系统原生文件夹选择对话框（使用 tkinter），返回选择的目录路径。"""
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
+def browse_directory(initial_dir="", title=None):
+    """弹出系统原生文件夹选择对话框，返回选择的目录路径。
 
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        root.update()
-        selected = filedialog.askdirectory(
-            title="选择文件夹", initialdir=initial_dir or os.path.expanduser("~"), parent=root
-        )
-        root.destroy()
-        return selected or ""
-    except Exception as e:
-        print("browse_directory failed:", e)
-        return ""
+    返回值语义（供路由层区分三种情况）：
+    - 成功选择：返回目录路径字符串
+    - 用户取消：返回 None
+    - 调用失败（无图形环境 / 对话框不可用）：抛出异常，由调用方返回失败，
+      前端据此回退到内置目录弹窗，避免“点了没反应”。
+
+    Windows 使用 Win32 SHBrowseForFolder API（ctypes 实现，无第三方依赖，
+    打包时不依赖 tkinter/tcl 数据）；Linux 回退到 tkinter，无桌面环境时抛异常。
+    """
+    if title is None:
+        title = "选择文件夹"
+    if IS_WINDOWS:
+        return _browse_directory_windows(initial_dir, title)
+    return _browse_directory_tk(initial_dir, title)
+
+
+def _browse_directory_windows(initial_dir="", title="选择文件夹"):
+    """Windows：通过 SHBrowseForFolder 弹出系统文件夹选择对话框。"""
+    import ctypes
+    from ctypes import wintypes
+
+    BIF_RETURNONLYFSDIRS = 0x0001
+    BIF_NEWDIALOGSTYLE = 0x0040
+
+    class BROWSEINFO(ctypes.Structure):
+        _fields_ = [
+            ("hwndOwner", wintypes.HWND),
+            ("pidlRoot", ctypes.c_void_p),
+            ("pszDisplayName", wintypes.LPWSTR),
+            ("lpszTitle", wintypes.LPCWSTR),
+            ("ulFlags", wintypes.UINT),
+            ("lpfn", ctypes.c_void_p),
+            ("lParam", wintypes.LPARAM),
+            ("iImage", ctypes.c_int),
+        ]
+
+    shell32 = ctypes.windll.shell32
+    SHBrowseForFolderW = shell32.SHBrowseForFolderW
+    SHBrowseForFolderW.argtypes = [ctypes.POINTER(BROWSEINFO)]
+    SHBrowseForFolderW.restype = ctypes.c_void_p
+    SHGetPathFromIDListW = shell32.SHGetPathFromIDListW
+    SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wintypes.LPWSTR]
+    SHGetPathFromIDListW.restype = wintypes.BOOL
+
+    buf = ctypes.create_unicode_buffer(260)
+    bi = BROWSEINFO()
+    bi.pszDisplayName = buf
+    bi.lpszTitle = title
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
+    pidl = SHBrowseForFolderW(ctypes.byref(bi))
+    if not pidl:
+        return None  # 用户取消
+    try:
+        path = ctypes.create_unicode_buffer(260)
+        if SHGetPathFromIDListW(pidl, path):
+            return path.value
+        return None
+    finally:
+        ctypes.windll.ole32.CoTaskMemFree(pidl)
+
+
+def _browse_directory_tk(initial_dir="", title="选择文件夹"):
+    """Linux / 其他平台：通过 tkinter 弹出文件夹选择对话框（无桌面环境时抛异常）。"""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    root.update()
+    selected = filedialog.askdirectory(
+        title=title, initialdir=initial_dir or os.path.expanduser("~"), parent=root
+    )
+    root.destroy()
+    return selected or None
 
 
 def get_lan_ip() -> str:
