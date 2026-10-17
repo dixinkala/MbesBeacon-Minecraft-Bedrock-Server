@@ -59,6 +59,19 @@ class TestBrowseDirRoutes(unittest.TestCase):
         self.assertIsNone(payload.get("dir"))
         self.assertTrue(payload.get("cancelled"))
 
+    @patch("bedrock_server_manager.web.routes.get_routes.browse_directory")
+    def test_browse_dir_failure_returns_error(self, mock_browse):
+        """系统选择器调用失败时应返回 ok:false + error（前端据此回退内置弹窗）。"""
+        from bedrock_server_manager.web.routes.get_routes import GetRoutesMixin as Handler
+
+        mock_browse.side_effect = RuntimeError("no dialog available")
+        handler = self._create_mock_handler()
+        Handler._get_browse_dir(handler, {"initial": [""]})
+        payload = handler._json.call_args[0][0]
+        self.assertFalse(payload["ok"])
+        self.assertIn("error", payload)
+        self.assertNotIn("cancelled", payload)
+
     @unittest.skipUnless(IS_WINDOWS, "Windows 专属：盘符视图")
     def test_listdir_empty_returns_drives(self):
         """空路径（我的电脑）应返回全部可用盘符。"""

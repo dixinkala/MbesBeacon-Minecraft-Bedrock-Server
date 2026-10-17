@@ -41,6 +41,7 @@ from ...utils import (
     load_theme,
     props_path,
     resolve_server_dir,
+    safe_log_exception,
     save_settings,
     sync_log_file,
 )
@@ -134,7 +135,14 @@ class GetRoutesMixin:
     def _get_browse_dir(self, q):
 
         initial = q.get("initial", [""])[0]
-        selected = browse_directory(initial)
+        title = "选择文件夹" if get_ui_lang() == "zh" else "Select Folder"
+        try:
+            selected = browse_directory(initial, title)
+        except Exception as e:
+            # 对话框不可用（无图形环境等）：返回失败，前端据此回退到内置目录弹窗
+            safe_log_exception("get_routes", f"浏览目录失败: {e}", "warning")
+            self._json({"ok": False, "error": str(e), "dir": None})
+            return
         if selected:
             self._json({"ok": True, "dir": selected})
         else:
