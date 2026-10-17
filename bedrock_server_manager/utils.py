@@ -316,9 +316,7 @@ def _browse_directory_tk(initial_dir="", title="选择文件夹"):
     root.withdraw()
     root.attributes("-topmost", True)
     root.update()
-    selected = filedialog.askdirectory(
-        title=title, initialdir=initial_dir or os.path.expanduser("~"), parent=root
-    )
+    selected = filedialog.askdirectory(title=title, initialdir=initial_dir or os.path.expanduser("~"), parent=root)
     root.destroy()
     return selected or None
 
