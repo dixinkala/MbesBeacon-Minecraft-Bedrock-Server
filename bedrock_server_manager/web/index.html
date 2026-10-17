@@ -2763,12 +2763,16 @@ $('serverSelectConfirm').onclick=async ()=>{
   if(!dir){ $('serverSelectMsg').textContent='请选择或输入服务器目录'; return; }
   await selectServer(dir, true);
 };
-// 服务器选择弹窗中的浏览按钮（调用系统资源管理器）
+// 服务器选择弹窗中的浏览按钮（优先系统资源管理器，失败回退内置弹窗）
 $('btnServerDirBrowse').onclick=async ()=>{
   try{
     const r=await jget('/api/browse-dir');
-    if(r.ok && r.dir){ $('inServerDirManual').value=r.dir; selectedServerDir=r.dir; }
+    if(r.ok && r.dir){ $('inServerDirManual').value=r.dir; selectedServerDir=r.dir; return; }
+    if(r.cancelled){ return; } // 用户取消：无操作
   }catch(e){}
+  // 系统选择器不可用或调用失败：回退到内置目录弹窗
+  dirModalTarget='inServerDirManual';
+  await openDirModal();
 };
 
 // ---- 选择并管理指定服务器 ----
