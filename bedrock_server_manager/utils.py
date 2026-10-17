@@ -264,47 +264,55 @@ def browse_directory(initial_dir="", title=None):
 
 def _browse_directory_windows(initial_dir="", title="选择文件夹"):
     """Windows：通过 SHBrowseForFolder 弹出系统文件夹选择对话框。"""
-    import ctypes
-    from ctypes import wintypes
+    from ctypes import (
+        POINTER,
+        Structure,
+        byref,
+        c_int,
+        c_void_p,
+        create_unicode_buffer,
+        windll,
+        wintypes,
+    )
 
     BIF_RETURNONLYFSDIRS = 0x0001
     BIF_NEWDIALOGSTYLE = 0x0040
 
-    class BROWSEINFO(ctypes.Structure):
+    class BROWSEINFO(Structure):
         _fields_ = [
             ("hwndOwner", wintypes.HWND),
-            ("pidlRoot", ctypes.c_void_p),
+            ("pidlRoot", c_void_p),
             ("pszDisplayName", wintypes.LPWSTR),
             ("lpszTitle", wintypes.LPCWSTR),
             ("ulFlags", wintypes.UINT),
-            ("lpfn", ctypes.c_void_p),
+            ("lpfn", c_void_p),
             ("lParam", wintypes.LPARAM),
-            ("iImage", ctypes.c_int),
+            ("iImage", c_int),
         ]
 
-    shell32 = ctypes.windll.shell32
+    shell32 = windll.shell32
     SHBrowseForFolderW = shell32.SHBrowseForFolderW
-    SHBrowseForFolderW.argtypes = [ctypes.POINTER(BROWSEINFO)]
-    SHBrowseForFolderW.restype = ctypes.c_void_p
+    SHBrowseForFolderW.argtypes = [POINTER(BROWSEINFO)]
+    SHBrowseForFolderW.restype = c_void_p
     SHGetPathFromIDListW = shell32.SHGetPathFromIDListW
-    SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wintypes.LPWSTR]
+    SHGetPathFromIDListW.argtypes = [c_void_p, wintypes.LPWSTR]
     SHGetPathFromIDListW.restype = wintypes.BOOL
 
-    buf = ctypes.create_unicode_buffer(260)
+    buf = create_unicode_buffer(260)
     bi = BROWSEINFO()
     bi.pszDisplayName = buf
     bi.lpszTitle = title
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
-    pidl = SHBrowseForFolderW(ctypes.byref(bi))
+    pidl = SHBrowseForFolderW(byref(bi))
     if not pidl:
         return None  # 用户取消
     try:
-        path = ctypes.create_unicode_buffer(260)
+        path = create_unicode_buffer(260)
         if SHGetPathFromIDListW(pidl, path):
             return path.value
         return None
     finally:
-        ctypes.windll.ole32.CoTaskMemFree(pidl)
+        windll.ole32.CoTaskMemFree(pidl)
 
 
 def _browse_directory_tk(initial_dir="", title="选择文件夹"):
@@ -386,9 +394,9 @@ def get_system_lang() -> str:
     """
     if IS_WINDOWS:
         try:
-            import ctypes
+            from ctypes import windll
 
-            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            lang_id = windll.kernel32.GetUserDefaultUILanguage()
             # PRIMARYLANGID(lang_id) = lang_id & 0x3FF，0x04 为 LANG_CHINESE
             if (lang_id & 0x3FF) == 0x04:
                 return "zh"
