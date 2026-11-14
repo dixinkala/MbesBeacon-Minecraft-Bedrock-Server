@@ -20,10 +20,15 @@ Write-Host ""
 Write-Host "[1/3] Checking PyInstaller..."
 try {
     $pyinstallerVersion = python -m PyInstaller --version 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "PyInstaller not available" }
     Write-Host "  PyInstaller version: $pyinstallerVersion"
 } catch {
     Write-Host "  PyInstaller not found, installing..."
     python -m pip install pyinstaller
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Failed to install PyInstaller."
+        exit 1
+    }
 }
 
 # Step 2: Build EXE
@@ -31,11 +36,17 @@ Write-Host ""
 Write-Host "[2/3] Building EXE..."
 $cleanArg = if ($NoClean) { "" } else { "--clean" }
 python -m PyInstaller --noconfirm $cleanArg BedrockServerManager.spec
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "[ERROR] PyInstaller build failed (exit code $LASTEXITCODE)."
+    exit 1
+}
 
+# 产物名必须与 spec 的 EXE(name=...) 以及 ci.yml 保持一致
 $exePath = Join-Path $scriptDir "dist\MbesBeacon.exe"
 if (-not (Test-Path $exePath)) {
     Write-Host ""
-    Write-Host "[ERROR] Build failed, please check error messages above."
+    Write-Host "[ERROR] Build failed: dist\MbesBeacon.exe not found. Check the spec name and PyInstaller output above."
     exit 1
 }
 
@@ -62,8 +73,14 @@ if (-not $SkipSign) {
                 $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
                 $cert.Import($mbesCertPath, $certPass, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
                 $signature = Set-AuthenticodeSignature -FilePath $exePath -Certificate $cert -TimestampServer "http://timestamp.digicert.com" -HashAlgorithm SHA256
-                if ($signature.Status -eq "Valid" -or $signature.Status -eq "UnknownError") {
+                # UnknownError 通常表示证书链不受信任（自签证书的常态），
+                # 签名确实写入了文件，但不应宣称"签名有效"。
+                if ($signature.Status -eq "Valid") {
                     Write-Host "  [SUCCESS] EXE signed (SHA256 + RFC3161 timestamp)"
+                    $signed = $true
+                } elseif ($signature.Status -eq "UnknownError") {
+                    Write-Host "  [WARNING] Signature written but certificate is not trusted (self-signed)."
+                    Write-Host "  [WARNING] SmartScreen will still warn users; only a CA-issued cert removes it."
                     $signed = $true
                 } else {
                     Write-Host "  [ERROR] Signature failed: $($signature.StatusMessage)"
@@ -88,8 +105,11 @@ if (-not $SkipSign) {
                     $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
                     $cert.Import($certPath, $certPass, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
                     $signature = Set-AuthenticodeSignature -FilePath $exePath -Certificate $cert -TimestampServer "http://timestamp.digicert.com" -HashAlgorithm SHA256
-                    if ($signature.Status -eq "Valid" -or $signature.Status -eq "UnknownError") {
+                    if ($signature.Status -eq "Valid") {
                         Write-Host "  [SUCCESS] EXE signed (SHA256 + RFC3161 timestamp)"
+                        $signed = $true
+                    } elseif ($signature.Status -eq "UnknownError") {
+                        Write-Host "  [WARNING] Signature written but certificate chain is not trusted."
                         $signed = $true
                     } else {
                         Write-Host "  [ERROR] Signature failed: $($signature.StatusMessage)"

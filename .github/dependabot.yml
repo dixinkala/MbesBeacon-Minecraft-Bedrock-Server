@@ -19,13 +19,26 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
-    # 安全更新（CVE 漏洞修复）总是启用
-    # 版本更新仅针对这些依赖
+    # 保持"只屏蔽常规版本升级，安全更新照常提 PR"。
+    #
+    # 注意：单独的 `dependency-name` 规则会连安全更新一起屏蔽。
+    # 显式列出 update_types 后，规则被限定在 version update 路径上
+    # （Dependabot 作业日志里会标为 "doesn't apply to security update"），
+    # 这样 pyinstaller / ruff 仍会在出现 CVE 时收到安全更新 PR。
+    # 参考：dependabot.yml 的 update-types 只影响版本更新，不影响安全更新。
     ignore:
       # PyInstaller 保持锁定，避免打包环境变化
       - dependency-name: "pyinstaller"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
       # ruff 保持锁定，避免代码风格规则变化
       - dependency-name: "ruff"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
 
   # GitHub Actions 工作流
   - package-ecosystem: "github-actions"
