@@ -3,6 +3,7 @@ console 相关路由处理方法
 """
 
 from ...app_context import AppContext
+from ...app_logger import safe_log_exception
 from ...security import validate_command
 from ...server import get_server_proc
 from ..route_decorator import register_route
@@ -25,6 +26,7 @@ class ConsoleRoutesMixin:
             AppContext.instance().console.append(f"\n[控制台] > {cmd}\n")
             self._json({"ok": True, "dangerous": is_dangerous})
         except Exception as e:
+            safe_log_exception("console", f"_route_cmd 忽略异常: {e}", "warning")
             self._json({"ok": False, "error": str(e)})
 
     @register_route("/api/console/clear")

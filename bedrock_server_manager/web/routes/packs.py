@@ -56,7 +56,13 @@ class PacksRoutesMixin:
         if pack_type not in ("resource", "behavior"):
             self._json({"ok": False, "error": "包类型必须是 resource 或 behavior"})
             return
-        ok, err, message = import_pack(d, pack_type, data.get("file_data") or "", data.get("file_name") or "pack.zip")
+        ok, err, message = import_pack(
+            d,
+            pack_type,
+            data.get("file_data") or "",
+            data.get("file_name") or "pack.zip",
+            overwrite=bool(data.get("overwrite", False)),
+        )
         if ok:
             _console().append(f"\n[系统] 已导入 {pack_type} 包: {data.get('file_name') or 'pack.zip'}\n")
             self._json({"ok": True, "message": message})
