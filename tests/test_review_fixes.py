@@ -547,5 +547,143 @@ class TestWorldsImportConfirm(unittest.TestCase):
         self.assertTrue(ok)
 
 
+class TestWorldNameTraversal(unittest.TestCase):
+    """回归：世界名未校验时可删除/移动整个服务器目录。"""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix="mbes_worldname_")
+        self.server_dir = os.path.join(self.tmpdir, "server")
+        os.makedirs(os.path.join(self.server_dir, "worlds", "WorldA"))
+        with open(os.path.join(self.server_dir, "worlds", "WorldA", "level.dat"), "w") as f:
+            f.write("x")
+        with open(os.path.join(self.server_dir, "server.properties"), "w", encoding="utf-8") as f:
+            f.write("level-name=WorldA\n")
+        with open(os.path.join(self.server_dir, "bedrock_server.exe"), "w") as f:
+            f.write("x")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_delete_world_rejects_dot_dot(self):
+        """delete_world('..') 曾删除整个服务器目录"""
+        from bedrock_server_manager.worlds import delete_world
+
+        for name in ("..", ".", "../..", "../../x"):
+            ok, _err = delete_world(self.server_dir, name)
+            self.assertFalse(ok, f"{name!r} 不应通过校验")
+            self.assertTrue(os.path.isdir(self.server_dir), "服务器目录不能被删除")
+            self.assertTrue(os.path.isdir(os.path.join(self.server_dir, "worlds", "WorldA")))
+
+    def test_rename_world_rejects_traversal(self):
+        from bedrock_server_manager.worlds import rename_world
+
+        self.assertFalse(rename_world(self.server_dir, "..", "pwn")[0])
+        self.assertFalse(rename_world(self.server_dir, "WorldA", "..")[0])
+        self.assertFalse(rename_world(self.server_dir, "WorldA", "../escaped")[0])
+        self.assertTrue(os.path.isdir(os.path.join(self.server_dir, "worlds", "WorldA")))
+
+    def test_duplicate_world_rejects_traversal(self):
+        from bedrock_server_manager.worlds import duplicate_world
+
+        self.assertFalse(duplicate_world(self.server_dir, "..", "copy")[0])
+        self.assertFalse(duplicate_world(self.server_dir, "WorldA", "../copy")[0])
+
+    def test_set_active_world_rejects_traversal(self):
+        from bedrock_server_manager.worlds import set_active_world
+
+        self.assertFalse(set_active_world(self.server_dir, "..")[0])
+        with open(os.path.join(self.server_dir, "server.properties"), encoding="utf-8") as f:
+            self.assertIn("level-name=WorldA", f.read())
+
+    def test_validate_world_name_rules(self):
+        from bedrock_server_manager.worlds import validate_world_name
+
+        self.assertTrue(validate_world_name("WorldA")[0])
+        self.assertTrue(validate_world_name("我的世界")[0])
+        for bad in ("", " ", ".", "..", "a/b", "a\\b", "con", "CON.txt", "x.", "a:b"):
+            self.assertFalse(validate_world_name(bad)[0], f"{bad!r} 应被拒绝")
+
+
+class TestDeleteServerModeWhitelist(unittest.TestCase):
+    """回归：delete_server 的 mode 未做白名单，拼错即整目录删除。"""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix="mbes_delmode_")
+        self.server_dir = os.path.join(self.tmpdir, "server")
+        os.makedirs(os.path.join(self.server_dir, "worlds"))
+        with open(os.path.join(self.server_dir, "bedrock_server.exe"), "w") as f:
+            f.write("x")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_unknown_mode_rejected(self):
+        from bedrock_server_manager.backup import delete_server
+
+        for mode in ("serveronly", "", "SERVER_ONLY", "keep"):
+            with self.assertRaises(RuntimeError):
+                delete_server(self.server_dir, mode)
+            self.assertTrue(os.path.isdir(self.server_dir), f"mode={mode!r} 不应删除目录")
+
+    def test_full_mode_rejects_dangerous_target(self):
+        from bedrock_server_manager.backup import delete_server
+
+        with self.assertRaises(RuntimeError):
+            delete_server(os.path.expanduser("~"), "full")
+        self.assertTrue(os.path.isdir(os.path.expanduser("~")))
+
+
+class TestBackupCleanupScope(unittest.TestCase):
+    """回归：旧备份清理曾按扩展名删除备份根下任意 .zip。"""
+
+    def setUp(self):
+        from bedrock_server_manager import settings
+
+        self._old_server_dir = settings.get("server_dir", "")
+        self.tmpdir = tempfile.mkdtemp(prefix="mbes_clean_")
+        self.server_dir = os.path.join(self.tmpdir, "server")
+        os.makedirs(os.path.join(self.server_dir, "worlds"))
+        with open(os.path.join(self.server_dir, "worlds", "level.dat"), "w") as f:
+            f.write("x")
+        settings["server_dir"] = self.server_dir
+
+    def tearDown(self):
+        from bedrock_server_manager import settings
+
+        settings["server_dir"] = self._old_server_dir
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_unrelated_files_survive_cleanup(self):
+        from bedrock_server_manager.backup import backup_worlds_zip, get_backup_root
+
+        root = get_backup_root(self.server_dir)
+        os.makedirs(root, exist_ok=True)
+        precious = os.path.join(root, "user_archive.zip")
+        with open(precious, "w") as f:
+            f.write("keep me")
+        notes = os.path.join(root, "worlds_notes.txt")
+        with open(notes, "w") as f:
+            f.write("keep me too")
+
+        backup_worlds_zip(self.server_dir, max_backups=1)
+        backup_worlds_zip(self.server_dir, max_backups=1)
+
+        self.assertTrue(os.path.exists(precious), "用户的无关 ZIP 不应被当作旧备份删除")
+        self.assertTrue(os.path.exists(notes), "备份根下的无关文件不应被删除")
+
+    def test_delete_backup_requires_server_dir(self):
+        from bedrock_server_manager import settings
+        from bedrock_server_manager.backup import delete_backup
+
+        outside = os.path.join(self.tmpdir, "my_worlds_backups_docs")
+        os.makedirs(outside)
+        with open(os.path.join(outside, "keep.txt"), "w") as f:
+            f.write("x")
+        settings["server_dir"] = ""
+        ok, _err = delete_backup(outside)
+        self.assertFalse(ok, "server_dir 为空时必须拒绝删除")
+        self.assertTrue(os.path.isdir(outside))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

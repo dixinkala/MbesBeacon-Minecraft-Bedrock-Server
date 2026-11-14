@@ -10,6 +10,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -69,6 +70,35 @@ class TestAuthCheck(unittest.TestCase):
         """无效token但有效origin仍应通过（origin作为后备）"""
         handler = FakeHandler({"X-API-Token": "wrong", "Origin": "http://127.0.0.1:19100"})
         self.assertTrue(bsm.Handler._check_auth(handler))
+
+
+class TestHostHeaderCheck(unittest.TestCase):
+    """Host 头校验（防 DNS rebinding）"""
+
+    def test_accepts_loopback_hosts(self):
+        for host in ("127.0.0.1:19100", "localhost:19100", "127.0.0.1"):
+            handler = FakeHandler({"Host": host})
+            self.assertTrue(bsm.Handler._check_host(handler), host)
+
+    def test_rejects_foreign_host(self):
+        for host in ("evil.com:19100", "attacker.example.com", "127.0.0.1.evil.com:19100"):
+            handler = FakeHandler({"Host": host})
+            self.assertFalse(bsm.Handler._check_host(handler), host)
+
+    def test_rejects_missing_host(self):
+        handler = FakeHandler({})
+        self.assertFalse(bsm.Handler._check_host(handler))
+
+    def test_rejects_wrong_port(self):
+        """端口不符说明连的不是本实例，拒绝"""
+        handler = FakeHandler({"Host": "127.0.0.1:9999"})
+        handler.server = SimpleNamespace(server_port=19100)
+        self.assertFalse(bsm.Handler._check_host(handler))
+
+    def test_accepts_matching_port(self):
+        handler = FakeHandler({"Host": "127.0.0.1:19100"})
+        handler.server = SimpleNamespace(server_port=19100)
+        self.assertTrue(bsm.Handler._check_host(handler))
 
 
 class TestServerDirSelection(unittest.TestCase):
@@ -269,9 +299,15 @@ class TestConsoleBufferIntegration(unittest.TestCase):
         buf.append("line2\n")
         text, count = buf.read_since(0)
         self.assertEqual(count, 2)
+        self.assertIn("line1", text)
         buf.clear()
         text, count = buf.read_since(0)
-        self.assertEqual(count, 0)
+        # 游标是单调递增的绝对计数：clear 只清空内容，不回退游标，
+        # 否则已连接的客户端会把旧日志重放一遍。
+        self.assertEqual(text, "")
+        self.assertEqual(count, 2)
+        # 清空后旧游标落在保留窗口之前，应能检测到"有日志被丢弃"
+        self.assertTrue(buf.dropped_since(0))
 
     def test_max_lines_truncation(self):
         buf = bsm.ConsoleBuffer()
@@ -281,7 +317,32 @@ class TestConsoleBufferIntegration(unittest.TestCase):
             for i in range(10):
                 buf.append(f"line{i}\n")
             text, count = buf.read_since(0)
-            self.assertLessEqual(count, 5)
+            # 保留窗口受 MAX_LINES 限制，但游标必须继续增长；
+            # 旧实现让 count 停在 MAX_LINES，客户端追平后永久读不到新日志。
+            self.assertLessEqual(len(buf), 5)
+            self.assertEqual(count, 10)
+            self.assertIn("line9", text)
+            self.assertNotIn("line0", text)
+            self.assertTrue(buf.dropped_since(0))
+        finally:
+            buf.MAX_LINES = original_max
+
+    def test_cursor_keeps_advancing_past_max_lines(self):
+        """回归：缓冲区打满后客户端游标仍能持续读到新日志（原实现永久冻结）。"""
+        buf = bsm.ConsoleBuffer()
+        original_max = buf.MAX_LINES
+        buf.MAX_LINES = 5
+        try:
+            for i in range(10):
+                buf.append(f"line{i}\n")
+            _, cursor = buf.read_since(0)
+            self.assertEqual(cursor, 10)
+            # 再写入新行，客户端用上一步游标继续读取
+            for i in range(10, 13):
+                buf.append(f"line{i}\n")
+            text, cursor = buf.read_since(cursor)
+            self.assertEqual(text, "line10\nline11\nline12\n")
+            self.assertEqual(cursor, 13)
         finally:
             buf.MAX_LINES = original_max
 
@@ -394,6 +455,98 @@ class TestCommandValidationIntegration(unittest.TestCase):
         ok, err, dangerous = bsm.validate_command("whitelist add Player1")
         self.assertTrue(ok)
         self.assertFalse(dangerous)
+
+
+class TestAtomicWrite(unittest.TestCase):
+    """原子写入：崩溃/断电不应留下截断的半文件"""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix="mbes_atomic_")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_atomic_write_text_replaces_content(self):
+        from bedrock_server_manager.utils import atomic_write_text
+
+        p = os.path.join(self.tmpdir, "a.txt")
+        atomic_write_text(p, "first")
+        atomic_write_text(p, "second")
+        with open(p, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "second")
+        # 不应残留中间临时文件
+        self.assertEqual(sorted(os.listdir(self.tmpdir)), ["a.txt"])
+
+    def test_no_tmp_leftovers(self):
+        from bedrock_server_manager.utils import atomic_write_json
+
+        p = os.path.join(self.tmpdir, "data.json")
+        atomic_write_json(p, {"k": "v"})
+        leftovers = [n for n in os.listdir(self.tmpdir) if ".tmp" in n]
+        self.assertEqual(leftovers, [], f"残留临时文件: {leftovers}")
+
+    def test_atomic_write_json_roundtrip_chinese(self):
+        import json as _json
+
+        from bedrock_server_manager.utils import atomic_write_json
+
+        p = os.path.join(self.tmpdir, "cn.json")
+        atomic_write_json(p, {"名称": "我的世界", "值": 1})
+        with open(p, encoding="utf-8") as f:
+            self.assertEqual(_json.load(f)["名称"], "我的世界")
+
+    def test_failed_write_keeps_original(self):
+        """写入失败时原文件保持不变（不能先截断再失败）"""
+        from unittest.mock import patch
+
+        from bedrock_server_manager.utils import atomic_write_text
+
+        p = os.path.join(self.tmpdir, "keep.txt")
+        atomic_write_text(p, "original")
+        with patch("os.replace", side_effect=OSError("disk full")), self.assertRaises(OSError):
+            atomic_write_text(p, "broken")
+        with open(p, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "original")
+
+
+class TestStateCompatibilityExport(unittest.TestCase):
+    """bsm.server_proc / httpd / server_lock 应转发到当前 AppContext，而不是恒 None"""
+
+    def test_package_exports_follow_app_context(self):
+        from bedrock_server_manager import app_context as ac
+
+        ctx = ac.AppContext.instance()
+        self.assertIs(bsm.server_proc, ctx.server_proc)
+        self.assertIs(bsm.httpd, ctx.httpd)
+        self.assertIs(bsm.server_lock, ctx.server_lock)
+
+    def test_state_no_longer_shadows_with_none(self):
+        """state 不应再暴露恒为 None 的 server_proc（会让调用方误以为能读）"""
+        from bedrock_server_manager import state
+
+        self.assertFalse(hasattr(state, "server_proc"))
+
+
+class TestPortCheck(unittest.TestCase):
+    """端口占用检测：Bedrock 是 UDP，必须按 UDP 判定"""
+
+    def test_free_port_not_in_use(self):
+        from bedrock_server_manager.server import check_port_in_use
+
+        # 随机高位端口，几乎不可能被占用
+        self.assertFalse(check_port_in_use(54321, host="127.0.0.1"))
+
+    def test_occupied_udp_port_detected(self):
+        import socket
+
+        from bedrock_server_manager.server import check_port_in_use
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.bind(("0.0.0.0", 54322))
+            self.assertTrue(check_port_in_use(54322, host="0.0.0.0"), "UDP 端口已绑定却未被检测到占用")
+        finally:
+            s.close()
 
 
 if __name__ == "__main__":
