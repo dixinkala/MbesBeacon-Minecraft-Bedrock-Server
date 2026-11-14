@@ -68,9 +68,8 @@ def _log(msg):
                     f.write("\ufeff")  # UTF-8 BOM
                 f.write(line)
         except Exception as e:
-            safe_log_exception("tray", f"_log 忽略异常: {e}", "warning")
             # 托盘日志写入失败时静默（不阻塞托盘主流程）
-            pass
+            safe_log_exception("tray", f"_log 忽略异常: {e}", "warning")
         # 控制台输出（开发模式可见）
         with contextlib.suppress(Exception):
             print(line, end="")

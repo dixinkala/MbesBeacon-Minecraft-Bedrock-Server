@@ -124,9 +124,8 @@ def _main():
         if migrated:
             get_app_logger().info(f"已迁移旧数据: {', '.join(migrated)}")
     except Exception as e:
-        safe_log_exception("main", f"_main 忽略异常: {e}", "warning")
         # 日志记录失败时静默，避免掩盖主流程
-        pass
+        safe_log_exception("main", f"_main 忽略异常: {e}", "warning")
 
     # 应用初始化状态：port 与初始化标记
     # 说明：api_token / console / install_state / settings 等状态在

@@ -94,9 +94,8 @@ def get_server_port(server_dir: str) -> int:
                 except (ValueError, TypeError):
                     return 19132
     except Exception as e:
-        safe_log_exception("server", f"get_server_port 忽略异常: {e}", "debug")
         # 配置文件不存在或解析失败时返回默认端口 19132
-        pass
+        safe_log_exception("server", f"get_server_port 忽略异常: {e}", "debug")
     return 19132
 
 
@@ -268,9 +267,8 @@ class ServerProcess:
 
                 get_app_logger().warning(f"server.py on_output 异常: {e}")
             except Exception as e:
-                safe_log_exception("server", f"_emit 忽略异常: {e}", "warning")
                 # 应用日志不可用时静默，避免二次异常
-                pass
+                safe_log_exception("server", f"_emit 忽略异常: {e}", "warning")
 
     def send(self, cmd):
         if not self.running:
@@ -294,9 +292,8 @@ class ServerProcess:
 
                 get_app_logger().warning(f"server.py 发送 stop 命令异常: {e}")
             except Exception as e:
-                safe_log_exception("server", f"stop 忽略异常: {e}", "warning")
                 # 应用日志不可用时静默，之后会走 kill 兜底
-                pass
+                safe_log_exception("server", f"stop 忽略异常: {e}", "warning")
         t0 = time.time()
         while self.running and time.time() - t0 < wait:
             time.sleep(0.2)
@@ -316,9 +313,8 @@ class ServerProcess:
 
                         get_app_logger().warning(f"server.py 杀死进程异常: {e}")
                     except Exception as e:
-                        safe_log_exception("server", f"kill 忽略异常: {e}", "warning")
                         # 应用日志不可用时静默，进程退出由系统兜底
-                        pass
+                        safe_log_exception("server", f"kill 忽略异常: {e}", "warning")
         self.on_state(False)
 
 

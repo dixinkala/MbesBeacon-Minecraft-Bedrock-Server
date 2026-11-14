@@ -105,9 +105,8 @@ class Handler(
 
             get_app_logger().log(level, message)
         except Exception as e:
-            safe_log_exception("handler", f"_log 忽略异常: {e}", "warning")
             # 应用日志记录失败不影响 API 响应
-            pass
+            safe_log_exception("handler", f"_log 忽略异常: {e}", "warning")
 
     def _json(self, obj, code=200):
         self._send(code, json.dumps(obj, ensure_ascii=False))
@@ -235,9 +234,8 @@ class Handler(
             # 客户端断开连接，SSE 流结束
             pass
         except Exception as e:
-            safe_log_exception("handler", f"_serve_console_stream 忽略异常: {e}", "warning")
             # 其他异常同样结束 SSE 流
-            pass
+            safe_log_exception("handler", f"_serve_console_stream 忽略异常: {e}", "warning")
 
     def _shutdown_later(self):
         """延迟关闭程序：停止服务器、停止托盘、关闭 HTTP 服务器、退出程序。"""
