@@ -2,10 +2,27 @@
 backups 相关路由处理方法
 """
 
-from ...backup import backup_worlds, backup_worlds_zip, delete_backup, list_backups, restore_backup
-from ...security import check_dangerous_operation
+from ...backup import (
+    DEFAULT_MAX_BACKUPS,
+    MAX_MAX_BACKUPS,
+    backup_worlds,
+    backup_worlds_zip,
+    delete_backup,
+    list_backups,
+    restore_backup,
+)
+from ...security import audit_log, check_dangerous_operation
 from ...utils import installed, resolve_server_dir
 from ..route_decorator import register_route
+
+
+def _parse_max_backups(data):
+    """解析 max_backups 参数，非法值回退默认，并限制上限避免异常行为。"""
+    try:
+        value = int(data.get("max_backups", DEFAULT_MAX_BACKUPS))
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_BACKUPS
+    return max(1, min(value, MAX_MAX_BACKUPS))
 
 
 class BackupsRoutesMixin:
@@ -18,9 +35,10 @@ class BackupsRoutesMixin:
         if not d or not installed():
             self._json({"ok": False, "error": "未找到服务器"})
             return
-        max_backups = int(data.get("max_backups", 10))
+        max_backups = _parse_max_backups(data)
         path = backup_worlds(d, max_backups=max_backups)
         if path:
+            audit_log("BACKUP_CREATE", f"{max_backups} {path}", d)
             self._json({"ok": True, "path": path, "backups": list_backups(d)})
         else:
             self._json({"ok": False, "error": "备份失败，请检查 worlds 目录是否存在"})
@@ -51,8 +69,10 @@ class BackupsRoutesMixin:
             return
         ok, err = restore_backup(backup_path, d)
         if ok:
+            audit_log("BACKUP_RESTORE", backup_path, d)
             self._json({"ok": True, "backups": list_backups(d)})
         else:
+            audit_log("BACKUP_RESTORE_FAILED", f"{backup_path}: {err}", d)
             self._json({"ok": False, "error": err})
 
     @register_route("/api/backups/delete")
@@ -65,6 +85,7 @@ class BackupsRoutesMixin:
         ok, err = delete_backup(backup_path)
         if ok:
             d = resolve_server_dir()
+            audit_log("BACKUP_DELETE", backup_path, d)
             self._json({"ok": True, "backups": list_backups(d) if d else []})
         else:
             self._json({"ok": False, "error": err})
@@ -76,9 +97,10 @@ class BackupsRoutesMixin:
         if not d or not installed():
             self._json({"ok": False, "error": "未找到服务器"})
             return
-        max_backups = int(data.get("max_backups", 10))
+        max_backups = _parse_max_backups(data)
         path = backup_worlds_zip(d, max_backups=max_backups)
         if path:
+            audit_log("BACKUP_ZIP", path, d)
             self._json({"ok": True, "path": path, "backups": list_backups(d)})
         else:
             self._json({"ok": False, "error": "备份失败"})
