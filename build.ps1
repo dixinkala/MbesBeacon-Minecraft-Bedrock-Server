@@ -60,10 +60,18 @@ if (-not $SkipSign) {
     # Get certificate password
     $certPass = $env:CERT_PASS
 
-    # Try MbesBeacon.pfx first
-    $mbesCertPath = Join-Path $scriptDir "MbesBeacon.pfx"
+    # 证书查找顺序：$env:MBES_CERT_PATH > 用户目录下的加密位置 > 仓库根目录
+    # 默认位置不在仓库内，避免私钥被误提交
+    $userCertPath = Join-Path $env:USERPROFILE ".mbesbeacon\certs\MbesBeacon.pfx"
+    $mbesCertPath = if ($env:MBES_CERT_PATH) {
+        $env:MBES_CERT_PATH
+    } elseif (Test-Path $userCertPath) {
+        $userCertPath
+    } else {
+        Join-Path $scriptDir "MbesBeacon.pfx"
+    }
     if (Test-Path $mbesCertPath) {
-        Write-Host "  Found self-signed certificate: MbesBeacon.pfx"
+        Write-Host "  Found self-signed certificate: $mbesCertPath"
         if (-not $certPass) {
             Write-Host "  [WARNING] CERT_PASS environment variable not set, skipping signature"
             Write-Host "  [TIP] Run: `$env:CERT_PASS = `"your_password`"; .\build.ps1"

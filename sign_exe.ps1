@@ -12,7 +12,16 @@ $ErrorActionPreference = "Stop"
 # Use script directory as base for relative paths
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $CertPath) {
-    $CertPath = Join-Path $scriptDir "MbesBeacon.pfx"
+    # 证书查找顺序：显式 -CertPath > $env:MBES_CERT_PATH > 用户目录下的加密位置 > 仓库根目录
+    # 默认位置不在仓库内，避免私钥被误提交
+    $userCert = Join-Path $env:USERPROFILE ".mbesbeacon\certs\MbesBeacon.pfx"
+    if ($env:MBES_CERT_PATH) {
+        $CertPath = $env:MBES_CERT_PATH
+    } elseif (Test-Path $userCert) {
+        $CertPath = $userCert
+    } else {
+        $CertPath = Join-Path $scriptDir "MbesBeacon.pfx"
+    }
 }
 if (-not $ExePath) {
     $ExePath = Join-Path $scriptDir "dist\MbesBeacon.exe"
