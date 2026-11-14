@@ -410,7 +410,7 @@ class TestDetectServersIntegration(unittest.TestCase):
         with open(os.path.join(self.server_dir, bsm.SERVER_EXE), "wb") as f:
             f.write(b"MZ")
         # 直接设置 settings 中的 server_dir（比 patch resolve_server_dir 更可靠）
-        from bedrock_server_manager.state import settings
+        settings = bsm.state.settings
 
         self._orig_dir = settings.get("server_dir", "")
         settings["server_dir"] = self.server_dir
@@ -418,7 +418,7 @@ class TestDetectServersIntegration(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
         bsm._detect_cache = {"result": None, "time": 0}
-        from bedrock_server_manager.state import settings
+        settings = bsm.state.settings
 
         settings["server_dir"] = self._orig_dir
 
@@ -467,7 +467,7 @@ class TestAtomicWrite(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_atomic_write_text_replaces_content(self):
-        from bedrock_server_manager.utils import atomic_write_text
+        atomic_write_text = bsm.utils.atomic_write_text
 
         p = os.path.join(self.tmpdir, "a.txt")
         atomic_write_text(p, "first")
@@ -478,7 +478,7 @@ class TestAtomicWrite(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(self.tmpdir)), ["a.txt"])
 
     def test_no_tmp_leftovers(self):
-        from bedrock_server_manager.utils import atomic_write_json
+        atomic_write_json = bsm.utils.atomic_write_json
 
         p = os.path.join(self.tmpdir, "data.json")
         atomic_write_json(p, {"k": "v"})
@@ -488,7 +488,7 @@ class TestAtomicWrite(unittest.TestCase):
     def test_atomic_write_json_roundtrip_chinese(self):
         import json as _json
 
-        from bedrock_server_manager.utils import atomic_write_json
+        atomic_write_json = bsm.utils.atomic_write_json
 
         p = os.path.join(self.tmpdir, "cn.json")
         atomic_write_json(p, {"名称": "我的世界", "值": 1})
@@ -499,7 +499,7 @@ class TestAtomicWrite(unittest.TestCase):
         """写入失败时原文件保持不变（不能先截断再失败）"""
         from unittest.mock import patch
 
-        from bedrock_server_manager.utils import atomic_write_text
+        atomic_write_text = bsm.utils.atomic_write_text
 
         p = os.path.join(self.tmpdir, "keep.txt")
         atomic_write_text(p, "original")
@@ -513,7 +513,7 @@ class TestStateCompatibilityExport(unittest.TestCase):
     """bsm.server_proc / httpd / server_lock 应转发到当前 AppContext，而不是恒 None"""
 
     def test_package_exports_follow_app_context(self):
-        from bedrock_server_manager import app_context as ac
+        ac = bsm.app_context
 
         ctx = ac.AppContext.instance()
         self.assertIs(bsm.server_proc, ctx.server_proc)
@@ -522,7 +522,7 @@ class TestStateCompatibilityExport(unittest.TestCase):
 
     def test_state_no_longer_shadows_with_none(self):
         """state 不应再暴露恒为 None 的 server_proc（会让调用方误以为能读）"""
-        from bedrock_server_manager import state
+        state = bsm.state
 
         self.assertFalse(hasattr(state, "server_proc"))
 
@@ -531,7 +531,7 @@ class TestPortCheck(unittest.TestCase):
     """端口占用检测：Bedrock 是 UDP，必须按 UDP 判定"""
 
     def test_free_port_not_in_use(self):
-        from bedrock_server_manager.server import check_port_in_use
+        check_port_in_use = bsm.server.check_port_in_use
 
         # 随机高位端口，几乎不可能被占用
         self.assertFalse(check_port_in_use(54321, host="127.0.0.1"))
@@ -539,7 +539,7 @@ class TestPortCheck(unittest.TestCase):
     def test_occupied_udp_port_detected(self):
         import socket
 
-        from bedrock_server_manager.server import check_port_in_use
+        check_port_in_use = bsm.server.check_port_in_use
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:

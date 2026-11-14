@@ -34,8 +34,6 @@ class TestOfficialVersions(unittest.TestCase):
 
         class FakeResp:
             def read(self):
-                import json
-
                 return json.dumps(payload).encode()
 
             def __enter__(self):

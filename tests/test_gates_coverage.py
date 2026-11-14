@@ -16,8 +16,8 @@ import unittest
 import zipfile
 from unittest.mock import patch
 
-import bedrock_server_manager as bsm
-import bedrock_server_manager.verify as V
+from bedrock_server_manager import verify as V
+from bedrock_server_manager.scheduler import SCHEDULED_TASKS_FILE
 
 
 def _make_zip(path, exe_bytes=b"MZ-fake", pad=0, extra=None):
@@ -183,7 +183,7 @@ class TestSchedulerLoop(unittest.TestCase):
         self.tmp = tempfile.mkdtemp(prefix="rv_loop_")
         settings["server_dir"] = self.tmp
         self.scheduler = scheduler
-        self.tasks_file = os.path.join(self.tmp, bsm.SCHEDULED_TASKS_FILE)
+        self.tasks_file = os.path.join(self.tmp, SCHEDULED_TASKS_FILE)
 
     def tearDown(self):
         from bedrock_server_manager import settings
@@ -193,7 +193,7 @@ class TestSchedulerLoop(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _write_tasks(self, tasks, directory=None):
-        path = os.path.join(directory or self.tmp, bsm.SCHEDULED_TASKS_FILE)
+        path = os.path.join(directory or self.tmp, SCHEDULED_TASKS_FILE)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(tasks, f)
 
