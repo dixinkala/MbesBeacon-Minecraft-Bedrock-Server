@@ -712,9 +712,8 @@ def select_server_dir(d: str) -> tuple:
 
                     get_app_logger().warning(f"install.py 停止服务器异常: {e}")
                 except Exception as e:
-                    safe_log_exception("install", f"select_server_dir 忽略异常: {e}", "warning")
                     # 停止旧服务器失败不影响目录切换
-                    pass
+                    safe_log_exception("install", f"select_server_dir 忽略异常: {e}", "warning")
     settings["server_dir"] = d
     add_server_dir_history(d)
     detected_ver = detect_server_version(d)
