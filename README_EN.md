@@ -9,7 +9,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-471%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-658%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -48,7 +48,7 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 
 | 🚀 One-click Install | ⚙️ GUI Configuration | 🎮 Player Management | 💾 World Backup |
 |------------|-------------|------------|------------|
-| Automatic download of the official server, all historical versions supported | 30+ config items with visual editing, config history rollback | Online player list, permission/kick/ban/allow-list | Manual/automatic backup, one-click restore, retention policy |
+| Automatic download of the official server, all historical versions supported | 17 common / 46 advanced config items with visual editing, config history rollback | Online player list, permission/kick/ban/allow-list | Manual/automatic backup, one-click restore, retention policy |
 
 | 📊 Performance Monitor | 📝 Live Console | 🕐 Scheduled Tasks | 🔒 Secure & Reliable |
 |------------|-------------|------------|------------|
@@ -113,7 +113,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 | Module | Description |
 |------|----------|
 | **① Install Server** | One-click download and install of the official server; all historical stable and preview versions supported; custom download URL; auto-detects installed servers |
-| **② Server Config** | Graphical editing of `server.properties`, 30+ config items supported; advanced mode shows all options; config history rollback; numeric range validation |
+| **② Server Config** | Graphical editing of `server.properties`, 17 common items; advanced mode edits all 46; config history rollback; numeric range validation |
 | **③ Server Console** | SSE real-time log push (latency <300ms); start/stop/restart; command auto-completion; command history; log search/export/clear |
 | **④ Player Management** | Online player list; permissions (visitor/member/operator); kick/ban; allow-list management; blacklist management; IP ban |
 | **⑤ World Management** | Multi-world switching; world rename/copy/delete; world import/export (ZIP); world info display |
@@ -126,12 +126,12 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 ### Special Features
 
 - **Bilingual UI (i18n)**: Detects the system language on first launch (Chinese system → Chinese UI, anything else → English UI); the language button in the header switches anytime and the choice is remembered; tray menu, balloon notifications and tooltip follow the chosen language
-- **System tray integration**: Runs in the background, tray icon shows running status, right-click menu for quick actions (menu language matches the UI language)
+- **System tray integration**: Runs in the background; right-click menu for quick actions (open manager / start / stop / exit) with menu and balloon text following the UI language; the tray tooltip shows live server state (running / stopped)
 - **Multiple themes**: 10 preset themes (Minecraft dark, grass green, redstone red, diamond blue, etc.) + custom accent colors
 - **Multi-server management**: Automatically scans for installed servers, switch between multiple servers
 - **Server version update detection**: Auto-detects new server versions, one-click update (with automatic world backup)
 - **App update detection**: Auto-detects new MbesBeacon releases, manual check supported, distinct from server updates
-- **Download integrity verification**: ZIP integrity + SHA256 hash (trust-on-first-use) + signature check (PE on Windows / ELF on Linux) + file size check
+- **Download integrity verification**: ZIP integrity + SHA256 (trust-on-first-use or an explicit expected hash) + official-release version check + signature check (WinVerifyTrust on Windows / ELF header on Linux) + file size check
 - **Resumable downloads**: HTTP Range support, resume after interruption
 - **Crash auto-restart**: Automatically restarts the server after an unexpected crash, exponential backoff + max retry count
 - **Port conflict detection**: Automatically checks whether the target port is in use before starting
@@ -144,7 +144,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 |------|------|
 | **OS** | Windows 10 / Windows 11 or Ubuntu 20.04+ (Linux) |
 | **Memory** | 4GB or more recommended (the server needs it) |
-| **Disk space** | At least 300MB free (auto-checked during install; aborts if insufficient); 500MB+ recommended (server download + world saves) |
+| **Disk space** | At least 1200MB free (auto-checked during install; aborts if insufficient); 2GB+ recommended (downloaded ZIP, extraction staging, previous version) |
 | **Network** | Internet needed for the first install; same Wi-Fi for LAN play |
 | **Python** | Windows: 3.10+ only needed for development; the released EXE needs no Python. Linux: 3.10+ required to run from source |
 
@@ -222,7 +222,7 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 2. **Install a server**: On the "① Install Server" page, choose a version and install directory, click "Download & Install"
 3. **Configure**: On the "② Server Config" page, edit server name, port, max players, etc., click "Save Config"
 4. **Start**: On the "③ Server Console" page, click "Start Server" and check the log to confirm startup
-5. **Play**: In Minecraft, "Play" → "Servers" → "Add Server", enter `127.0.0.1:19132` (default port)
+5. **Play**: use `127.0.0.1:19132` on the same machine; other devices/friends need the **LAN IP** of the host (e.g. `192.168.1.10:19132`, shown on the Performance page or via `ipconfig`/`hostname -I`)
 
 ### Switching the UI Language
 
@@ -287,9 +287,9 @@ Specified version: 1.21.0.03
 Trying download source: Official API
 Download URL: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.0.03.zip
 Download complete (source: Official API): bedrock-server-1.21.0.03.zip (85.3 MB)
-Loaded 57 official version hashes for verification
+Version 1.21.0.03 confirmed as an official release (current stable: 1.21.0.03)
 Download integrity check passed (size: 85.3 MB, SHA256: a1b2c3d4...)
-Extracting to: D:\MinecraftServer
+Extracting to staging dir: D:\MinecraftServer\.install_staging\extracted
 Extraction complete
 ✔ Server installation complete! Version 1.21.0.03
   Server program: D:\MinecraftServer\bedrock_server.exe
@@ -323,7 +323,7 @@ Extraction complete
 - Console log: `[10:40:00] [INFO] Steve has been made an operator`
 - Player card permission display updates to: `Operator (operator)`
 - Audit log entry (JSON line format in `audit.log` in the server directory):
-  `{"time": "2026-09-03 10:40:00", "action": "PERMISSION_CHANGE", "detail": "player=Steve level=operator"}`
+  `{"time": "2026-09-03 10:40:00", "action": "PLAYER_PERMISSION", "detail": "Steve operator"}`
 
 ### Example 4: World backup
 
@@ -353,7 +353,7 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 {
   "app": "mbesbeacon",
   "title": "MbesBeacon",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "server_dir": "D:\\MinecraftServer",
   "installed": true,
   "installed_version": "1.21.0.03",
@@ -382,9 +382,8 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── __init__.py
 │   ├── main.py                 # Program entry, single-instance check, HTTP server startup
 │   ├── app_context.py          # AppContext application context (global state management)
-│   ├── di.py                   # Dependency injection container
 │   ├── app_update.py           # App update detection
-│   ├── constants.py            # Constants
+│   ├── constants.py            # Platform/path/command constants (data file names live in config.py)
 │   ├── server.py               # ServerProcess, server process management
 │   ├── console.py              # ConsoleBuffer, console log buffer
 │   ├── install.py              # Download, install, version detection
@@ -399,10 +398,10 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── tray.py                 # System tray icon
 │   ├── ratelimit.py            # API rate limiting
 │   ├── commands.py             # Command auto-completion
-│   ├── state.py                # Global state management (backward compatible)
+│   ├── state.py                # Lazy proxies to AppContext (backward compatible)
 │   ├── utils.py                # Utility functions
 │   ├── app_logger.py           # Application logging
-│   ├── assets.py               # Asset management
+│   ├── assets/                 # Packaged assets (tray icons .ico / .png)
 │   └── web/
 │       ├── __init__.py
 │       ├── handler.py          # HTTP request handling
@@ -421,7 +420,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # Command routes
 │           ├── players.py      # Player management routes
 │           └── config.py       # Config management routes
-├── tests/                      # Test suite (20 test files, 471 test cases)
+├── tests/                      # Test suite (28 Python test files + 1 frontend test file, 659 cases, 658 passed / 1 skipped)
 │   ├── __init__.py
 │   ├── test_unit.py            # Unit tests (config/players/backup/install/utils)
 │   ├── test_integration.py     # Integration tests (module cooperation, state sync)
@@ -433,7 +432,14 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_app_logger.py      # App log tests
 │   ├── test_browse_dir.py      # Browse directory / server selection tests
 │   ├── test_console.py         # Console tests (log buffer, SSE stream)
-│   ├── test_di.py              # DI container tests
+│   ├── test_install_staging.py # Install staging, version validation, world import isolation
+│   ├── test_commands_completion.py # Command completion, dangerous-command consistency
+│   ├── test_p2_hardening.py    # Rate limit, audit rotation, mutex, health
+│   ├── test_p2_data_guards.py  # Pack overwrite, schedule time, restore rollback
+│   ├── test_review_round3.py   # Review regressions: concurrent atomic writes, PE signature, audit generations
+│   ├── test_review_round4.py   # Review round 5: scheduler state isolation, restart dir, port precheck, audit coverage
+│   ├── test_gates_coverage.py # Install integrity gate + scheduler loop (previously 0 coverage)
+│   ├── test_review_round3_tail.py # Official version list, exact signer lookup, stale-file pruning scope
 │   ├── test_p3_regression.py   # P3 gate regression tests
 │   ├── test_packs.py           # Pack management tests (resource/behavior pack enable/disable, import/delete)
 │   ├── test_performance.py     # Performance monitoring tests
@@ -444,6 +450,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_worlds_export.py   # World save export tests
 │   └── test_modules.py         # Module tests (world management, commands, app log)
 ├── dist/                       # Build output (MbesBeacon.exe)
+├── docs/                       # Screenshots and demo (referenced by README)
 ├── .github/                    # GitHub Actions CI workflows
 ├── BedrockServerManager.spec   # PyInstaller build config
 ├── build.bat                   # Build launcher (calls build.ps1)
@@ -458,12 +465,29 @@ MbesBeacon-Minecraft-Bedrock-Server/
 ├── pyproject.toml              # Project config (pytest/ruff)
 ├── .pre-commit-config.yaml     # pre-commit config
 ├── .gitignore                  # Git ignore rules
-├── LICENSE                     # MIT License
-├── CODE_OF_CONDUCT.md          # Code of conduct
-├── CONTRIBUTING.md             # Contributing guide
-├── SECURITY.md                 # Security policy
-└── README.md                   # This document
+├── CODE_OF_CONDUCT.md          # Code of conduct (EN: CODE_OF_CONDUCT_EN.md)
+├── CONTRIBUTING.md             # Contributing guide (EN: CONTRIBUTING_EN.md)
+├── SECURITY.md                 # Security policy (EN: SECURITY_EN.md)
+├── README.md                   # This document (EN: README_EN.md)
+└── LICENSE                     # MIT License
 ```
+
+---
+
+## Testing
+
+```bash
+# Python: 28 test files / 659 cases, with a coverage gate (fail_under=52)
+pip install -r requirements-dev.txt
+pytest --cov
+
+# Frontend: node:test, zero external deps; extracts scripts from web/index.html into a minimal DOM stub
+node --test "tests/js/**/*.test.mjs"
+```
+
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs ruff format/lint, `pytest --cov`
+(fails below the coverage threshold), frontend tests, and a real HTTP smoke test on Windows,
+across a Windows / Ubuntu x Python 3.10-3.12 matrix.
 
 ---
 
@@ -473,11 +497,16 @@ MbesBeacon ships with multiple security mechanisms to keep your server and local
 
 | Mechanism | Implementation |
 |----------|----------|
-| **API auth** | Random 32-char Token + Origin/Referer validation to prevent CSRF |
-| **Download integrity** | ZIP integrity + SHA256 hash (TOFU) + signature check (PE on Windows / ELF on Linux) + file size range |
-| **Signature check** | Windows uses the WinVerifyTrust API to verify the bedrock_server.exe digital signature exists and is valid (does not validate the signer identity); Linux verifies the ELF magic and executable permission |
+| **API auth** | Random 32-char token (constant-time comparison) + Origin/Referer validation + **Host header validation** (blocks DNS rebinding) |
+| **Download integrity** | ZIP integrity + SHA256 (TOFU, or an expected hash supplied by the caller; the official source publishes **no** hashes) + official-release version check + signature check (PE on Windows / ELF on Linux) + file size range |
+| **Local data integrity** | `settings.json`, `server.properties`, allowlists and permissions are written with temp file + fsync + atomic replace, so a crash or power loss cannot leave a half-written file |
+| **Download URL validation** | http/https only; localhost, cloud metadata and private/loopback/link-local addresses are rejected (SSRF), including IPv4-mapped IPv6; `user:pass@` disguises and over-long URLs are refused; redirect targets are re-checked |
+| **Command injection protection** | Console commands reject newlines and control characters; a leading `/` is normalised before the dangerous-command check so it cannot be used to bypass |
+| **Path traversal protection** | World names and backup paths are validated against the server directory boundary (real-path comparison); `..`, absolute paths and symlink escapes are refused |
+| **Signature check** | Windows verifies the PE signature with WinVerifyTrust. **Tampered digests and distrusted certificates always abort the install.** Unsigned or non-official signers are advisory by default (whether Mojang ships an embedded-signed exe cannot be confirmed offline); set `MBES_REQUIRE_SIGNATURE=1` for strict mode. Linux validates the ELF header instead |
+| **TOFU trust store** | The hash manifest is HMAC-signed; a rewritten manifest, or a deleted signature file (except legacy unsigned format), invalidates the cache. **Boundary**: key, mac and manifest live in the same directory, so this protects against accidental corruption and unprivileged processes, not malware running as the same user |
 | **Confirm for dangerous actions** | Deleting a server, restoring a backup, etc. require confirmation to prevent accidents |
-| **Operation audit log** | Records all dangerous operations (start/stop/delete, config changes, player management, backup restore) |
+| **Operation audit log** | JSON-lines `audit.log` with size-based rotation: server start/stop/restart/delete/select, config saves, world switch/rename/delete/duplicate, player kick/op/deop/permission/ban/pardon, allow-list and IP bans, pack import/toggle/delete, backup create/zip/restore/delete, scheduled-task executions |
 | **API rate limiting** | Token bucket algorithm, prevents front-end bugs or malicious scripts from hammering the API |
 | **ZIP path traversal protection** | Checks target path boundaries before extraction to prevent Zip Slip |
 | **Input validation** | Player name regex, IP address format, config numeric range validation |
@@ -567,8 +596,11 @@ pip install -r requirements.txt
 # Run the dev version
 python run.py
 
-# Run tests
-pytest tests/ -v
+# Run tests (with coverage gate)
+pytest --cov
+
+# Frontend tests (node:test, zero external deps)
+node --test "tests/js/**/*.test.mjs"
 
 # Format code
 ruff format .
