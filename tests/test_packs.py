@@ -237,7 +237,8 @@ class TestPacksRoutesDispatch(unittest.TestCase):
         handler._send = MagicMock()
         handler._post_data = MagicMock(return_value=body or {})
         handler._check_auth = MagicMock(return_value=True)
-        handler.headers = {}
+        # Host 头是新增的 DNS rebinding 防护所必需（真实 HTTP/1.1 请求必带）
+        handler.headers = {"Host": "127.0.0.1:19100"}
         handler.client_address = ("127.0.0.1", 12345)
         handler.rfile = MagicMock()
         handler.wfile = MagicMock()

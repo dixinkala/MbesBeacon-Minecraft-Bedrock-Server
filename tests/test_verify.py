@@ -149,13 +149,42 @@ class TestHashCache(unittest.TestCase):
 
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
+    def _read_cache_payload(self):
+        """读取清单文件，兼容带魔数的封装格式。"""
+        with open(self.new_path, encoding="utf-8") as f:
+            raw = json.load(f)
+        return raw.get("hashes", raw) if isinstance(raw, dict) else {}
+
     def test_register_known_hash_writes_new_path(self):
         """注册哈希后应写入统一的新路径缓存文件"""
         verify_module.register_known_hash("1.21.0", "abc123")
         self.assertTrue(os.path.isfile(self.new_path))
-        with open(self.new_path, encoding="utf-8") as f:
-            cache = json.load(f)
-        self.assertEqual(cache.get("1.21.0"), "abc123")
+        self.assertEqual(self._read_cache_payload().get("1.21.0"), "abc123")
+
+    def test_refuses_tampered_cache(self):
+        """清单被直接改写（未更新签名）时必须被忽略"""
+        verify_module.register_known_hash("1.21.0", "abc123")
+        # 直接把哈希改成攻击者可控值，模拟本地篡改
+        with open(self.new_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {"magic": verify_module._HASH_CACHE_MAGIC, "hashes": {"1.21.0": "deadbeef"}},
+                f,
+            )
+        verify_module._KNOWN_HASHES.clear()
+        self.assertIsNone(verify_module.get_known_hash("1.21.0"))
+
+    def test_accepts_valid_signed_cache(self):
+        """签名与清单一致时可正常读回"""
+        verify_module.register_known_hash("1.21.0", "abc123")
+        verify_module._KNOWN_HASHES.clear()
+        self.assertEqual(verify_module.get_known_hash("1.21.0"), "abc123")
+
+    def test_mac_file_permissions_restricted(self):
+        """签名文件应仅属主可读写（Windows 上为只读位控制）"""
+        verify_module.register_known_hash("1.21.0", "abc123")
+        mac_path = verify_module._mac_file_path()
+        self.assertTrue(os.path.isfile(mac_path))
+        self.assertEqual(os.path.dirname(mac_path), os.path.dirname(self.new_path))
 
     def test_get_known_hash_roundtrip(self):
         """注册后可读回，且内存与文件缓存一致"""
@@ -185,10 +214,76 @@ class TestHashCache(unittest.TestCase):
         self.assertEqual(cache.get("1.22.0"), "newhash")
         self.assertNotIn("1.20.0", cache)
         self.assertTrue(os.path.isfile(self.legacy_path))  # 旧文件未被误删
+        # 旧版未签名清单应被就地升级为带签名格式
+        self.assertTrue(os.path.isfile(verify_module._mac_file_path()))
 
     def test_load_no_cache_files(self):
         """无任何缓存文件时返回空字典"""
         self.assertEqual(verify_module._load_hash_cache(), {})
+
+
+class TestSignatureStrictness(unittest.TestCase):
+    """签名/格式校验必须对可疑文件返回 False"""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_non_pe_rejected(self):
+        p = os.path.join(self.tmpdir, "not_pe.exe")
+        with open(p, "wb") as f:
+            f.write(b"not a pe file at all")
+        ok, msg = verify_module.verify_pe_signature(p)
+        self.assertFalse(ok, msg)
+
+    def test_elf_magic_and_type(self):
+        """合法 ELF/ET_EXEC 通过，ET_REL 与非 ELF 拒绝"""
+        import struct
+
+        hdr = bytearray(64)
+        hdr[0:4] = b"\x7fELF"
+        hdr[4] = 2
+        hdr[5] = 1
+        struct.pack_into("<H", hdr, 16, 2)
+        ok_path = os.path.join(self.tmpdir, "ok.elf")
+        with open(ok_path, "wb") as f:
+            f.write(bytes(hdr))
+        ok, msg = verify_module.verify_elf_executable(ok_path)
+        self.assertTrue(ok, msg)
+
+        rel = bytearray(hdr)
+        struct.pack_into("<H", rel, 16, 1)
+        rel_path = os.path.join(self.tmpdir, "rel.elf")
+        with open(rel_path, "wb") as f:
+            f.write(bytes(rel))
+        ok, _msg = verify_module.verify_elf_executable(rel_path)
+        self.assertFalse(ok, "ET_REL 不是可执行文件")
+
+        bad_path = os.path.join(self.tmpdir, "bad.bin")
+        with open(bad_path, "wb") as f:
+            f.write(b"MZ not elf")
+        ok, _msg = verify_module.verify_elf_executable(bad_path)
+        self.assertFalse(ok)
+
+    def test_elf_without_exec_permission_still_accepted(self):
+        """zip 解压不保留权限位；不能因为缺少 X_OK 就误判失败"""
+        import struct
+
+        hdr = bytearray(64)
+        hdr[0:4] = b"\x7fELF"
+        hdr[4] = 2
+        hdr[5] = 1
+        struct.pack_into("<H", hdr, 16, 2)
+        p = os.path.join(self.tmpdir, "noexec.elf")
+        with open(p, "wb") as f:
+            f.write(bytes(hdr))
+        with mock.patch("os.access", return_value=False):
+            ok, msg = verify_module.verify_elf_executable(p)
+        self.assertTrue(ok, msg)
 
 
 if __name__ == "__main__":

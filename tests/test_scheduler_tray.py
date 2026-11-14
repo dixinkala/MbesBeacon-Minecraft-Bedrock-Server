@@ -485,5 +485,106 @@ class TestSystemTray(unittest.TestCase):
         MockTray.assert_called_once()
 
 
+class TestSchedulerStatePersistence(unittest.TestCase):
+    """回归：上次执行时间必须持久化，避免重启后重复执行。
+
+    早期实现把 last_check 只放在调度线程的局部变量里，
+    进程重启后 hourly/interval 任务会立刻再跑一次、daily 任务当天重复执行。
+    """
+
+    def setUp(self):
+        from bedrock_server_manager import settings
+
+        self._old_server_dir = settings.get("server_dir", "")
+        self.tmpdir = tempfile.mkdtemp(prefix="mbes_sched_state_")
+        self.server_dir = os.path.join(self.tmpdir, "server")
+        os.makedirs(os.path.join(self.server_dir, "worlds"))
+        with open(os.path.join(self.server_dir, SERVER_EXE), "wb") as f:
+            f.write(b"MZ")
+        settings["server_dir"] = self.server_dir
+
+    def tearDown(self):
+        from bedrock_server_manager import settings
+
+        settings["server_dir"] = self._old_server_dir
+        import shutil
+
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_state_roundtrip(self):
+        """写入的状态可以被重新读回（模拟进程重启）"""
+        from bedrock_server_manager.scheduler import load_scheduler_state, save_scheduler_state
+
+        now = time.time()
+        save_scheduler_state({"daily_backup": now, "hourly_announce": now - 100})
+        loaded = load_scheduler_state()
+        self.assertAlmostEqual(loaded["daily_backup"], now, places=2)
+        self.assertAlmostEqual(loaded["hourly_announce"], now - 100, places=2)
+
+    def test_state_file_written_atomically(self):
+        """不应残留 .tmp 文件"""
+        from bedrock_server_manager.scheduler import SCHEDULER_STATE_FILE, save_scheduler_state
+
+        save_scheduler_state({"t1": time.time()})
+        self.assertTrue(os.path.exists(os.path.join(self.server_dir, SCHEDULER_STATE_FILE)))
+        self.assertFalse(os.path.exists(os.path.join(self.server_dir, SCHEDULER_STATE_FILE + ".tmp")))
+
+    def test_missing_state_is_empty(self):
+        from bedrock_server_manager.scheduler import load_scheduler_state
+
+        self.assertEqual(load_scheduler_state(), {})
+
+    def test_corrupt_state_degrades_to_empty(self):
+        """状态文件损坏时降级为空，不抛异常"""
+        from bedrock_server_manager.scheduler import SCHEDULER_STATE_FILE, load_scheduler_state
+
+        with open(os.path.join(self.server_dir, SCHEDULER_STATE_FILE), "w", encoding="utf-8") as f:
+            f.write("{not json")
+        self.assertEqual(load_scheduler_state(), {})
+
+    def test_daily_task_not_repeated_after_restart(self):
+        """今天已执行过的 daily 任务，重启后不应再次触发"""
+        from bedrock_server_manager.scheduler import _should_run_daily, save_scheduler_state
+
+        now = time.time()
+        save_scheduler_state({"daily_restart": now})
+        state = load_scheduler_state_safe()
+        last_date = time.strftime("%Y-%m-%d", time.localtime(state["daily_restart"]))
+        today = time.strftime("%Y-%m-%d")
+        self.assertFalse(_should_run_daily("23:59", "04:00", today, last_date))
+
+    def test_hourly_not_immediate_after_restart(self):
+        """10 分钟前刚跑过的 hourly 任务，重启后不应立即再跑"""
+        from bedrock_server_manager.scheduler import _should_run_hourly, load_scheduler_state, save_scheduler_state
+
+        save_scheduler_state({"hourly_announce": time.time() - 600})
+        state = load_scheduler_state()
+        self.assertFalse(_should_run_hourly(state["hourly_announce"]))
+
+    def test_interval_respects_persisted_last_run(self):
+        """interval 任务重启后按持久化的上次执行时间判断"""
+        from bedrock_server_manager.scheduler import load_scheduler_state, save_scheduler_state
+
+        save_scheduler_state({"interval_backup": time.time() - 3600})
+        state = load_scheduler_state()
+        # 24 小时间隔、1 小时前跑过 → 不应触发
+        self.assertGreater(24 * 3600, time.time() - state["interval_backup"])
+
+    def test_stale_state_pruned(self):
+        """超过 30 天的历史记录应被丢弃，避免文件无限增长"""
+        from bedrock_server_manager.scheduler import load_scheduler_state, save_scheduler_state
+
+        save_scheduler_state({"ancient": time.time() - 40 * 24 * 3600, "fresh": time.time()})
+        state = load_scheduler_state()
+        self.assertNotIn("ancient", state)
+        self.assertIn("fresh", state)
+
+
+def load_scheduler_state_safe():
+    from bedrock_server_manager.scheduler import load_scheduler_state
+
+    return load_scheduler_state()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

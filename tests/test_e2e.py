@@ -25,28 +25,36 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bedrock_server_manager as bsm
 
 
-def api_request(method, path, data=None, token=""):
-    """发送API请求"""
+def api_request(method, path, data=None, token="", retries=2):
+    """发送API请求。
+
+    连接级错误（``-1``）在整套用例连跑时偶发（端口刚被上一个用例释放、
+    或 accept 队列瞬间打满），对这类瞬时故障重试一次；HTTP 错误码不重试。
+    """
     url = f"http://127.0.0.1:{bsm.DEFAULT_PORT}{path}"
     headers = {}
     if token:
         headers["X-API-Token"] = token
-    if method == "POST":
-        body = json.dumps(data or {}).encode()
-        req = urllib.request.Request(url, data=body, method="POST", headers=headers)
-        req.add_header("Content-Type", "application/json")
-    else:
-        req = urllib.request.Request(url, headers=headers)
-    try:
-        resp = urllib.request.urlopen(req, timeout=10)
-        return resp.status, json.loads(resp.read().decode())
-    except urllib.error.HTTPError as e:
+    for attempt in range(retries + 1):
+        body = json.dumps(data or {}).encode() if method == "POST" else None
         try:
-            return e.code, json.loads(e.read().decode())
-        except Exception:
-            return e.code, {"error": str(e)}
-    except Exception as e:
-        return -1, {"error": str(e)}
+            if method == "POST":
+                req = urllib.request.Request(url, data=body, method="POST", headers=headers)
+                req.add_header("Content-Type", "application/json")
+            else:
+                req = urllib.request.Request(url, headers=headers)
+            resp = urllib.request.urlopen(req, timeout=10)
+            return resp.status, json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            try:
+                return e.code, json.loads(e.read().decode())
+            except Exception:
+                return e.code, {"error": str(e)}
+        except Exception as e:
+            if attempt >= retries:
+                return -1, {"error": str(e)}
+            time.sleep(0.2)
+    return -1, {"error": "unreachable"}
 
 
 class TestE2EFullWorkflow(unittest.TestCase):
@@ -100,6 +108,17 @@ class TestE2EFullWorkflow(unittest.TestCase):
         time.sleep(0.5)
 
         cls.token = bsm.API_TOKEN
+
+    def setUp(self):
+        """每个用例前清空限流桶。
+
+        端到端套件会在几毫秒内连续打多个 GET 端点，容易撞上"每秒 N 次"的
+        生产配额而拿到 429，导致与限流无关的功能断言偶发失败。
+        限流本身由 test_ratelimit.py / test_p2_hardening.py 专门覆盖。
+        """
+        from bedrock_server_manager.ratelimit import get_rate_limiter
+
+        get_rate_limiter().reset()
 
     @classmethod
     def tearDownClass(cls):
