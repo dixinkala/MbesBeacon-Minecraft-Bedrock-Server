@@ -1,5 +1,6 @@
 """C 类工程化项回归：托盘状态、覆盖率/测试配置、CI 与依赖配置一致性。"""
 
+import os
 import pathlib
 import re
 import unittest
@@ -18,20 +19,32 @@ class TestTrayStateTooltip(unittest.TestCase):
         self.tray._nid = MagicMock()
         self.tray._nid.szTip = ""
 
+    def test_state_tooltip_text_differs_by_state(self):
+        """文案必须随状态变化，且不依赖界面语言（CI 上语言可能是英文）"""
+        running = self.tray._state_tooltip(True)
+        stopped = self.tray._state_tooltip(False)
+        self.assertNotEqual(running, stopped)
+        for text in (running, stopped):
+            self.assertTrue(text.strip())
+            self.assertIn("MbesBeacon", text)
+
+    @unittest.skipUnless(os.name == "nt", "NIM_MODIFY 仅 Windows")
     def test_tooltip_reflects_running(self):
         from bedrock_server_manager import tray as tray_mod
 
         with patch.object(tray_mod, "server_running", return_value=True):
             self.tray.refresh_state_tooltip(force=True)
-        self.assertIn("运行中", self.tray._nid.szTip)
+        self.assertEqual(self.tray._nid.szTip, self.tray._state_tooltip(True))
 
+    @unittest.skipUnless(os.name == "nt", "NIM_MODIFY 仅 Windows")
     def test_tooltip_reflects_stopped(self):
         from bedrock_server_manager import tray as tray_mod
 
         with patch.object(tray_mod, "server_running", return_value=False):
             self.tray.refresh_state_tooltip(force=True)
-        self.assertIn("已停止", self.tray._nid.szTip)
+        self.assertEqual(self.tray._nid.szTip, self.tray._state_tooltip(False))
 
+    @unittest.skipUnless(os.name == "nt", "NIM_MODIFY 仅 Windows")
     def test_uses_nif_tip_flag(self):
         """必须把 uFlags 重置为 NIF_TIP，否则 notify() 留下的 NIF_INFO 会改错字段"""
         from bedrock_server_manager import tray as tray_mod
@@ -41,6 +54,7 @@ class TestTrayStateTooltip(unittest.TestCase):
             self.tray.refresh_state_tooltip(force=True)
         self.assertEqual(self.tray._nid.uFlags, 0x04)
 
+    @unittest.skipUnless(os.name == "nt", "NIM_MODIFY 仅 Windows")
     def test_skips_when_state_unchanged(self):
         """状态未变时不重复调用 shell API"""
         from bedrock_server_manager import tray as tray_mod

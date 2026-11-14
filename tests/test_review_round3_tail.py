@@ -54,10 +54,13 @@ class TestOfficialVersions(unittest.TestCase):
     def test_known_and_unknown_versions(self):
         from bedrock_server_manager import verify as V
 
-        with patch.object(
-            V,
-            "fetch_official_versions",
-            return_value={"windows": {"stable": "1.26.63.1", "preview": "", "versions": ["1.21.0.03"]}},
+        with (
+            patch.object(V, "IS_WINDOWS", True),
+            patch.object(
+                V,
+                "fetch_official_versions",
+                return_value={"windows": {"stable": "1.26.63.1", "preview": "", "versions": ["1.21.0.03"]}},
+            ),
         ):
             self.assertTrue(V.get_official_version_info("1.21.0.03")["known"])
             self.assertFalse(V.get_official_version_info("9.9.9.9")["known"])
@@ -156,13 +159,16 @@ class TestStaleArtifactPruning(unittest.TestCase):
     """更新只清"上次自己装过、本次包里已没有"的服务端产物"""
 
     def setUp(self):
+        from bedrock_server_manager.constants import SERVER_EXE
+
+        self.exe = SERVER_EXE
         self.tmp = tempfile.mkdtemp(prefix="rv_prune_")
         self.target = os.path.join(self.tmp, "server")
         self.staging = os.path.join(self.tmp, "staging")
         os.makedirs(self.target)
         os.makedirs(self.staging)
         # 合法 staging 必须含服务端可执行文件（否则 apply 会拒绝合并）
-        self._write(self.staging, "bedrock_server.exe", b"NEW")
+        self._write(self.staging, self.exe, b"NEW")
         self._write(self.staging, "libCrypto.dll", b"NEW")
 
     def tearDown(self):
@@ -184,7 +190,7 @@ class TestStaleArtifactPruning(unittest.TestCase):
         """清单里记过、本次包里没有 → 清理"""
         from bedrock_server_manager.install import apply_staged_install
 
-        owned = ("bedrock_server.exe", "libCrypto.dll", "bedrock_server.pdb", "bedrock_server_how_to.html")
+        owned = (self.exe, "libCrypto.dll", "bedrock_server.pdb", "bedrock_server_how_to.html")
         for name in owned:
             self._write(self.target, name, b"OLD")
         self._manifest(owned)
@@ -193,7 +199,7 @@ class TestStaleArtifactPruning(unittest.TestCase):
 
         self.assertFalse(os.path.exists(os.path.join(self.target, "bedrock_server.pdb")), "旧 PDB 未清理")
         self.assertFalse(os.path.exists(os.path.join(self.target, "bedrock_server_how_to.html")), "旧文档未清理")
-        with open(os.path.join(self.target, "bedrock_server.exe"), "rb") as f:
+        with open(os.path.join(self.target, self.exe), "rb") as f:
             self.assertEqual(f.read(), b"NEW")
 
     def test_user_files_never_removed_even_if_artifact_like(self):
@@ -219,7 +225,7 @@ class TestStaleArtifactPruning(unittest.TestCase):
             self._write(self.target, name, b"user")
         os.makedirs(os.path.join(self.target, "my_scripts"), exist_ok=True)
         self._write(self.target, os.path.join("my_scripts", "run.bat"), b"echo")
-        self._manifest(["bedrock_server.exe"])  # 只装过 exe
+        self._manifest([self.exe])  # 只装过 exe
 
         apply_staged_install(self.staging, self.target)
 
@@ -233,7 +239,7 @@ class TestStaleArtifactPruning(unittest.TestCase):
         apply_staged_install(self.staging, self.target)
         with open(os.path.join(self.target, ".install_manifest.json"), encoding="utf-8") as f:
             data = json.load(f)
-        self.assertIn("bedrock_server.exe", data["files"])
+        self.assertIn(self.exe, data["files"])
 
     def test_incomplete_staging_refused(self):
         """staging 缺服务端 exe 时必须拒绝合并（否则会把服务器目录清空）"""
@@ -241,10 +247,10 @@ class TestStaleArtifactPruning(unittest.TestCase):
 
         empty = os.path.join(self.tmp, "empty_staging")
         os.makedirs(empty, exist_ok=True)
-        self._write(self.target, "bedrock_server.exe", b"OLD")
+        self._write(self.target, self.exe, b"OLD")
         with self.assertRaises(RuntimeError):
             apply_staged_install(empty, self.target)
-        with open(os.path.join(self.target, "bedrock_server.exe"), "rb") as f:
+        with open(os.path.join(self.target, self.exe), "rb") as f:
             self.assertEqual(f.read(), b"OLD", "拒绝合并后目标文件不应被改动")
 
     def test_orphan_install_old_is_preserved(self):
@@ -270,10 +276,11 @@ class TestStaleArtifactPruning(unittest.TestCase):
     def test_crashed_tmp_file_cleaned(self):
         from bedrock_server_manager.install import apply_staged_install
 
-        self._write(self.target, "bedrock_server.exe.install_ab12cd.tmp", b"partial")
+        tmp_name = f"{self.exe}.install_ab12cd.tmp"
+        self._write(self.target, tmp_name, b"partial")
         apply_staged_install(self.staging, self.target)
         self.assertFalse(
-            os.path.exists(os.path.join(self.target, "bedrock_server.exe.install_ab12cd.tmp")),
+            os.path.exists(os.path.join(self.target, tmp_name)),
             "崩溃残留的临时文件未清理",
         )
 
