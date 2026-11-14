@@ -2,6 +2,7 @@
 服务器进程管理模块：ServerProcess、进程启停、状态检测。
 """
 
+import contextlib
 import os
 import socket
 import subprocess
@@ -33,23 +34,46 @@ def _get_constants():
     return SERVER_EXE, IS_WINDOWS
 
 
-def check_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
-    """检测指定端口是否被占用。
+def check_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
+    """检测指定 UDP 端口是否被占用。
+
+    Bedrock 服务端使用 **UDP**（默认 19132）。早期实现用 TCP ``connect_ex``
+    探测同一个端口号，对 UDP 服务恒为"未占用"，等于没有检测；
+    这里改为 UDP ``bind``，与 ``web/routes/server.py`` 的启动前检测保持一致。
 
     Args:
         port: 端口号
-        host: 主机地址（默认 127.0.0.1）
+        host: 绑定地址（默认 0.0.0.0，与官方服务端默认监听一致）
 
     Returns:
         bool: True 表示端口被占用，False 表示端口可用
     """
+    # 端口范围校验：非法端口会让 bind 抛 OverflowError（不是 OSError），
+    # 逃出下面的 except 直接把调用方打断。非法端口按"不可用"处理更安全。
+    if not isinstance(port, int) or not (0 < port < 65536):
+        return True
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(1)
-            result = s.connect_ex((host, port))
-            return result == 0
-    except OSError:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            # Windows 下 UDP 默认允许复用，先关闭复用才能可靠判断占用
+            if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                with contextlib.suppress(OSError):
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            s.bind((host, port))
         return False
+    except OSError as e:
+        # 只把"地址/端口已被占用"类错误当成占用；EADDRNOTAVAIL（本机没有这个
+        # IP）、EACCES（Windows 保留端口段）等属于"探测环境问题"，
+        # 误判成占用会让用户被永久拒绝启动且无从排查。
+        errno_ = getattr(e, "errno", None)
+        winerror = getattr(e, "winerror", None)
+        addr_in_use = {98, 48}  # EADDRINUSE(linux) / WSAEADDRINUSE
+        if errno_ in addr_in_use or winerror == 10048:
+            return True
+        safe_log_exception("server", f"端口探测异常（按可用处理）: {e}", "warning")
+        return False
+    except Exception as e:
+        safe_log_exception("server", f"端口探测异常（按不可用处理）: {e}", "warning")
+        return True
 
 
 def get_server_port(server_dir: str) -> int:
@@ -69,7 +93,8 @@ def get_server_port(server_dir: str) -> int:
                     return int(value)
                 except (ValueError, TypeError):
                     return 19132
-    except Exception:
+    except Exception as e:
+        safe_log_exception("server", f"get_server_port 忽略异常: {e}", "debug")
         # 配置文件不存在或解析失败时返回默认端口 19132
         pass
     return 19132
@@ -111,11 +136,20 @@ class ServerProcess:
                 exe = os.path.join(self.server_dir, SERVER_EXE)
                 if not os.path.exists(exe):
                     raise FileNotFoundError(f"未找到 {SERVER_EXE}，请先安装服务器。")
-                # 端口占用检测
+                # 端口占用检测：所有启动入口（Web 路由 / 托盘 / 安装后自动启动 /
+                # 调度重启）都会走到这里，所以在这里拒绝一次即可避免
+                # "启动后立刻退出 → 崩溃重启退避"的循环。
+                # 早期只有 Web 路由做预检，其它入口直接 Popen，用户只会看到
+                # 服务器反复启动又退出，且日志里没有任何端口冲突提示。
                 server_port = get_server_port(self.server_dir)
                 if check_port_in_use(server_port):
-                    self._emit(f"\n[系统] ⚠ 警告：端口 {server_port} 已被占用，服务器可能无法正常启动。\n")
-                    self._emit(f"[系统] 请关闭占用端口 {server_port} 的程序，或在服务器配置中修改 server-port。\n")
+                    self._emit(f"\n[系统] ✗ 无法启动：端口 {server_port}（UDP）已被其它程序占用。\n")
+                    self._emit(
+                        f"[系统] 请关闭占用端口 {server_port} 的程序，或在「服务器配置」中修改 server-port 后重试。\n"
+                    )
+                    raise RuntimeError(
+                        f"端口 {server_port} 已被占用，无法启动服务器（请关闭占用该端口的程序，或修改 server-port）"
+                    )
                 flags = subprocess.CREATE_NO_WINDOW if IS_WINDOWS else 0  # Windows: 不创建控制台窗口；Linux: 无此标志
                 self._user_stopped = False
                 self._exit_code = None
@@ -163,13 +197,15 @@ class ServerProcess:
                     break
                 self._emit(self._decode(line))
         except Exception as e:
+            safe_log_exception("server", f"_reader 忽略异常: {e}", "warning")
             self._emit(f"[日志读取中断: {e}]\n")
         finally:
             # 等待进程完全退出并获取退出码
             try:
                 proc.wait(timeout=5)
                 self._exit_code = proc.returncode
-            except Exception:
+            except Exception as e:
+                safe_log_exception("server", f"_reader 忽略异常: {e}", "warning")
                 self._exit_code = proc.poll()
             # 健康监控：检测非用户主动停止的意外退出
             if not self._user_stopped:
@@ -205,6 +241,7 @@ class ServerProcess:
                                 try:
                                     self.start()
                                 except Exception as e:
+                                    safe_log_exception("server", f"_delayed_restart 忽略异常: {e}", "warning")
                                     self._emit(f"[系统] 自动重启失败: {e}\n")
 
                         threading.Thread(target=_delayed_restart, args=(backoff,), daemon=True).start()
@@ -217,18 +254,21 @@ class ServerProcess:
     def _decode(buf):
         try:
             return buf.decode("utf-8", errors="replace")
-        except Exception:
+        except Exception as e:
+            safe_log_exception("server", f"_decode 忽略异常: {e}", "warning")
             return buf.decode("gbk", errors="replace")
 
     def _emit(self, line):
         try:
             self.on_output(line)
         except Exception as e:
+            safe_log_exception("server", f"_emit 忽略异常: {e}", "warning")
             try:
                 from .app_logger import get_app_logger
 
                 get_app_logger().warning(f"server.py on_output 异常: {e}")
-            except Exception:
+            except Exception as e:
+                safe_log_exception("server", f"_emit 忽略异常: {e}", "warning")
                 # 应用日志不可用时静默，避免二次异常
                 pass
 
@@ -248,11 +288,13 @@ class ServerProcess:
         try:
             self.send("stop")
         except Exception as e:
+            safe_log_exception("server", f"stop 忽略异常: {e}", "warning")
             try:
                 from .app_logger import get_app_logger
 
                 get_app_logger().warning(f"server.py 发送 stop 命令异常: {e}")
-            except Exception:
+            except Exception as e:
+                safe_log_exception("server", f"stop 忽略异常: {e}", "warning")
                 # 应用日志不可用时静默，之后会走 kill 兜底
                 pass
         t0 = time.time()
@@ -268,11 +310,13 @@ class ServerProcess:
                 try:
                     self.proc.kill()
                 except Exception as e:
+                    safe_log_exception("server", f"kill 忽略异常: {e}", "warning")
                     try:
                         from .app_logger import get_app_logger
 
                         get_app_logger().warning(f"server.py 杀死进程异常: {e}")
-                    except Exception:
+                    except Exception as e:
+                        safe_log_exception("server", f"kill 忽略异常: {e}", "warning")
                         # 应用日志不可用时静默，进程退出由系统兜底
                         pass
         self.on_state(False)

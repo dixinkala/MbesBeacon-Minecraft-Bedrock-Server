@@ -8,6 +8,7 @@ import shutil
 import time
 
 from .app_logger import safe_log_exception
+from .utils import atomic_write_text
 
 PROP_META = [
     ("server-name", "服务器名称", "text", "Dedicated Server"),
@@ -29,16 +30,19 @@ PROP_META = [
     ("language", "语言(zh_CN=中文)", "text", "zh_CN"),
 ]
 # ---------------- 新增功能常量 ----------------
-AUDIT_LOG_NAME = "audit.log"
 CONFIG_HISTORY_DIR = ".config_history"
-VERSION_CACHE_FILE = ".versions_cache.json"
-VERSION_CACHE_TTL = 3600  # 1小时
 SCHEDULED_TASKS_FILE = "scheduled_tasks.json"
-PACKS_CONFIG = "valid_known_packs.json"
+
+# 服务端数据文件名（单一事实来源）。
+# 这些文件名此前在 players.py / packs.py / backup.py 各自硬编码，
+# 改一处漏一处；统一从本模块导入。
 PERMISSIONS_FILE = "permissions.json"
 ALLOWLIST_FILE = "allowlist.json"
-BANNED_IPS_FILE = "banned-ips.json"
+WHITELIST_FILE = "whitelist.json"
 BANNED_PLAYERS_FILE = "banned-players.json"
+BANNED_IPS_FILE = "banned-ips.json"
+PACKS_CONFIG = "valid_known_packs.json"
+AUDIT_LOG_NAME = "audit.log"
 
 # 全量配置项元数据（高级模式）
 FULL_PROP_META = PROP_META + [
@@ -149,7 +153,8 @@ def load_properties(filepath: str) -> list[tuple[str, str]]:
                 if "=" in line:
                     key, _, value = line.partition("=")
                     items.append((key.strip(), value.strip()))
-    except Exception:
+    except Exception as e:
+        safe_log_exception("config", f"load_properties 忽略异常: {e}", "warning")
         return []
     _properties_cache[filepath] = (stat_key, items)
     return items
@@ -175,31 +180,34 @@ def save_properties(filepath: str, items: list[tuple[str, str]]) -> bool:
         new_dict = dict(items)
         # 写入文件：先写原文件中需要保留的行，再写新的或更新的项
         written_keys = set()
-        with open(filepath, "w", encoding="utf-8", newline="\n") as f:
-            for line in original_lines:
-                stripped = line.strip()
-                if not stripped or stripped.startswith("#"):
-                    f.write(line if line.endswith("\n") else line + "\n")
-                    continue
-                if "=" in stripped:
-                    key = stripped.split("=", 1)[0].strip()
-                    if key in new_dict:
-                        f.write(f"{key}={new_dict[key]}\n")
-                        written_keys.add(key)
-                    else:
-                        # 保留未列出的项
-                        f.write(line if line.endswith("\n") else line + "\n")
+        out = []
+        for line in original_lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                out.append(line if line.endswith("\n") else line + "\n")
+                continue
+            if "=" in stripped:
+                key = stripped.split("=", 1)[0].strip()
+                if key in new_dict:
+                    out.append(f"{key}={new_dict[key]}\n")
+                    written_keys.add(key)
                 else:
-                    f.write(line if line.endswith("\n") else line + "\n")
-            # 写入新增的项
-            for key, value in items:
-                if key not in written_keys:
-                    f.write(f"{key}={value}\n")
+                    # 保留未列出的项
+                    out.append(line if line.endswith("\n") else line + "\n")
+            else:
+                out.append(line if line.endswith("\n") else line + "\n")
+        # 写入新增的项
+        for key, value in items:
+            if key not in written_keys:
+                out.append(f"{key}={value}\n")
+        # 原子写入：整目录唯一副本，截断写会因崩溃/断电丢失全部服务器配置
+        atomic_write_text(filepath, "".join(out), newline="\n")
         # 写后主动失效缓存：等长内容 + FS mtime 精度不足时 mtime 可能不变化，
         # 若依赖自然失效会导致下次 load 命中旧缓存（B6）
         _properties_cache.pop(filepath, None)
         return True
-    except Exception:
+    except Exception as e:
+        safe_log_exception("config", f"save_properties 忽略异常: {e}", "warning")
         return False
 
 
@@ -347,7 +355,8 @@ def backup_config_history(server_dir: str) -> str | None:
                 with contextlib.suppress(OSError):
                     os.remove(os.path.join(history_dir, old_backup))
         return backup_path
-    except Exception:
+    except Exception as e:
+        safe_log_exception("config", f"backup_config_history 忽略异常: {e}", "warning")
         return None
 
 
@@ -393,4 +402,5 @@ def rollback_config(server_dir, backup_name):
         shutil.copy2(backup_path, props_path)
         return True, ""
     except Exception as e:
+        safe_log_exception("config", f"rollback_config 忽略异常: {e}", "warning")
         return False, f"恢复失败: {str(e)}"

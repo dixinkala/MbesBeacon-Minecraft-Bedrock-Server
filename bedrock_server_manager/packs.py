@@ -24,11 +24,10 @@ import time
 import zipfile
 
 from .app_logger import safe_log_exception
+from .config import PACKS_CONFIG as VALID_KNOWN_PACKS_FILE
 from .security import audit_log
 from .utils import resolve_server_dir
 from .worlds import get_active_world_name
-
-VALID_KNOWN_PACKS_FILE = "valid_known_packs.json"
 
 # pack_type -> (服务器目录下的包文件夹名, 活动世界内的启用清单文件名)
 _PACK_TYPES = {
@@ -41,6 +40,9 @@ _PACK_NAME_RE = re.compile(r"^[A-Za-z0-9_.\- ()（）\u4e00-\u9fff]+$")
 
 # 导入包文件大小上限（base64 解码后），防止超大文件耗尽内存
 _IMPORT_MAX_BYTES = 200 * 1024 * 1024
+# 解压后总体积上限（防 zip bomb）：压缩包本身限制 200MB，
+# 但高压缩比可以解出几十 GB，必须单独限制解压总量。
+_IMPORT_MAX_UNPACKED_BYTES = 2 * 1024 * 1024 * 1024  # 2GB
 
 
 def _read_json(path: str, default):
@@ -86,6 +88,31 @@ def _validate_pack_name(name: str) -> tuple[bool, str]:
     if len(name) > 80:
         return False, "包名过长"
     return True, ""
+
+
+# Windows 文件名非法字符（extractall 会把它们替换成下划线）
+_ILLEGAL_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _sanitize_path_component(name: str, max_len: int = 80) -> str:
+    """把 ZIP 内的顶层目录名转换成"实际会落盘的名字"。
+
+    ``zipfile`` 在 Windows 上用 ``os.path`` 语义落盘，非法字符会被替换为 ``_``
+    （例如 ``Bad<Root>|Name`` → ``Bad_Root__Name``）。导入前的"同名则拒绝覆盖"
+    守卫必须按落盘名判断，否则特殊字符名会绕过守卫。
+
+    Args:
+        name: ZIP 内声明的顶层目录名
+        max_len: 结果最大长度
+
+    Returns:
+        str: 落盘名；清洗后为空时返回空串
+    """
+    cleaned = _ILLEGAL_FILENAME_CHARS.sub("_", (name or "").strip())
+    cleaned = cleaned.strip(". ")
+    if not cleaned or cleaned in (".", ".."):
+        return ""
+    return cleaned[:max_len]
 
 
 def _pack_dir_of(server_dir: str, pack_type: str, name: str) -> str | None:
@@ -294,8 +321,18 @@ def _validate_zip_paths(names: list[str]) -> str | None:
     return None
 
 
-def import_pack(server_dir: str, pack_type: str, file_data: str, file_name: str) -> tuple[bool, str, str]:
-    """导入包（.zip/.mcpack，base64 编码）到服务器对应目录。返回 (ok, error, message)。"""
+def import_pack(
+    server_dir: str, pack_type: str, file_data: str, file_name: str, overwrite: bool = False
+) -> tuple[bool, str, str]:
+    """导入包（.zip/.mcpack，base64 编码）到服务器对应目录。返回 (ok, error, message)。
+
+    Args:
+        server_dir: 服务器目录
+        pack_type: ``resource`` 或 ``behavior``
+        file_data: base64 编码的 ZIP
+        file_name: 原始文件名
+        overwrite: 已存在同名包时是否覆盖（默认 False，避免静默丢弃用户现有包）
+    """
     try:
         d = server_dir or resolve_server_dir()
         if not d:
@@ -323,19 +360,55 @@ def import_pack(server_dir: str, pack_type: str, file_data: str, file_name: str)
                 return False, "文件不是有效的 ZIP 格式", ""
 
             with zipfile.ZipFile(temp_path, "r") as zf:
-                names = zf.namelist()
+                infos = zf.infolist()
+                names = [i.filename for i in infos]
                 err = _validate_zip_paths(names)
                 if err:
                     return False, err, ""
+                # 解压后总体积上限（防 zip bomb：压缩包 200MB 可解出几十 GB）
+                total_unpacked = sum(max(0, i.file_size) for i in infos)
+                if total_unpacked > _IMPORT_MAX_UNPACKED_BYTES:
+                    return (
+                        False,
+                        f"解压后体积过大（{total_unpacked // (1024 * 1024)} MB，"
+                        f"上限 {_IMPORT_MAX_UNPACKED_BYTES // (1024 * 1024)} MB）",
+                        "",
+                    )
                 # 解压目标：ZIP 根为单一目录时直接解到包根（保留原目录名）；
                 # 否则新建一个以文件名为名的子目录
                 pack_root = os.path.join(d, mapped[0])
                 os.makedirs(pack_root, exist_ok=True)
                 single_root = _zip_has_single_root(names)
                 if single_root:
+                    # zipfile.extractall 在 Windows 上会清洗文件名里的非法字符，
+                    # 因此"磁盘上的真实目录名"可能与 ZIP 里写的 root 名不同。
+                    # 守卫必须按**落盘名**判断，否则 Bad<Root> 这类名字会让
+                    # "已存在则拒绝覆盖"的检查直接失效。
+                    disk_name = _sanitize_path_component(single_root)
+                    if not disk_name:
+                        return False, f"包内顶层目录名非法: {single_root}", ""
+                    target_dir = os.path.join(pack_root, disk_name)
+                    if os.path.isdir(target_dir) and not overwrite:
+                        return (
+                            False,
+                            f"已存在同名包 '{disk_name}'，如确认覆盖请重新导入并选择覆盖",
+                            "",
+                        )
+                    # 覆盖时先删旧目录：否则新版本删掉的资源文件会残留在磁盘上，
+                    # 形成"新旧文件混合"的包（manifest 是新版、资源是并集）。
+                    if os.path.isdir(target_dir):
+                        shutil.rmtree(target_dir, ignore_errors=True)
                     zf.extractall(pack_root)
                 else:
                     target_dir = os.path.join(pack_root, os.path.splitext(safe_name)[0])
+                    if os.path.isdir(target_dir) and not overwrite:
+                        return (
+                            False,
+                            f"已存在同名包 '{os.path.basename(target_dir)}'，如确认覆盖请重新导入并选择覆盖",
+                            "",
+                        )
+                    if os.path.isdir(target_dir):
+                        shutil.rmtree(target_dir, ignore_errors=True)
                     os.makedirs(target_dir, exist_ok=True)
                     zf.extractall(target_dir)
 
