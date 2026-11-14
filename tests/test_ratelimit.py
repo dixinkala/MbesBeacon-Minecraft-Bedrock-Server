@@ -110,17 +110,56 @@ class TestRateLimiterAllow(unittest.TestCase):
         self.assertTrue(allowed)
 
     def test_custom_endpoint_limit(self):
-        """测试自定义端点的速率限制"""
+        """自定义端点的配额必须按端点配置生效（而非默认值）
+
+        /api/install 配置为每 5 秒 1 次：桶容量应为 1，
+        首个请求放行、第二个立即拒绝。早期实现桶容量固定取 default_rate(5)，
+        导致这类"严格"端点在冷启动时可连打 5 次。
+        """
         limiter = RateLimiter()
-        # /api/install 限制为每5秒1次
-        # 注意：初始令牌使用 default_rate (5)，需要先消耗完
-        for i in range(5):
-            allowed, _ = limiter.allow("/api/install")
-            self.assertTrue(allowed, f"第 {i + 1} 个初始请求应该被允许")
-        # 第6个请求应该被拒绝
+        allowed, _ = limiter.allow("/api/install")
+        self.assertTrue(allowed, "首个请求应被放行")
+
         allowed, retry_after = limiter.allow("/api/install")
+        self.assertFalse(allowed, "第二个请求应立即被拒绝")
+        self.assertGreater(retry_after, 4)  # 距下一次可用接近 5 秒
+
+    def test_bucket_capacity_matches_endpoint_rate(self):
+        """每个端点的冷启动容量等于自身 rate，不是 default_rate"""
+        limiter = RateLimiter(default_rate=5, default_period=1.0)
+        cases = {
+            "/api/install": 1,
+            "/api/server/restart": 1,
+            "/api/server/start": 2,
+            "/api/cmd": 10,
+            "/api/unknown-endpoint": 5,  # 默认
+        }
+        for endpoint, expected in cases.items():
+            allowed_count = 0
+            for _ in range(12):
+                if limiter.allow(endpoint)[0]:
+                    allowed_count += 1
+                else:
+                    break
+            self.assertEqual(allowed_count, expected, f"{endpoint} 冷启动容量应为 {expected}")
+
+    def test_retry_after_is_meaningful(self):
+        """被限流时 retry_after 应接近真实的等待时间"""
+        limiter = RateLimiter()
+        limiter.allow("/api/server/restart")  # 1 次/15 秒
+        allowed, retry_after = limiter.allow("/api/server/restart")
         self.assertFalse(allowed)
-        self.assertGreater(retry_after, 4)  # 应该接近5秒
+        self.assertGreater(retry_after, 14.0)
+        self.assertLessEqual(retry_after, 15.0)
+
+    def test_buckets_are_pruned(self):
+        """大量不同端点不应导致桶无上限增长"""
+        from bedrock_server_manager.ratelimit import MAX_BUCKETS
+
+        limiter = RateLimiter()
+        for i in range(MAX_BUCKETS + 200):
+            limiter.allow(f"/api/nonexistent/{i}", client_ip="1.2.3.4")
+        self.assertLessEqual(len(limiter._buckets), MAX_BUCKETS)
 
 
 class TestRateLimiterReset(unittest.TestCase):

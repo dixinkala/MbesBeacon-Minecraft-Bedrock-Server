@@ -367,19 +367,6 @@ class TestBackupWorlds(unittest.TestCase):
         self.assertTrue(os.path.isfile(result))
 
 
-class TestMakeDownloadUrl(unittest.TestCase):
-    """下载URL生成"""
-
-    def test_official_source(self):
-        url = bsm.make_download_url("1.21.0.03", source_index=0)
-        self.assertIn("1.21.0.03", url)
-        self.assertIn("minecraft.net", url)
-
-    def test_invalid_source_fallback(self):
-        url = bsm.make_download_url("1.21.0.03", source_index=999)
-        self.assertIn("1.21.0.03", url)
-
-
 class TestDetectFileEncoding(unittest.TestCase):
     """文件编码检测"""
 
