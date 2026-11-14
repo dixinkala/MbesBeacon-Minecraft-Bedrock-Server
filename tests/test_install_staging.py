@@ -38,6 +38,9 @@ class TestApplyStagedInstall(unittest.TestCase):
     """A1：暂存目录并入服务器目录时保留用户数据"""
 
     def setUp(self):
+        from bedrock_server_manager.constants import SERVER_EXE
+
+        self.exe = SERVER_EXE
         self.tmp = tempfile.mkdtemp(prefix="mbes_stage_")
         self.target = os.path.join(self.tmp, "server")
         self.staging = os.path.join(self.tmp, "staged")
@@ -69,7 +72,7 @@ class TestApplyStagedInstall(unittest.TestCase):
         self._write(self.staging, "server.properties", "server-name=Dedicated Server\n")
         self._write(self.staging, "allowlist.json", "[]")
         os.makedirs(os.path.join(self.staging, "worlds"))
-        self._write(self.staging, "bedrock_server.exe", "new-binary")
+        self._write(self.staging, self.exe, "new-binary")
 
         skipped = apply_staged_install(self.staging, self.target)
 
@@ -79,7 +82,7 @@ class TestApplyStagedInstall(unittest.TestCase):
             self.assertIn("Steve", f.read(), "白名单被清空了")
         self.assertTrue(os.path.isfile(os.path.join(self.target, "worlds", "MyWorld", "level.dat")))
         # 二进制应更新
-        with open(os.path.join(self.target, "bedrock_server.exe"), encoding="utf-8") as f:
+        with open(os.path.join(self.target, self.exe), encoding="utf-8") as f:
             self.assertEqual(f.read(), "new-binary")
         self.assertIn("server.properties", skipped)
 
@@ -87,20 +90,20 @@ class TestApplyStagedInstall(unittest.TestCase):
         from bedrock_server_manager.install import apply_staged_install
 
         self._write(self.staging, "server.properties", "server-name=Default\n")
-        self._write(self.staging, "bedrock_server.exe", "bin")
+        self._write(self.staging, self.exe, "bin")
         empty = os.path.join(self.tmp, "fresh")
         os.makedirs(empty)
         skipped = apply_staged_install(self.staging, empty)
         self.assertEqual(skipped, [])
         self.assertTrue(os.path.isfile(os.path.join(empty, "server.properties")))
-        self.assertTrue(os.path.isfile(os.path.join(empty, "bedrock_server.exe")))
+        self.assertTrue(os.path.isfile(os.path.join(empty, self.exe)))
 
     def test_replaces_stale_dll(self):
         """非用户数据的旧文件应被替换"""
         from bedrock_server_manager.install import apply_staged_install
 
         # 合法 staging 必含服务端可执行文件（apply 有完整性守卫）
-        self._write(self.staging, "bedrock_server.exe", "exe")
+        self._write(self.staging, self.exe, "exe")
         self._write(self.target, "libCrypto.dll", "old")
         self._write(self.staging, "libCrypto.dll", "new")
         apply_staged_install(self.staging, self.target)
@@ -134,7 +137,9 @@ class TestFailedInstallKeepsServer(unittest.TestCase):
 
         tmp = tempfile.mkdtemp(prefix="mbes_keep_")
         try:
-            exe = os.path.join(tmp, "bedrock_server.exe")
+            from bedrock_server_manager.constants import SERVER_EXE
+
+            exe = os.path.join(tmp, SERVER_EXE)
             with open(exe, "w") as f:
                 f.write("original-binary")
             with open(os.path.join(tmp, "server.properties"), "w", encoding="utf-8") as f:
@@ -161,12 +166,14 @@ class TestWorldImportIsolation(unittest.TestCase):
     """A3：世界导入不得覆盖服务器根目录文件"""
 
     def setUp(self):
+        from bedrock_server_manager.constants import SERVER_EXE
+
         self.tmp = tempfile.mkdtemp(prefix="mbes_wimp_")
         self.server = os.path.join(self.tmp, "server")
         os.makedirs(os.path.join(self.server, "worlds"))
         with open(os.path.join(self.server, "server.properties"), "w", encoding="utf-8") as f:
             f.write("server-name=Original\n")
-        with open(os.path.join(self.server, "bedrock_server.exe"), "w") as f:
+        with open(os.path.join(self.server, SERVER_EXE), "w") as f:
             f.write("real-binary")
 
     def tearDown(self):

@@ -3,6 +3,7 @@
 """
 
 import contextlib
+import errno
 import json
 import os
 import tempfile
@@ -31,6 +32,20 @@ def _get_server_proc():
 
 # 设置文件路径（统一到 APP_DATA_DIR，与 state.migrate_legacy_data 迁移目标一致）
 SETTINGS_FILE = os.path.join(APP_DATA_DIR, "settings.json")
+
+
+def _is_transient_replace_error(err: OSError) -> bool:
+    """``os.replace`` 的失败是否属于"目标被临时占用"，值得重试。
+
+    Windows 上并发写同一文件时会出现共享冲突（winerror 32）或锁定冲突（33），
+    Python 可能把它们映射成普通 ``OSError`` 而不是 ``PermissionError``；
+    早期只捕获 ``PermissionError``，并发写偶发失败（实测 CI 上 1/N 次）。
+    """
+    if isinstance(err, PermissionError):
+        return True
+    if getattr(err, "winerror", None) in (5, 32, 33):
+        return True
+    return err.errno in (errno.EACCES, errno.EBUSY, errno.ETXTBSY)
 
 
 def atomic_write_text(path: str, text: str, encoding: str = "utf-8", newline: str = "") -> None:
@@ -66,17 +81,21 @@ def atomic_write_text(path: str, text: str, encoding: str = "utf-8", newline: st
             f.write(text)
             f.flush()
             os.fsync(f.fileno())
-        # Windows 上目标被其它进程/杀软短暂占用时 os.replace 会抛 PermissionError，
-        # 重试几次；仍失败则向上抛出不吞掉，避免"看起来保存成功其实没写"。
+        # Windows 上目标被其它进程/线程/杀软短暂占用时 os.replace 会失败：
+        #   - PermissionError（拒绝访问）
+        #   - OSError(winerror=32/33)：共享冲突 / 锁定冲突
+        # 这些都属于**瞬时**冲突，重试即可；其它错误（磁盘满、只读）直接抛。
         last_err = None
-        for delay in (0.0, 0.05, 0.1, 0.2):
+        for delay in (0.0, 0.02, 0.05, 0.1, 0.2, 0.4):
             if delay:
                 time.sleep(delay)
             try:
                 os.replace(tmp, path)
                 replaced = True
                 break
-            except PermissionError as e:
+            except OSError as e:
+                if not _is_transient_replace_error(e):
+                    raise
                 last_err = e
         if not replaced:
             raise last_err if last_err else OSError("原子替换失败")

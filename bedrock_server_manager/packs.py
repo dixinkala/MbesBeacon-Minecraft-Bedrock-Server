@@ -388,16 +388,23 @@ def import_pack(
                     if not disk_name:
                         return False, f"包内顶层目录名非法: {single_root}", ""
                     target_dir = os.path.join(pack_root, disk_name)
-                    if os.path.isdir(target_dir) and not overwrite:
+                    # zipfile 只在 Windows 上把非法字符换成 "_"；POSIX 按原样落盘。
+                    # 因此"已存在"判断必须同时看清洗名与原名，否则 Linux 上
+                    # 含 <>| 之类字符的包会绕过覆盖守卫。
+                    existing_dir = next(
+                        (path for path in (target_dir, os.path.join(pack_root, single_root)) if os.path.isdir(path)),
+                        None,
+                    )
+                    if existing_dir and not overwrite:
                         return (
                             False,
-                            f"已存在同名包 '{disk_name}'，如确认覆盖请重新导入并选择覆盖",
+                            f"已存在同名包 '{os.path.basename(existing_dir)}'，如确认覆盖请重新导入并选择覆盖",
                             "",
                         )
                     # 覆盖时先删旧目录：否则新版本删掉的资源文件会残留在磁盘上，
                     # 形成"新旧文件混合"的包（manifest 是新版、资源是并集）。
-                    if os.path.isdir(target_dir):
-                        shutil.rmtree(target_dir, ignore_errors=True)
+                    if existing_dir:
+                        shutil.rmtree(existing_dir, ignore_errors=True)
                     zf.extractall(pack_root)
                 else:
                     target_dir = os.path.join(pack_root, os.path.splitext(safe_name)[0])

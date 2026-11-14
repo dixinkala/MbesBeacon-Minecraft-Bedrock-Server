@@ -100,11 +100,12 @@ class TestPortPrecheckCentralized(unittest.TestCase):
 
     def test_start_raises_on_occupied_port(self):
         from bedrock_server_manager import server as S
+        from bedrock_server_manager.constants import SERVER_EXE
 
         proc = S.ServerProcess(tempfile.mkdtemp(prefix="rv_srv_"), on_output=lambda _l: None, on_state=lambda _s: None)
         try:
             # 造一个存在的 exe，让流程走到端口检查
-            open(os.path.join(proc.server_dir, "bedrock_server.exe"), "wb").close()
+            open(os.path.join(proc.server_dir, SERVER_EXE), "wb").close()
             with (
                 patch.object(S, "check_port_in_use", return_value=True),
                 patch.object(S, "get_server_port", return_value=19132),

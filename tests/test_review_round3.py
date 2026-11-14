@@ -224,6 +224,7 @@ class TestPeSignature(unittest.TestCase):
         ok, msg = _verify_signer_identity(sys.executable)
         self.assertIn("签名者: ", msg, f"未能解析签名者: {msg}")
 
+    @unittest.skipUnless(os.name == "nt", "PE 签名校验仅 Windows 实现")
     def test_unsigned_is_advisory_in_default_mode(self):
         from bedrock_server_manager.verify import verify_pe_signature
 
@@ -249,18 +250,21 @@ class TestPeSignature(unittest.TestCase):
 
 
 class TestStagedInstallAtomic(unittest.TestCase):
-    """合并阶段必须原子替换：失败时不得丢 bedrock_server.exe"""
+    """合并阶段必须原子替换：失败时不得丢服务端可执行文件"""
 
     def setUp(self):
+        from bedrock_server_manager.constants import SERVER_EXE
+
+        self.exe = SERVER_EXE
         self.tmp = tempfile.mkdtemp(prefix="rv_stage_")
         self.target = os.path.join(self.tmp, "server")
         self.staging = os.path.join(self.tmp, "staging")
         os.makedirs(self.target)
         os.makedirs(self.staging)
-        for name, data in (("bedrock_server.exe", b"OLD"), ("libCrypto.dll", b"OLDDLL")):
+        for name, data in ((self.exe, b"OLD"), ("libCrypto.dll", b"OLDDLL")):
             with open(os.path.join(self.target, name), "wb") as f:
                 f.write(data)
-        for name, data in (("bedrock_server.exe", b"NEW"), ("libCrypto.dll", b"NEWDLL")):
+        for name, data in ((self.exe, b"NEW"), ("libCrypto.dll", b"NEWDLL")):
             with open(os.path.join(self.staging, name), "wb") as f:
                 f.write(data)
 
@@ -271,16 +275,17 @@ class TestStagedInstallAtomic(unittest.TestCase):
         from bedrock_server_manager.install import apply_staged_install
 
         real_copy2 = shutil.copy2
+        exe = self.exe
 
         def boom(src, dst, **kw):
-            if str(src).endswith("bedrock_server.exe"):
+            if os.path.basename(str(src)) == exe:
                 raise OSError(28, "No space left on device")
             return real_copy2(src, dst, **kw)
 
         with patch("bedrock_server_manager.install.shutil.copy2", side_effect=boom), self.assertRaises(OSError):
             apply_staged_install(self.staging, self.target)
 
-        with open(os.path.join(self.target, "bedrock_server.exe"), "rb") as f:
+        with open(os.path.join(self.target, self.exe), "rb") as f:
             self.assertEqual(f.read(), b"OLD", "合并失败后旧 exe 丢了")
         with open(os.path.join(self.target, "libCrypto.dll"), "rb") as f:
             self.assertEqual(f.read(), b"OLDDLL")
@@ -291,7 +296,7 @@ class TestStagedInstallAtomic(unittest.TestCase):
         from bedrock_server_manager.install import apply_staged_install
 
         apply_staged_install(self.staging, self.target)
-        with open(os.path.join(self.target, "bedrock_server.exe"), "rb") as f:
+        with open(os.path.join(self.target, self.exe), "rb") as f:
             self.assertEqual(f.read(), b"NEW")
 
     def test_official_content_dirs_overlay_not_frozen(self):
