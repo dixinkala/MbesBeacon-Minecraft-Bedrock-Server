@@ -13,7 +13,7 @@ Minecraft 基岩版（Bedrock）服务器自动搭建管理工具
   - scheduler.py 定时任务调度模块
   - tray.py      系统托盘模块（SystemTray）
   - state.py     全局状态管理（常量、全局变量、API_TOKEN）
-  - assets.py    前端资源模块（HELP_TEXT、INDEX_HTML、HELP_JS）
+  - assets.py    前端资源缺失时的兜底页面
   - web/         Web 子包（Handler、AppContext）
   - main.py      程序入口（main、_main）
 """
@@ -47,8 +47,7 @@ from .app_update import (  # noqa: F401
     check_app_update_async,
 )
 
-# 从 assets.py 导入前端资源
-from .assets import HELP_JS, HELP_TEXT, INDEX_HTML  # noqa: F401
+# 前端资源缺失时的兜底页面
 from .backup import (  # noqa: F401
     backup_worlds,
     backup_worlds_zip,
@@ -118,7 +117,6 @@ from .install import (  # noqa: F401
     get_bedrock_versions,
     get_cached_versions,
     get_latest_server_info,
-    make_download_url,
     select_server_dir,
 )
 from .main import _main, main  # noqa: F401
@@ -165,8 +163,6 @@ from .security import (  # noqa: F401
     SAFE_COMMANDS,
     audit_log,
     check_dangerous_operation,
-    get_dangerous_endpoints_info,
-    is_dangerous_endpoint,
     read_audit_log,
     validate_command,
     validate_custom_url,
@@ -175,13 +171,9 @@ from .server import ServerProcess, get_server_proc, server_running  # noqa: F401
 
 # 全局状态通过 AppContext 访问（推荐）
 # API_TOKEN / app_start_time / settings 通过包级 __getattr__ 惰性代理到
-# AppContext.instance()（见本文件底部），保证与当前实例一致；
-# 以下纯兼容变量保留顶层绑定
-from .state import (  # noqa: F401  # 向后兼容
-    httpd,
-    server_lock,
-    server_proc,
-)
+# AppContext.instance()（见本文件底部），保证与当前实例一致。
+# 早期这里从 state 顶层导入 httpd/server_lock/server_proc，但那三个变量
+# 从未被写入真实值，导入得到的永远是 None；改为下方的惰性代理。
 from .tray import SystemTray  # noqa: F401
 from .utils import (  # noqa: F401
     SETTINGS_FILE,
@@ -208,7 +200,6 @@ from .verify import (  # noqa: F401
     MAX_BDS_SIZE,
     MIN_BDS_SIZE,
     calculate_sha256,
-    get_known_hashes,
     register_known_hash,
     verify_download_full,
     verify_file_size,
@@ -243,7 +234,7 @@ if not _global_ctx.has_install_state:
 console = _global_ctx.console
 install_state = _global_ctx.install_state
 
-__version__ = "1.0.24"
+__version__ = "1.0.25"
 
 
 def get_app_context():
@@ -282,7 +273,15 @@ def __getattr__(name: str):
     （bsm.API_TOKEN / bsm.app_start_time / bsm.settings）。
     注意：console / install_state 不在此名单——同名子模块会遮蔽惰性代理，
     由上方顶层快照绑定提供兼容导出。
+
+    server_proc / httpd / server_lock 也从这里转发到 AppContext：
+    它们曾经是 state 里恒为 None 的模块变量，导入即得 None，
+    现在改为读取当前实例的真实状态。
     """
     if name in ("API_TOKEN", "app_start_time", "settings"):
         return getattr(_state, name)
+    if name in ("server_proc", "httpd", "server_lock"):
+        from .app_context import AppContext
+
+        return getattr(AppContext.instance(), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

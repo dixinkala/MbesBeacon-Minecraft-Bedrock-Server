@@ -22,14 +22,17 @@ from .scheduler import start_scheduler, stop_scheduler
 from .server import get_server_proc, server_running
 from .state import migrate_legacy_data
 from .tray import SystemTray
-from .utils import get_ui_lang, installed, load_settings, open_browser_with_retry, resolve_server_dir
+from .utils import get_ui_lang, installed, load_settings, open_browser_with_retry, resolve_server_dir, tr_msg
 from .web.handler import Handler
 
 
 def _acquire_single_instance():
     """获取单实例锁（平台相关）。
 
-    Windows: 命名互斥量（CreateMutexW）。
+    Windows: 当前会话命名互斥量 ``Local\\MbesBeacon_Mutex``。
+        早期用 ``Global\\`` 前缀，创建它需要 SeCreateGlobalPrivilege，
+        普通（未提升）账户会失败返回 NULL，结果"单实例保护"静默失效。
+        ``Local\\`` 只需当前会话权限，覆盖正常使用场景（同一登录会话重复双击）。
     Linux: 锁文件 flock（fcntl），随进程退出自动释放，无残留问题。
 
     Returns:
@@ -43,8 +46,16 @@ def _acquire_single_instance():
             import ctypes
 
             kernel32 = ctypes.windll.kernel32
-            mutex = kernel32.CreateMutexW(None, False, "Global\\MbesBeacon_Mutex")
+            mutex = kernel32.CreateMutexW(None, False, "Local\\MbesBeacon_Mutex")
             last_error = kernel32.GetLastError()
+            if not mutex:
+                # 创建失败（权限/资源问题）：返回 None 交由端口探测兜底
+                safe_log_exception(
+                    "main",
+                    f"单实例互斥量创建失败（GetLastError={last_error}），将退回端口探测",
+                    "warning",
+                )
+                return None, None, None
             if last_error == 183:  # ERROR_ALREADY_EXISTS：已有实例或残留互斥量
                 return None, kernel32, mutex
             return mutex, kernel32, None
@@ -87,15 +98,20 @@ def _release_single_instance(lock_handle, kernel32):
 
 
 def _probe_running_instance():
-    """探测是否已有实例在运行；若在运行则打开其管理界面并返回 True。"""
+    """探测是否已有实例在运行；若在运行则打开其管理界面并返回 True。
+
+    注意：必须使用免认证端点 ``/api/health``（``/api/status`` 需要 API token，
+    匿名探测恒返回 403，会导致单实例检测永远失败并让第二个实例继续启动）。
+    """
     for probe_port in range(DEFAULT_PORT, DEFAULT_PORT + 20):
         try:
-            probe = urllib.request.urlopen(f"http://127.0.0.1:{probe_port}/api/status", timeout=1)
+            probe = urllib.request.urlopen(f"http://127.0.0.1:{probe_port}/api/health", timeout=1)
             data = json.loads(probe.read().decode("utf-8", "ignore"))
             if data.get("app") == APP_MARKER:
                 open_browser_with_retry(f"http://127.0.0.1:{probe_port}/")
                 return True
-        except Exception:
+        except Exception as e:
+            safe_log_exception("main", f"_probe_running_instance 忽略异常: {e}", "warning")
             continue
     return False
 
@@ -107,7 +123,8 @@ def _main():
         migrated = migrate_legacy_data()
         if migrated:
             get_app_logger().info(f"已迁移旧数据: {', '.join(migrated)}")
-    except Exception:
+    except Exception as e:
+        safe_log_exception("main", f"_main 忽略异常: {e}", "warning")
         # 日志记录失败时静默，避免掩盖主流程
         pass
 
@@ -174,7 +191,7 @@ def _main():
     # 兜底：探测默认端口（锁获取异常时）
     if lock_handle is None:
         try:
-            probe = urllib.request.urlopen(f"http://127.0.0.1:{DEFAULT_PORT}/api/status", timeout=2)
+            probe = urllib.request.urlopen(f"http://127.0.0.1:{DEFAULT_PORT}/api/health", timeout=2)
             data = json.loads(probe.read().decode("utf-8", "ignore"))
             if data.get("app") == APP_MARKER:
                 open_browser_with_retry(f"http://127.0.0.1:{DEFAULT_PORT}/")
@@ -224,6 +241,11 @@ def _main():
                     p.start()
             except Exception as e:
                 safe_log_exception("main", f"操作失败: {e}", "warning")
+                # 托盘是"无窗口"入口，失败必须用气泡告知，否则用户只会看到
+                # "点了没反应"（例如端口被占用、服务器未安装）
+                with contextlib.suppress(Exception):
+                    if tray is not None:
+                        tray.notify(tr_msg("启动服务器失败", "Failed to start server"), str(e))
 
         def _tray_exit():
             """系统托盘退出：停止服务器、停止托盘、关闭 HTTP 服务器、退出程序。"""
@@ -276,7 +298,8 @@ def _main():
             notify_title = "Minecraft 基岩版服务器管理器"
             notify_body = f"管理界面已启动：{url}"
         threading.Timer(1.5, lambda: tray.notify(notify_title, notify_body) if tray else None).start()
-    except Exception:
+    except Exception as e:
+        safe_log_exception("main", f"_main 忽略异常: {e}", "warning")
         tray = None
         threading.Timer(0.8, lambda: open_browser_with_retry(url)).start()
 

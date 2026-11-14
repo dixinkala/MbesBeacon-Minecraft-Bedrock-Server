@@ -10,6 +10,10 @@
     --bg:#0f1216; --panel:#171c22; --panel2:#1e252e; --line:#2a333f;
     --txt:#e6edf3; --dim:#8b98a5; --acc:#3fb950; --acc2:#58a6ff; --warn:#d29922; --err:#f85149;
     --log-bg:#0a0d10; --log-txt:#c9d1d9;
+    /* 兼容别名：模板字符串里大量使用 --bg2/--border/--muted/--txt2/--accent，
+       但不变量名本身定义为 --panel2/--line/--dim/--txt/--acc。
+       这里用别名兜底，避免卡片背景透明、边框缺失。 */
+    --bg2:var(--panel2); --border:var(--line); --muted:var(--dim); --txt2:var(--dim); --accent:var(--acc);
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{background:var(--bg); color:var(--txt); font-family:"Microsoft YaHei","Segoe UI",sans-serif; font-size:14px;}
@@ -1157,6 +1161,18 @@ const I18N_HELP_EN = "【MbesBeacon — Minecraft Bedrock Server Manager Help】
   </div>
 </div>
 
+<!-- 自定义确认弹窗（替代原生 confirm） -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal" style="width:460px; max-width:92vw;">
+    <h3 id="confirmTitle">请确认</h3>
+    <div id="confirmMsg" style="margin:10px 0; line-height:1.6; word-break:break-word;"></div>
+    <div class="btns">
+      <button class="btn" id="confirmCancel">取消</button>
+      <button class="btn primary" id="confirmOk">确定</button>
+    </div>
+  </div>
+</div>
+
 <!-- 更新服务器弹窗 -->
 <div class="modal-bg" id="updateModal">
   <div class="modal">
@@ -1616,6 +1632,15 @@ let tabs=document.querySelectorAll('.tab');
 // ---- Escape 键关闭弹窗 ----
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape'){
+    // 确认弹窗必须走"取消"路径：直接隐藏会跳过回调，
+    // 导致 _confirmCallback 残留、勾选状态（如"跳过 SSL 验证"）不回滚，
+    // 等于让用户绕过确认。
+    const cm=$('confirmModal');
+    if(cm && cm.style.display!=='none'){
+      const cancel=$('confirmCancel');
+      if(cancel) cancel.onclick();
+      return;
+    }
     document.querySelectorAll('.modal-bg').forEach(m=>{
       if(m.id!=='installModal' || !$('btnCancel')?.disabled){
         m.style.display='none';
@@ -1634,6 +1659,26 @@ function showAlert(msg, type){
   $('alertModal').style.display='flex';
 }
 $('alertOk').onclick=()=>{ $('alertModal').style.display='none'; };
+
+// ---- 自定义确认弹窗（替代原生 confirm，支持回调） ----
+// 早期代码调用了未定义的 showConfirm()，导致"跳过 SSL 验证"的确认框直接抛错、
+// 勾选状态无法回滚。此处补齐实现：确认/取消都会回调，保证调用方状态一致。
+let _confirmCallback=null;
+function showConfirm(title, msg, callback){
+  const modal=$('confirmModal');
+  $('confirmTitle').textContent=title||tt('请确认');
+  $('confirmMsg').textContent=msg||'';
+  _confirmCallback=(typeof callback==='function')?callback:null;
+  modal.style.display='flex';
+}
+function _closeConfirm(result){
+  $('confirmModal').style.display='none';
+  const cb=_confirmCallback;
+  _confirmCallback=null;
+  if(cb) cb(result);
+}
+$('confirmOk').onclick=()=>_closeConfirm(true);
+$('confirmCancel').onclick=()=>_closeConfirm(false);
 
 // ---- 状态轮询 ----
 const API_TOKEN = document.querySelector('meta[name="api-token"]')?.content || '';
@@ -1858,7 +1903,10 @@ window.wizardFinish=()=>{
 setTimeout(showWizard, 500);
 
 // ---- 控制台 SSE 实时流（替代轮询，延迟<300ms）----
-function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// 模板字符串里拼接用户/服务端数据统一走 esc()：额外转义引号，
+// 用于属性值（onclick 等）场景，防止跳出属性注入 JS。
+function esc(s){ return escapeHtml(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function highlightLog(text){
   let h=escapeHtml(text);
   // 关键字高亮
@@ -1880,11 +1928,14 @@ function startConsoleStream(){
       try{
         const data=JSON.parse(e.data);
         // 控制台被截断（2000行上限）导致索引回退时清空重建，避免日志重复/倒退
-        if(data.reset){ $('consoleBox').innerHTML=''; }
+        if(data.reset){ $('consoleBox').innerHTML=''; consolePlain=''; }
         if(data.lines){
           const b=$('consoleBox');
           b.innerHTML+=highlightLog(data.lines);
           b.scrollTop=b.scrollHeight;
+          // 维护纯文本副本供搜索使用（上限与后端 MAX_LINES 对齐，避免无限增长）
+          consolePlain+=data.lines;
+          if(consolePlain.length>4*1024*1024){ consolePlain=consolePlain.slice(-2*1024*1024); }
         }
         consoleN=data.count;
         $('consoleState').textContent=data.running?'● 运行中':'○ 已停止';
@@ -2118,15 +2169,36 @@ async function loadConfig(){
   if(!r.ok){ $('cfgPath').textContent=tt('未找到 server.properties（')+tt(r.error)+tt('）。请先在「① 安装服务器」页安装后点击「重新载入」。'); return; }
   $('cfgPath').textContent=tt('配置文件：')+r.path;
   cfgVals=r.data||{};
-  for(const key in metaMap){
-    const [label,kind,opts]=metaMap[key];
-    const cur=(cfgVals[key]!==undefined&&cfgVals[key]!==null)?cfgVals[key]:opts[0];
+  renderConfigFields(Object.keys(metaMap).map(k=>[k, ...metaMap[k]]));
+}
+
+// 高级模式：使用服务端 /api/config/full 返回的完整元数据渲染全部配置项。
+// 元数据形如 [key, 标签, 类型, 默认值或选项数组]。
+function renderConfig(data, meta){
+  cfgVals=Object.assign({}, data||{});
+  const grid=$('cfgGrid'); if(!grid) return;
+  grid.innerHTML='';
+  if(!Array.isArray(meta)||!meta.length){ loadConfig(); return; }
+  renderConfigFields(meta);
+}
+
+// 按元数据渲染配置表单（标准模式与高级模式共用）
+function renderConfigFields(meta){
+  const grid=$('cfgGrid'); if(!grid) return;
+  grid.innerHTML='';
+  meta.forEach(item=>{
+    if(!Array.isArray(item)||item.length<2) return;
+    const key=item[0], label=item[1], kind=item[2]||'text';
+    const spec=item[3];
+    const cur=(cfgVals[key]!==undefined&&cfgVals[key]!==null)?cfgVals[key]:(Array.isArray(spec)?spec[0]:(spec!==undefined?spec:''));
     const wrap=document.createElement('div'); wrap.className='field';
     const lab=document.createElement('label'); lab.textContent=tt(label);
     let inp;
     if(kind==='choice'){
+      const opts=Array.isArray(spec)?spec:[];
       inp=document.createElement('select');
       opts.forEach(o=>{ const op=document.createElement('option'); op.value=o; op.textContent=o; inp.appendChild(op); });
+      if(cur!==''&&!opts.includes(String(cur))){ const op=document.createElement('option'); op.value=cur; op.textContent=cur; inp.appendChild(op); }
       inp.value=cur;
     }else if(kind==='bool'){
       inp=document.createElement('select');
@@ -2134,10 +2206,13 @@ async function loadConfig(){
       inp.value=(String(cur).toLowerCase()==='true')?'true':'false';
     }else{
       inp=document.createElement('input'); inp.type='text'; inp.value=cur;
+      // int/float 使用数字输入，避免用户输入非法字符后才在保存时被拒
+      if(kind==='int') inp.inputMode='numeric';
+      if(kind==='float') inp.inputMode='decimal';
     }
     inp.onchange=()=>{ cfgVals[key]=inp.value; };
     wrap.appendChild(lab); wrap.appendChild(inp); grid.appendChild(wrap);
-  }
+  });
 }
 $('btnCfgSave').onclick=async()=>{
   const r=await jpost('/api/config',{data:cfgVals});
@@ -2357,18 +2432,30 @@ $('btnCopyLog').onclick=()=>{
   const text=$('consoleBox').innerText;
   navigator.clipboard.writeText(text).then(()=>{ showAlert(tt('日志已复制到剪贴板'),'success'); }).catch(()=>{ showAlert(tt('复制失败，请手动选择复制'),'warn'); });
 };
-$('btnExportLog').onclick=()=>{
-  // 下载日志文件
-  const a=document.createElement('a');
-  a.href='/api/console/export';
-  a.download='';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+$('btnExportLog').onclick=async()=>{
+  // 该端点需要 X-API-Token；直接 <a href> 导航不带请求头，会拿到 403 JSON。
+  // 统一走 fetch + Blob（与"导出存档"一致）。
+  try{
+    const resp=await fetch('/api/console/export',{headers:{'X-API-Token':API_TOKEN}});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const blob=await resp.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='bedrock_console.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(e){ showAlert(tt('导出日志失败：')+e.message,'error'); }
 };
 $('btnClearLog').onclick=()=>{
   if(confirm(tt('确定要清空控制台日志吗？（此操作不可恢复，日志文件不受影响）'))){
-    jpost('/api/console/clear',{}).then(()=>{ $('consoleBox').innerHTML=''; showAlert(tt('控制台已清空'),'success'); });
+    jpost('/api/console/clear',{}).then(()=>{
+      $('consoleBox').innerHTML='';
+      // 必须同时清掉本地缓存：否则在搜索框里输入再删空时，
+      // filterConsole 会用 consolePlain 把"已清空"的旧日志整段渲染回来。
+      consolePlain='';
+      const s=$('consoleSearch'); if(s) s.value='';
+      showAlert(tt('控制台已清空'),'success');
+    });
   }
 };
 
@@ -2506,7 +2593,14 @@ window.deleteBackup=async(i)=>{
 
 // ---------------- 命令自动补全 ----------------
 let cmdSuggestions=[]; let cmdSuggestIdx=-1;
-async function onCmdInput(){
+// 输入防抖：每次按键都发 POST 会撞上服务端的 POST 配额（默认 5 次/秒），
+// 快速打字时补全会被 429 静默掐断；同时也避免旧响应覆盖新建议。
+let cmdInputTimer=null;
+function onCmdInput(){
+  if(cmdInputTimer) clearTimeout(cmdInputTimer);
+  cmdInputTimer=setTimeout(()=>{ cmdInputTimer=null; onCmdInputNow(); },120);
+}
+async function onCmdInputNow(){
   const input=$('inCmd').value;
   const dropdown=$('cmdDropdown');
   if(!input.trim()){ dropdown.style.display='none'; cmdSuggestions=[]; return; }
@@ -2564,14 +2658,34 @@ window.onCmdKeydown=(e)=>{
 };
 
 const cmdHistory=[]; let cmdHistIdx=-1;
-const DANGEROUS_CMDS=['stop','kill','ban','pardon','deop','restart'];
-function sendCmd(){
+// 危险命令清单由后端提供（constants.DANGEROUS_COMMANDS 是单一事实来源）。
+// 早期前端自己硬编码 ['stop','kill','ban','pardon','deop','restart']，缺
+// "whitelist remove" / "allowlist remove" 两个多词命令，导致这两类操作
+// 在界面上没有二次确认，而后端却认为危险。
+const DANGEROUS_CMDS_FALLBACK=['stop','kill','ban','pardon','deop','restart','whitelist remove','allowlist remove'];
+let dangerousCmds=null;
+async function getDangerousCmds(){
+  if(dangerousCmds) return dangerousCmds;
+  try{
+    const r=await jget('/api/commands/dangerous');
+    if(r && r.ok && Array.isArray(r.commands) && r.commands.length){ dangerousCmds=r.commands; return dangerousCmds; }
+  }catch(e){ /* 取不到就用内置兜底清单 */ }
+  dangerousCmds=DANGEROUS_CMDS_FALLBACK;
+  return dangerousCmds;
+}
+function isDangerousCmd(cmd,list){
+  const text=(cmd||'').toLowerCase().trim();
+  if(!text) return false;
+  // 多词命令（whitelist remove）按"前缀 + 空格"匹配，单词命令按首 token 匹配
+  return (list||[]).some(d=>text===d || text.startsWith(d+' '));
+}
+async function sendCmd(){
   const c=$('inCmd').value.trim();
   if(!c){ showAlert('请输入指令','warn'); return; }
   if(!serverRunning){ showAlert('服务器未运行，无法发送指令','warn'); return; }
-  // 危险指令二次确认
-  const mainCmd=c.toLowerCase().split(' ')[0];
-  if(DANGEROUS_CMDS.includes(mainCmd)){
+  // 危险指令二次确认（清单来自后端，与后端校验保持同一来源）
+  const list=await getDangerousCmds();
+  if(isDangerousCmd(c,list)){
     if(!confirm(tt('⚠ 危险指令确认\n\n你即将执行：')+c+tt('\n\n此操作可能影响服务器运行，确定继续吗？'))) return;
   }
   jpost('/api/cmd',{cmd:c});
@@ -2905,17 +3019,26 @@ async function loadPacks(){
   }
 }
 function packCardHtml(packType, p){
-  const ver=p.version||'未知';
+  // 包名/版本来自导入的 manifest.json，属不可信内容：
+  // 展示走 esc()，事件绑定改为 data-* + 事件委托，避免拼进 onclick 属性被注入。
+  const ver=esc(p.version||'未知');
+  const nameAttr=esc(p.name||'');
   const st=p.enabled?'<span style="color:var(--acc);font-weight:bold;">'+tt('启用')+'</span>':'<span class="hint">'+tt('禁用')+'</span>';
   const btnStyle=p.enabled?'':'background:var(--acc);color:#fff';
   const delStyle='background:#e74c3c;color:#fff';
   return '<div class="field" style="padding:10px 12px;margin-bottom:6px;border-radius:6px;background:var(--bg2);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-    +'<div style="flex:1;min-width:180px;"><strong>'+p.name+'</strong>'
-    +'<div style="font-size:12px;color:var(--dim);">'+tt('版本: ')+ver+(p.enabled?' · '+st:' · '+st)+'</div></div>'
-    +'<button class="btn" style="'+btnStyle+'" onclick="togglePack(\''+packType+'\',\''+p.name.replace(/'/g,"\\'")+'\','+(p.enabled?'false':'true')+')">'+(p.enabled?tt('禁用'):tt('启用'))+'</button>'
-    +'<button class="btn" style="'+delStyle+'" onclick="deletePack(\''+packType+'\',\''+p.name.replace(/'/g,"\\'")+'\')">'+tt('删除')+'</button>'
+    +'<div style="flex:1;min-width:180px;"><strong>'+esc(p.name||'')+'</strong>'
+    +'<div style="font-size:12px;color:var(--dim);">'+tt('版本: ')+ver+' · '+st+'</div></div>'
+    +'<button class="btn" style="'+btnStyle+'" data-pack-type="'+esc(packType)+'" data-pack-name="'+nameAttr+'" data-pack-enable="'+(p.enabled?'0':'1')+'" onclick="onTogglePack(this)">'+(p.enabled?tt('禁用'):tt('启用'))+'</button>'
+    +'<button class="btn" style="'+delStyle+'" data-pack-type="'+esc(packType)+'" data-pack-name="'+nameAttr+'" onclick="onDeletePack(this)">'+tt('删除')+'</button>'
     +'</div>';
 }
+window.onTogglePack=(btn)=>{
+  togglePack(btn.dataset.packType, btn.dataset.packName, btn.dataset.packEnable==='1');
+};
+window.onDeletePack=(btn)=>{
+  deletePack(btn.dataset.packType, btn.dataset.packName);
+};
 window.togglePack=async(packType,name,enabled)=>{
   if(!name) return;
   try{
@@ -2938,7 +3061,19 @@ window.importPack=async(packType,input)=>{
     reader.onload=async function(e){
       try{
         const base64=e.target.result.split(',')[1];
-        const r=await jpost('/api/packs/import',{pack_type:packType,file_data:base64,file_name:file.name});
+        const send=async(overwrite)=>{
+          return await jpost('/api/packs/import',{pack_type:packType,file_data:base64,file_name:file.name,overwrite:!!overwrite});
+        };
+        let r=await send(false);
+        // 同名包冲突：后端会拒绝并提示"请选择覆盖"，这里直接给出确认弹窗，
+        // 否则用户按提示找不到"覆盖"选项，只能先去删包（删包还要输 DELETE）。
+        if(!r.ok && (r.error||'').includes('已存在同名包')){
+          const confirmed=await new Promise(res=>{
+            showConfirm(tt('包已存在'), (r.error||'')+'\n\n'+tt('是否用新包覆盖它？（旧包内容会被替换）'), res);
+          });
+          if(!confirmed){ showAlert(tt('已取消导入'),'info'); input.value=''; return; }
+          r=await send(true);
+        }
         if(r.ok){ showAlert(tt('包导入成功！')+(r.message?' '+r.message:''),'success'); loadPacks(); }
         else showAlert(tt('包导入失败: ')+(r.error||'未知'),'error');
       }catch(err){ showAlert(tt('包导入失败: ')+err,'error'); }
@@ -2964,7 +3099,9 @@ window.deletePack=async(packType,name)=>{
 let scheduledTasks=[];
 async function loadScheduledTasks(){
   try{
-    const r=await jpost('/api/scheduled/list',{});
+    // 该端点在服务端注册为 GET（misc.py），早期前端用 POST 导致 404 被空 catch 吞掉，
+    // 计划任务列表于是永远显示为空。
+    const r=await jget('/api/scheduled/list');
     scheduledTasks=r.tasks||[];
     renderScheduledTasks();
   }catch(e){}
@@ -2977,8 +3114,9 @@ function renderScheduledTasks(){
     const typeName={restart:'定时重启',backup:'定时备份',announce:'定时公告'}[t.type]||t.type;
     const schedName=t.schedule_type==='daily'?('每天 '+t.time):('每'+t.interval_hours+'小时');
     html+='<div class="field" style="padding:10px 14px;margin-bottom:6px;border-radius:8px;background:var(--bg2);display:flex;justify-content:space-between;align-items:center;">';
-    html+='<div><strong>'+typeName+'</strong> <span class="hint">'+schedName+'</span>';
-    if(t.type==='announce'&&t.message) html+=' <span class="hint">消息: '+t.message+'</span>';
+    html+='<div><strong>'+typeName+'</strong> <span class="hint">'+esc(schedName)+'</span>';
+    // 公告消息由用户输入并持久化，必须转义（否则可注入 <img onerror> 等）
+    if(t.type==='announce'&&t.message) html+=' <span class="hint">消息: '+esc(t.message)+'</span>';
     html+='</div>';
     html+='<div style="display:flex;gap:6px;align-items:center;">';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:12px;"><input type="checkbox" '+(t.enabled!==false?'checked':'')+' onchange="toggleTask('+i+',this.checked)"> 启用</label>';
@@ -3054,13 +3192,21 @@ function copyConnInfo(){
 }
 
 // ---- 控制台搜索 ----
-let consoleOriginal='';
+// 日志由 SSE 以 HTML 形式写入 #consoleBox，搜索需要纯文本副本：
+// consolePlain 同步累积原始文本，过滤时重新渲染（高亮仍然生效）。
+let consolePlain='';
+function renderConsole(text){
+  $('consoleBox').innerHTML=highlightLog(text);
+  $('consoleBox').scrollTop=$('consoleBox').scrollHeight;
+}
 function filterConsole(){
-  const q=$('consoleSearch').value.toLowerCase();
-  const pre=$('consoleOut');
-  if(!q){ pre.textContent=consoleOriginal; return; }
-  const lines=consoleOriginal.split('\n');
-  pre.textContent=lines.filter(l=>l.toLowerCase().includes(q)).join('\n');
+  const q=($('consoleSearch').value||'').toLowerCase();
+  const box=$('consoleBox');
+  if(!q){ renderConsole(consolePlain); return; }
+  const lines=consolePlain.split('\n');
+  const matched=lines.filter(l=>l.toLowerCase().includes(q));
+  box.innerHTML=highlightLog(matched.join('\n')||('（没有匹配 "'+$('consoleSearch').value+'" 的日志）'));
+  box.scrollTop=0;
 }
 
 // ---- 键盘快捷键 ----
@@ -3074,49 +3220,14 @@ document.addEventListener('keydown',e=>{
 });
 
 // ---- 命令自动补全 ----
-const COMMAND_LIST=['help','list','say','give','tp','gamemode','weather','time','kill','op','deop','kick','ban','pardon','ban-ip','pardon-ip','whitelist','stop','save','save-all','save-off','save-on','setworldspawn','difficulty','effect','enchant','experience','fill','summon','clear','playsound','particle','testfor','testforblock','testforblocks','toggledownfall','xp','me','tell','tellraw','title','w','seed','defaultgamemode','gamerule','alwaysday','daylock','lockeddifficulty','mobevent','reload','replaceitem','structure','stopsound','spreadplayers','setblock','clone','execute','function'];
-let cmdAutocompleteDiv=null;
+// 只保留服务端补全（onCmdInput → /api/commands/autocomplete）。
+// 早期这里还有一套本地 COMMAND_LIST 浮层，两套会同时响应、弹出两个下拉，
+// 且本地版本不知道在线玩家、无法做玩家名补全，故整段移除。
 document.addEventListener('DOMContentLoaded',()=>{
   // 隐藏加载骨架屏（页面已就绪）
   const loadingOverlay=document.getElementById('loadingOverlay');
   if(loadingOverlay){ setTimeout(()=>{ loadingOverlay.style.display='none'; },300); }
-  const inCmd=$('inCmd');
-  if(inCmd){
-    inCmd.addEventListener('input',()=>{
-      const val=inCmd.value.trim();
-      if(!val||!val.startsWith('/')){ hideCmdAutocomplete(); return; }
-      const prefix=val.substring(1).toLowerCase();
-      const matches=COMMAND_LIST.filter(c=>c.startsWith(prefix)).slice(0,8);
-      if(matches.length===0){ hideCmdAutocomplete(); return; }
-      showCmdAutocomplete(matches,inCmd);
-    });
-    inCmd.addEventListener('blur',()=>setTimeout(hideCmdAutocomplete,200));
-    inCmd.addEventListener('keydown',e=>{
-      if(e.key==='Tab'&&cmdAutocompleteDiv&&cmdAutocompleteDiv.style.display!=='none'){
-        e.preventDefault();
-        const first=cmdAutocompleteDiv.querySelector('.ac-item');
-        if(first){ inCmd.value='/'+first.textContent; hideCmdAutocomplete(); }
-      }
-    });
-  }
 });
-function showCmdAutocomplete(matches,input){
-  if(!cmdAutocompleteDiv){
-    cmdAutocompleteDiv=document.createElement('div');
-    cmdAutocompleteDiv.style.cssText='position:absolute;background:var(--bg2);border:1px solid var(--border);border-radius:6px;z-index:1000;max-height:200px;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.3);';
-    document.body.appendChild(cmdAutocompleteDiv);
-    cmdAutocompleteDiv.addEventListener('mouseover',e=>{ if(e.target.classList.contains('ac-item')) e.target.style.background='var(--bg)'; });
-    cmdAutocompleteDiv.addEventListener('mouseout',e=>{ if(e.target.classList.contains('ac-item')) e.target.style.background='transparent'; });
-    cmdAutocompleteDiv.addEventListener('click',e=>{ if(e.target.classList.contains('ac-item')){ $('inCmd').value='/'+e.target.dataset.cmd; cmdAutocompleteDiv.style.display='none'; } });
-  }
-  const rect=input.getBoundingClientRect();
-  cmdAutocompleteDiv.style.left=rect.left+'px';
-  cmdAutocompleteDiv.style.top=(rect.bottom+2)+'px';
-  cmdAutocompleteDiv.style.width=rect.width+'px';
-  cmdAutocompleteDiv.style.display='block';
-  cmdAutocompleteDiv.innerHTML=matches.map(m=>`<div class="ac-item" data-cmd="${m}" style="padding:6px 12px;cursor:pointer;font-size:13px;">/${m}</div>`).join('');
-}
-function hideCmdAutocomplete(){ if(cmdAutocompleteDiv) cmdAutocompleteDiv.style.display='none'; }
 
 // ---- 更新标签页点击处理 ----
 const _origTabClick=tabs;

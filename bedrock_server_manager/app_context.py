@@ -161,6 +161,9 @@ class AppContext:
         def wait_for_new(self, *args, **kwargs):
             return "", 0
 
+        def dropped_since(self, *args, **kwargs):
+            return False
+
         def set_log_file(self, *args, **kwargs):
             pass
 
@@ -177,7 +180,15 @@ class AppContext:
             return iter([])
 
     class _NullInstallState:
-        """空安装状态对象：当 install_state 未初始化时使用，避免 NoneType 错误。"""
+        """空安装状态对象：当 install_state 未初始化时使用，避免 NoneType 错误。
+
+        需要接受任意属性赋值：安装流程会写 ``install_state.busy = True``
+        这类属性，若空对象直接抛 AttributeError，未初始化时的调用会崩。
+        """
+
+        def __setattr__(self, name, value):
+            """接受并丢弃所有赋值（空对象语义）。"""
+            return None
 
         def snapshot(self):
             return {
