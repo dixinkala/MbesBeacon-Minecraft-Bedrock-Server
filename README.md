@@ -207,6 +207,8 @@ python run.py
 pip install pyinstaller
 
 # 打包（可选：设置证书密码进行数字签名）
+# 证书默认从 %USERPROFILE%\.mbesbeacon\certs\MbesBeacon.pfx 读取（位于仓库外，
+# 建议放在加密目录）；也可用 $env:MBES_CERT_PATH 指定，都没有时回退到仓库根目录
 # set CERT_PASS=你的密码
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 

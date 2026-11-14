@@ -206,6 +206,9 @@ python run.py
 pip install pyinstaller
 
 # Build (optionally set a certificate password for signing)
+# The certificate is read from %USERPROFILE%\.mbesbeacon\certs\MbesBeacon.pfx
+# (outside the repo; keep it in an encrypted folder). You can also point
+# $env:MBES_CERT_PATH at it; otherwise it falls back to the repo root.
 # set CERT_PASS=your_password
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
