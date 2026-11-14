@@ -78,7 +78,7 @@ jobs:
       uses: actions/checkout@v7
 
     - name: 🟩 设置 Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v7
       with:
         # 用 22：`node --test <glob>` 的 glob 支持是 22 才稳定的，
         # 之前 pin 20 与下面的 glob 写法自相矛盾（在 20 上会直接报找不到模块）。
