@@ -28,6 +28,21 @@ LOG_LEVELS = {
 log_dir = LOGS_DIR
 log_file = os.path.join(LOGS_DIR, "app.log")
 
+# 默认日志级别。
+# 早期实现把 logger 固定为 INFO，而文件 handler 设为 DEBUG —— 记录在 logger
+# 层就被过滤掉了，全项目的 log_debug / safe_log_exception(level="debug") 从未生效。
+# 这里允许用 MBES_LOG_LEVEL 环境变量覆盖（排障时设 DEBUG 即可看到明细），
+# 默认仍为 INFO，避免上百处 debug 诊断默认刷爆日志。
+_DEFAULT_LEVEL_NAME = (os.environ.get("MBES_LOG_LEVEL") or "INFO").upper()
+if _DEFAULT_LEVEL_NAME not in {
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+}:
+    _DEFAULT_LEVEL_NAME = "INFO"
+
 # 全局日志器实例与创建锁
 _app_logger = None
 _logger_lock = threading.Lock()
@@ -51,7 +66,7 @@ def get_app_logger():
             return _app_logger
 
         logger = logging.getLogger("bedrock_server_manager")
-        logger.setLevel(logging.INFO)
+        logger.setLevel(LOG_LEVELS[_DEFAULT_LEVEL_NAME])
         # logging.getLogger 按名缓存同一实例，重建时清空旧 handler 避免累积
         logger.handlers.clear()
 

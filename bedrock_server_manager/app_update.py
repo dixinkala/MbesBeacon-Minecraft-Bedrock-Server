@@ -45,18 +45,31 @@ def _parse_version(version_str):
     """
     解析版本字符串为元组，用于比较。
     支持 "v0.1.0"、"0.1.0"、"0.1.0.0"、"1.0.22.1" 等格式（最多 4 段）。
+
+    仅接受纯数字段。遇到预发布后缀（如 ``1.0.25-beta``）或其他非数字段时
+    返回 None —— 早期实现把它们当作 0，导致 ``1.0.25-beta`` 与 ``1.0.25``
+    解析结果相同，既不提示升级也不提示降级，用户完全收不到更新。
+    版本号无法比较时宁可不提示，也不要给出错误结论。
+
+    Args:
+        version_str: 版本字符串
+
+    Returns:
+        tuple | None: 4 段整数元组；无法解析返回 None
     """
     if not version_str:
-        return (0, 0, 0, 0)
-    # 去掉前缀 v
-    v = version_str.lstrip("vV")
-    # 分割版本号
+        return None
+    v = version_str.strip().lstrip("vV")
+    if not v:
+        return None
     parts = []
     for p in v.split("."):
-        try:
-            parts.append(int(p))
-        except ValueError:
-            parts.append(0)
+        # 只接受纯数字段（拒绝 "25-beta"、"25rc1"、空段等）
+        if not p.isdigit():
+            return None
+        parts.append(int(p))
+    if not parts:
+        return None
     # 补齐到 4 位（第 4 段用于区分 1.0.22 与 1.0.22.1 等构建号差异）
     while len(parts) < 4:
         parts.append(0)
@@ -66,9 +79,14 @@ def _parse_version(version_str):
 def _is_newer(latest_version, current_version):
     """
     比较版本号，判断 latest 是否比 current 新。
+
+    任一版本号无法解析（如预发布版本）时返回 False：不主动提示更新，
+    以免把 ``1.0.25-beta`` 误判为与 ``1.0.25`` 相等或更高。
     """
     latest = _parse_version(latest_version)
     current = _parse_version(current_version)
+    if latest is None or current is None:
+        return False
     return latest > current
 
 

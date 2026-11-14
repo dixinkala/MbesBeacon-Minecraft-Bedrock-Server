@@ -25,11 +25,6 @@ class PerformanceMonitor:
         self.max_history = max_history
         self._history = deque(maxlen=max_history)
         self._lock = threading.Lock()
-        self._last_cpu_time = None
-        self._last_cpu_wall_time = None
-        self._tps_history = deque(maxlen=60)  # 最近60秒的TPS
-        self._last_tick_time = None
-        self._tick_count = 0
         self._current_tps = 0.0
         # P2-1 增量读取：记录上次控制台读取位置与玩家快照，避免每 5 秒全文扫描
         self._last_console_idx = 0
@@ -74,9 +69,23 @@ class PerformanceMonitor:
             pid = proc.pid
 
             # 获取进程启动时间（用于计算运行时长）
+            # 注意：proc 是 subprocess.Popen，没有 create_time()。
+            # 早期实现 hasattr 恒为假，回退到 time.time() → uptime_seconds 永远是 0。
+            # 优先用 ServerProcess 自己记录的启动时间戳，其次用 psutil 创建时间。
             try:
-                create_time = proc.create_time() if hasattr(proc, "create_time") else time.time()
-                data["uptime_seconds"] = int(time.time() - create_time)
+                start_ts = 0.0
+                for attr in ("_start_time", "start_time"):
+                    val = getattr(server_proc, attr, None)
+                    if isinstance(val, (int, float)) and val > 0:
+                        start_ts = float(val)
+                        break
+                if not start_ts:
+                    try:
+                        start_ts = psutil.Process(pid).create_time()
+                    except (psutil.Error, OSError):
+                        start_ts = 0.0
+                if start_ts:
+                    data["uptime_seconds"] = max(0, int(time.time() - start_ts))
             except (OSError, ValueError, AttributeError) as e:
                 safe_log_exception("performance.py", f"性能数据采集失败: {e}", "debug")
 
@@ -105,9 +114,11 @@ class PerformanceMonitor:
             recent_text = ""
             if console is not None:
                 try:
-                    recent_text, new_idx = console.read_since(self._last_console_idx)
-                    if new_idx < self._last_console_idx:
-                        # 控制台被清空或截断导致索引失效：从头重读
+                    prev_idx = self._last_console_idx
+                    recent_text, new_idx = console.read_since(prev_idx)
+                    dropped = getattr(console, "dropped_since", None)
+                    # 游标倒退（控制台被清空/替换）或已落后于保留窗口时从头重读
+                    if new_idx < prev_idx or (callable(dropped) and dropped(prev_idx)):
                         recent_text, new_idx = console.read_since(0)
                     self._last_console_idx = new_idx
                 except (OSError, ValueError, AttributeError) as e:

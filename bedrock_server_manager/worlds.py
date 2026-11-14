@@ -8,7 +8,72 @@ import shutil
 import time
 
 from .app_logger import safe_log_exception
-from .config import backup_config_history
+from .config import backup_config_history, load_properties, save_properties
+from .utils import is_path_within
+
+# Windows 保留设备名（作为目录名会导致创建失败或被系统特殊处理）
+_RESERVED_NAMES = {
+    "con",
+    "prn",
+    "aux",
+    "nul",
+    *(f"com{i}" for i in range(1, 10)),
+    *(f"lpt{i}" for i in range(1, 10)),
+}
+
+
+def _validate_world_name_basic(name: str) -> tuple[bool, str]:
+    """校验世界目录名本身的合法性（不含路径解析）。
+
+    防御目标：``..``/``.`` 等相对路径段、路径分隔符、绝对路径、
+    Windows 保留设备名、结尾空格或点号（Windows 会静默裁剪）。
+
+    Args:
+        name: 待校验的世界名
+
+    Returns:
+        tuple: (ok, error_msg)
+    """
+    if not name:
+        return False, "世界名不能为空"
+    if name != name.strip():
+        return False, "世界名首尾不能包含空白字符"
+    n = name
+    if n in (".", ".."):
+        return False, "世界名不能为 . 或 .."
+    if any(c in n for c in '\\/:*?"<>|'):
+        return False, "世界名包含非法字符"
+    if any(ord(c) < 32 for c in n):
+        return False, "世界名包含控制字符"
+    if n.endswith("."):
+        return False, "世界名不能以点号结尾"
+    # 去掉扩展名后再比较保留名（CON.txt 同样被 Windows 特殊处理）
+    if n.split(".")[0].lower() in _RESERVED_NAMES:
+        return False, f"世界名 '{n}' 是系统保留名"
+    return True, ""
+
+
+def validate_world_name(name: str, server_dir: str = "") -> tuple[bool, str]:
+    """校验世界名；同时保证其解析后的路径不会逃出 worlds 目录。
+
+    Args:
+        name: 待校验的世界名
+        server_dir: 服务器目录（提供时执行路径边界校验）
+
+    Returns:
+        tuple: (ok, error_msg)
+    """
+    ok, err = _validate_world_name_basic(name)
+    if not ok:
+        return False, err
+    if server_dir:
+        worlds_dir = os.path.join(server_dir, "worlds")
+        target = os.path.join(worlds_dir, name)
+        if not is_path_within(target, worlds_dir):
+            return False, "世界名解析后的路径越界"
+        if os.path.normcase(os.path.abspath(target)) == os.path.normcase(os.path.abspath(worlds_dir)):
+            return False, "世界名不能指向 worlds 目录本身"
+    return True, ""
 
 
 def list_worlds(server_dir: str) -> list[dict[str, any]]:
@@ -81,11 +146,10 @@ def get_active_world_name(server_dir: str) -> str:
     if not os.path.isfile(props_path):
         return "Bedrock level"
     try:
-        with open(props_path, encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("level-name="):
-                    return line.split("=", 1)[1].strip()
+        # 复用 config 模块的解析（统一 key 归一化与大小写处理，避免两套解析结论不一致）
+        for key, value in load_properties(props_path):
+            if key == "level-name" and value.strip():
+                return value.strip()
     except Exception as e:
         safe_log_exception("worlds", f"操作失败: {e}", "warning")
     return "Bedrock level"
@@ -103,9 +167,9 @@ def set_active_world(server_dir: str, world_name: str) -> tuple[bool, str]:
     """
     if not server_dir or not os.path.isdir(server_dir):
         return False, "服务器目录不存在"
-    if not world_name or not world_name.strip():
-        return False, "世界名不能为空"
-    world_name = world_name.strip()
+    ok, err = validate_world_name(world_name, server_dir)
+    if not ok:
+        return False, err
 
     # 检查世界是否存在
     world_path = os.path.join(server_dir, "worlds", world_name)
@@ -118,24 +182,23 @@ def set_active_world(server_dir: str, world_name: str) -> tuple[bool, str]:
 
     try:
         # 备份配置
-
         backup_config_history(server_dir)
 
-        # 读取并修改配置
-        lines = []
-        found = False
-        with open(props_path, encoding="utf-8", errors="replace") as f:
-            for line in f:
-                if line.strip().startswith("level-name="):
-                    lines.append(f"level-name={world_name}\n")
-                    found = True
-                else:
-                    lines.append(line)
-        if not found:
-            lines.append(f"level-name={world_name}\n")
+        # 复用 config.save_properties：保留注释/未列出的键、复用编码处理、原子写入
+        items = load_properties(props_path)
+        merged = []
+        replaced = False
+        for key, value in items:
+            if key == "level-name":
+                merged.append((key, world_name))
+                replaced = True
+            else:
+                merged.append((key, value))
+        if not replaced:
+            merged.append(("level-name", world_name))
 
-        with open(props_path, "w", encoding="utf-8") as f:
-            f.writelines(lines)
+        if not save_properties(props_path, merged):
+            return False, "写入 server.properties 失败"
         return True, ""
     except Exception as e:
         return False, f"设置活动世界失败: {str(e)}"
@@ -154,14 +217,12 @@ def rename_world(server_dir: str, old_name: str, new_name: str) -> tuple[bool, s
     """
     if not server_dir or not os.path.isdir(server_dir):
         return False, "服务器目录不存在"
-    if not old_name or not new_name:
-        return False, "世界名不能为空"
-    old_name = old_name.strip()
-    new_name = new_name.strip()
-
-    # 检查世界名合法性
-    if any(c in new_name for c in '\\/:*?"<>|'):
-        return False, "世界名包含非法字符"
+    ok, err = validate_world_name(old_name, server_dir)
+    if not ok:
+        return False, err
+    ok, err = validate_world_name(new_name, server_dir)
+    if not ok:
+        return False, "新" + err
 
     old_path = os.path.join(server_dir, "worlds", old_name)
     new_path = os.path.join(server_dir, "worlds", new_name)
@@ -203,9 +264,9 @@ def delete_world(server_dir: str, world_name: str) -> tuple[bool, str]:
     """
     if not server_dir or not os.path.isdir(server_dir):
         return False, "服务器目录不存在"
-    if not world_name or not world_name.strip():
-        return False, "世界名不能为空"
-    world_name = world_name.strip()
+    ok, err = validate_world_name(world_name, server_dir)
+    if not ok:
+        return False, err
 
     world_path = os.path.join(server_dir, "worlds", world_name)
     if not os.path.isdir(world_path):
@@ -236,13 +297,12 @@ def duplicate_world(server_dir: str, source_name: str, new_name: str) -> tuple[b
     """
     if not server_dir or not os.path.isdir(server_dir):
         return False, "服务器目录不存在"
-    if not source_name or not new_name:
-        return False, "世界名不能为空"
-    source_name = source_name.strip()
-    new_name = new_name.strip()
-
-    if any(c in new_name for c in '\\/:*?"<>|'):
-        return False, "新世界名包含非法字符"
+    ok, err = validate_world_name(source_name, server_dir)
+    if not ok:
+        return False, err
+    ok, err = validate_world_name(new_name, server_dir)
+    if not ok:
+        return False, "新" + err
 
     source_path = os.path.join(server_dir, "worlds", source_name)
     new_path = os.path.join(server_dir, "worlds", new_name)
@@ -280,6 +340,7 @@ __all__ = [
     "list_worlds",
     "get_active_world_name",
     "set_active_world",
+    "validate_world_name",
     "rename_world",
     "delete_world",
     "duplicate_world",

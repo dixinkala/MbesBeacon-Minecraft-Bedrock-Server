@@ -2,6 +2,7 @@
 玩家管理模块：玩家名校验、在线玩家解析、权限/封禁/白名单管理。
 """
 
+import contextlib
 import json
 import os
 import re
@@ -9,9 +10,10 @@ import time
 
 from .app_context import AppContext
 from .app_logger import safe_log_exception
+from .config import ALLOWLIST_FILE, BANNED_IPS_FILE, BANNED_PLAYERS_FILE, PERMISSIONS_FILE
 from .security import audit_log
 from .server import get_server_proc, server_running
-from .utils import resolve_server_dir
+from .utils import atomic_write_json, resolve_server_dir
 
 # 玩家名校验正则
 _PLAYER_NAME_RE = re.compile(r"^[A-Za-z0-9_.]+$")
@@ -55,28 +57,24 @@ def send_command_capture(cmd, timeout=2.5):
 
 
 def parse_online_players(text: str) -> list:
-    """从 list 命令输出解析在线玩家名列表。"""
+    """从 list 命令输出解析在线玩家名列表。
+
+    只认 BDS 的固定输出格式 ``There are X/Y players online: p1, p2``。
+    早期还有一条"逐行猜玩家名"的兜底（匹配 ``[A-Za-z0-9_ .]{2,20}``），
+    会把回显的命令行（``list`` / ``version``）和日志行误判成玩家，
+    在玩家列表里凭空多出条目；已移除——格式固定时兜底只会带来误报。
+    """
     if not text:
         return []
-    players = []
     # 格式: There are X/Y players online: p1, p2
-    m = re.search(r"players online:\s*(.+)", text, re.IGNORECASE)
-    if m:
-        names = m.group(1).strip()
-        if names:
-            players = [n.strip() for n in names.split(",") if n.strip()]
-    # 兜底：逐行找可能的玩家名
-    if not players:
-        for line in text.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            low = line.lower()
-            if any(k in low for k in ["player", "connect", "online", "there are", "level", "dimension", "xuid"]):
-                continue
-            if re.match(r"^[A-Za-z0-9_ .]+$", line) and 1 < len(line) <= 20:
-                players.append(line)
-    return players
+    m = re.search(r"players online:\s*(.*)", text, re.IGNORECASE)
+    if not m:
+        return []
+    names = m.group(1).strip()
+    if not names:
+        return []
+    # 按逗号切分；基岩允许空格与中文名，故不用 ASCII 白名单过滤
+    return [n.strip() for n in names.split(",") if n.strip()]
 
 
 def read_permissions(server_dir: str) -> list[dict]:
@@ -84,7 +82,7 @@ def read_permissions(server_dir: str) -> list[dict]:
     result = {}
     if not server_dir:
         return result
-    path = os.path.join(server_dir, "permissions.json")
+    path = os.path.join(server_dir, PERMISSIONS_FILE)
     if not os.path.exists(path):
         return result
     try:
@@ -106,7 +104,7 @@ def read_banlist(server_dir: str) -> list[dict]:
     result = []
     if not server_dir:
         return result
-    path = os.path.join(server_dir, "banned-players.json")
+    path = os.path.join(server_dir, BANNED_PLAYERS_FILE)
     if not os.path.exists(path):
         return result
     try:
@@ -127,7 +125,7 @@ def read_allowlist(server_dir: str) -> list[dict]:
     result = []
     if not server_dir:
         return result
-    path = os.path.join(server_dir, "allowlist.json")
+    path = os.path.join(server_dir, ALLOWLIST_FILE)
     if not os.path.exists(path):
         return result
     try:
@@ -152,7 +150,7 @@ def add_allowlist(server_dir: str, name: str) -> bool:
     if server_running():
         get_server_proc().send(f"whitelist add {name}")
         return True
-    path = os.path.join(server_dir, "allowlist.json")
+    path = os.path.join(server_dir, ALLOWLIST_FILE)
     try:
         data = []
         if os.path.exists(path):
@@ -162,10 +160,10 @@ def add_allowlist(server_dir: str, name: str) -> bool:
                 data = []
         if not any((item.get("name", "") if isinstance(item, dict) else str(item)) == name for item in data):
             data.append({"name": name, "ignoresPlayerLimit": False})
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            atomic_write_json(path, data)
         return True
-    except Exception:
+    except Exception as e:
+        safe_log_exception("players", f"add_allowlist 忽略异常: {e}", "warning")
         return False
 
 
@@ -178,7 +176,7 @@ def remove_allowlist(server_dir: str, name: str) -> bool:
     if server_running():
         get_server_proc().send(f"whitelist remove {name}")
         return True
-    path = os.path.join(server_dir, "allowlist.json")
+    path = os.path.join(server_dir, ALLOWLIST_FILE)
     try:
         if not os.path.exists(path):
             return True
@@ -186,14 +184,11 @@ def remove_allowlist(server_dir: str, name: str) -> bool:
             data = json.load(f)
         if isinstance(data, list):
             data = [item for item in data if (item.get("name", "") if isinstance(item, dict) else str(item)) != name]
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            atomic_write_json(path, data)
         return True
-    except Exception:
+    except Exception as e:
+        safe_log_exception("players", f"remove_allowlist 忽略异常: {e}", "warning")
         return False
-
-
-BANNED_IPS_FILE = "banned-ips.json"
 
 
 def load_banned_ips(server_dir: str | None = None) -> list[dict]:
@@ -248,54 +243,58 @@ def ban_ip(ip, reason="", server_dir=None):
         for entry in banned:
             if entry.get("ip") == ip or entry.get("address") == ip:
                 return False, "IP已在封禁列表中"
-        entry = {"ip": ip, "reason": reason, "created": time.strftime("%Y-%m-%d %H:%M:%S"), "source": "manual"}
-        banned.append(entry)
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump(banned, f, indent=2, ensure_ascii=False)
-        if server_running():
+        running = server_running()
+        if running:
+            # 运行中先发命令让服务端立刻生效（BDS 自己会持久化，可能丢掉
+            # created/source 字段）。命令失败就不写文件，避免"文件里有、实际没封"。
             try:
                 get_server_proc().send(f"ban-ip {ip} {reason}")
             except Exception as e:
-                try:
-                    from .app_logger import get_app_logger
-
-                    get_app_logger().warning(f"players.py 发送 ban-ip 命令异常: {e}")
-                except Exception:
-                    # 应用日志记录失败时静默
-                    pass
+                safe_log_exception("players.py", f"发送 ban-ip 命令失败: {e}", "warning")
+                return False, f"发送封禁命令失败: {e}"
+        # 无论运行与否都补写文件：UI 的封禁列表读的是文件（load_banned_ips），
+        # 只发命令会让"刚封的 IP 在界面上不显示、也无法解封"。
+        # 备份后用 ip/address 去重，BDS 之后覆盖该文件也不会产生重复项。
+        entry = {"ip": ip, "reason": reason, "created": time.strftime("%Y-%m-%d %H:%M:%S"), "source": "manual"}
+        banned.append(entry)
+        with contextlib.suppress(OSError, TypeError, ValueError):
+            atomic_write_json(p, banned)
         audit_log("BAN_IP", f"{ip} {reason}", d)
         return True, ""
     except Exception as e:
+        safe_log_exception("players", f"ban_ip 忽略异常: {e}", "warning")
         return False, str(e)
 
 
 def pardon_ip(ip, server_dir=None):
 
     try:
+        ip_ok, ip_err = validate_ip(ip)
+        if not ip_ok:
+            return False, ip_err
         d = server_dir or resolve_server_dir()
         if not d:
             return False, "未设置服务器目录"
         p = os.path.join(d, BANNED_IPS_FILE)
         banned = load_banned_ips(d)
         new_banned = [e for e in banned if e.get("ip") != ip and e.get("address") != ip]
-        if len(new_banned) == len(banned):
-            return False, "IP不在封禁列表中"
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump(new_banned, f, indent=2, ensure_ascii=False)
-        if server_running():
+        removed = len(new_banned) != len(banned)
+        running = server_running()
+        if running:
             try:
                 get_server_proc().send(f"pardon-ip {ip}")
             except Exception as e:
-                try:
-                    from .app_logger import get_app_logger
-
-                    get_app_logger().warning(f"players.py 发送 pardon-ip 命令异常: {e}")
-                except Exception:
-                    # 应用日志记录失败时静默
-                    pass
+                safe_log_exception("players.py", f"发送 pardon-ip 命令失败: {e}", "warning")
+                return False, f"发送解封命令失败: {e}"
+        elif not removed:
+            return False, "IP不在封禁列表中"
+        if removed:
+            with contextlib.suppress(OSError, TypeError, ValueError):
+                atomic_write_json(p, new_banned)
         audit_log("PARDON_IP", ip, d)
         return True, ""
     except Exception as e:
+        safe_log_exception("players", f"pardon_ip 忽略异常: {e}", "warning")
         return False, str(e)
 
 
@@ -336,20 +335,3 @@ def get_all_player_status(server_dir=None):
     except (json.JSONDecodeError, FileNotFoundError, PermissionError, OSError) as e:
         safe_log_exception("players.py", f"读取玩家状态失败: {e}", "warning")
         return []
-
-
-def _player_action(name, command_template, log_msg, server_dir=None):
-    """通用玩家操作：校验玩家名 → 检查服务器运行 → 发送命令 → 写日志 → 返回。"""
-
-    ok, err = validate_player_name(name)
-    if not ok:
-        return False, err
-    if not server_running():
-        return False, "服务器未运行"
-    try:
-        cmd = command_template % name
-        get_server_proc().send(cmd)
-        audit_log(log_msg, name, server_dir)
-        return True, ""
-    except Exception as e:
-        return False, str(e)
