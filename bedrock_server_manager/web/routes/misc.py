@@ -51,7 +51,12 @@ class MiscRoutesMixin:
 
     @register_route("/api/audit")
     def _route_audit(self, data):
-        limit = int(data.get("limit", 200))
+        try:
+            limit = int(data.get("limit", 200))
+        except (TypeError, ValueError):
+            limit = 200
+        # 限制单次读取条数，避免前端传入超大值导致整文件读入内存
+        limit = max(1, min(limit, 5000))
         logs = read_audit_log(limit=limit)
         self._json({"ok": True, "logs": logs, "count": len(logs)})
 

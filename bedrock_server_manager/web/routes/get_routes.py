@@ -53,6 +53,19 @@ class GetRoutesMixin:
 
     @register_get_route("/")
     def _get_index(self, q):
+        self._serve_index()
+
+    @register_get_route("/index.html")
+    def _get_index_html(self, q):
+        """与 ``/`` 等价的显式入口。
+
+        早期白名单里放行了 /index.html 却没有对应路由，访问会得到 404，
+        现在补上实际路由，两个入口行为一致。
+        """
+        self._serve_index()
+
+    def _serve_index(self):
+        """渲染并返回单页前端（注入 API token 与平台信息）。"""
         from ..handler import get_index_html  # 必要的延迟导入，避免循环依赖
 
         html = get_index_html().replace("__API_TOKEN__", AppContext.instance().api_token)
@@ -65,7 +78,12 @@ class GetRoutesMixin:
 
     @register_get_route("/api/health")
     def _get_health(self, q):
+        """健康检查（免认证）。
 
+        注意：本端点无需 token 即可访问，因此**不能返回绝对路径**。
+        早期版本返回了 server_dir，等于向本机任意进程泄露用户目录结构；
+        需要完整状态请用需认证的 /api/status。
+        """
         mem_mb = 0
         cpu_percent = 0
         try:
@@ -77,7 +95,8 @@ class GetRoutesMixin:
         except ImportError:
             # psutil 未安装时使用默认值（健康检查降级）
             pass
-        except Exception:
+        except Exception as e:
+            safe_log_exception("get_routes", f"_get_health 忽略异常: {e}", "warning")
             # 获取进程信息失败时使用默认值
             pass
         uptime = time.time() - AppContext.instance().app_start_time
@@ -93,7 +112,6 @@ class GetRoutesMixin:
                 "memory_mb": round(mem_mb, 2),
                 "cpu_percent": round(cpu_percent, 2),
                 "server_running": server_running(),
-                "server_dir": AppContext.instance().settings.get("server_dir", ""),
                 "installed": installed(),
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             }
@@ -168,6 +186,7 @@ class GetRoutesMixin:
             AppContext.instance().settings["_latest"] = info
             self._json({"ok": True, "info": info})
         except Exception as e:
+            safe_log_exception("get_routes", f"_get_latest 忽略异常: {e}", "warning")
             self._json({"ok": False, "error": str(e)})
 
     @register_get_route("/api/versions")
@@ -186,6 +205,7 @@ class GetRoutesMixin:
                 }
             )
         except Exception as e:
+            safe_log_exception("get_routes", f"_get_versions 忽略异常: {e}", "warning")
             self._json({"ok": False, "error": str(e), "versions": FALLBACK_VERSIONS})
 
     @register_get_route("/api/sources")
@@ -205,12 +225,14 @@ class GetRoutesMixin:
 
     @register_get_route("/api/console")
     def _get_console(self, q):
-
-        since = int(q.get("since", ["0"])[0])
-        text, count = AppContext.instance().console.read_since(since)
-        # 控制台被截断（MAX_LINES=2000）导致索引回退时，通知前端清空重建，
-        # 避免重放客户端已读过的旧日志
-        reset = since > 0 and count < since
+        try:
+            since = int(q.get("since", ["0"])[0])
+        except (TypeError, ValueError):
+            since = 0
+        console = AppContext.instance().console
+        # 在读取前判断游标是否已落后于保留窗口（否则重置标志永远为假）
+        reset = since > 0 and console.dropped_since(since)
+        text, count = console.read_since(since)
         self._json({"lines": text, "count": count, "running": server_running(), "reset": reset})
 
     @register_get_route("/api/console/export")
@@ -433,6 +455,7 @@ class GetRoutesMixin:
             result["is_server"] = os.path.isfile(os.path.join(base, SERVER_EXE))
             result["has_exe"] = result["is_server"]
         except Exception as e:
+            safe_log_exception("get_routes", f"_get_listdir 忽略异常: {e}", "warning")
             result["ok"] = False
             result["error"] = str(e)
         self._json(result)

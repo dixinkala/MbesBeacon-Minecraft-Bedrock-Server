@@ -8,11 +8,12 @@ import os
 import threading
 
 from ...app_context import AppContext
+from ...app_logger import safe_log_exception
 from ...app_update import check_app_update
 from ...backup import backup_worlds, delete_server
 from ...install import do_install, get_latest_server_info, select_server_dir
 from ...players import add_allowlist, remove_allowlist, validate_player_name
-from ...security import check_dangerous_operation, validate_custom_url, validate_reason
+from ...security import audit_log, check_dangerous_operation, validate_custom_url, validate_reason
 from ...server import get_server_proc, server_running
 from ...utils import (
     installed,
@@ -34,6 +35,7 @@ class PostExtraRoutesMixin:
             AppContext.instance().settings["_latest"] = info
             self._json({"ok": True, "info": info})
         except Exception as e:
+            safe_log_exception("post_extra", f"_post_latest 忽略异常: {e}", "warning")
             self._json({"ok": False, "error": str(e)})
 
     @register_post_route("/api/servers/select")
@@ -43,6 +45,7 @@ class PostExtraRoutesMixin:
         if not ok:
             self._json({"ok": False, "error": err})
             return
+        audit_log("SERVER_SELECT", data.get("dir", ""), None)
         self._json({"ok": True, **info})
 
     @register_post_route("/api/install")
@@ -62,7 +65,10 @@ class PostExtraRoutesMixin:
                 self._json({"ok": False, "error": f"自定义下载地址无效：{msg}"})
                 return
         AppContext.instance().settings["server_dir"] = d
-        AppContext.instance().settings.get("ignore_ssl", False)
+        try:
+            source_index = int(data.get("source_index", 0) or 0)
+        except (TypeError, ValueError):
+            source_index = 0
         threading.Thread(
             target=do_install,
             args=(
@@ -70,7 +76,7 @@ class PostExtraRoutesMixin:
                 (data.get("version") or "").strip(),
                 bool(data.get("autostart", True)),
                 custom_url,
-                int(data.get("source_index", 0)),
+                source_index,
             ),
             daemon=True,
         ).start()
@@ -95,6 +101,7 @@ class PostExtraRoutesMixin:
                 AppContext.instance().settings["_latest"] = info
                 target_ver = info["version"]
             except Exception as e:
+                safe_log_exception("post_extra", f"_post_update 忽略异常: {e}", "warning")
                 self._json({"ok": False, "error": f"获取最新版本失败：{e}"})
                 return
         if target_ver == cur_ver:
@@ -105,11 +112,9 @@ class PostExtraRoutesMixin:
             with contextlib.suppress(Exception):
                 get_server_proc().stop(wait=10)
         backup_worlds(d)
-        try:
-            delete_server(d, "server_only")
-        except Exception as e:
-            self._json({"ok": False, "error": f"清理旧版本失败：{e}"})
-            return
+        # 不再在下载前 delete_server：do_install 现在会先下载并校验到暂存目录，
+        # 通过后才并入服务器目录（并保留用户数据）。这样下载/校验失败时
+        # 原服务器仍可正常启动，不会出现"更新失败且没有服务端"的状态。
         AppContext.instance().console.append(
             "\n[系统] 正在更新服务器：{} → {}\n".format(cur_ver or "（未知）", target_ver)
         )
@@ -174,6 +179,7 @@ class PostExtraRoutesMixin:
                     h for h in history if os.path.normcase(os.path.abspath(h)) != abs_d
                 ]
             save_settings()
+            audit_log("SERVER_DELETE", f"{mode} {d}", None)
             AppContext.instance().console.append(
                 "\n[系统] 服务器已删除：{}（{}）\n".format(
                     d, "仅删程序，保留世界存档与配置" if mode == "server_only" else "彻底删除，含世界存档"
@@ -181,6 +187,7 @@ class PostExtraRoutesMixin:
             )
             self._json({"ok": True})
         except Exception as e:
+            safe_log_exception("post_extra", f"_post_server_delete 忽略异常: {e}", "warning")
             self._json({"ok": False, "error": str(e)})
 
     @register_post_route("/api/players/kick")
@@ -202,6 +209,7 @@ class PostExtraRoutesMixin:
         cmd = f"kick {name} {reason}" if reason else f"kick {name}"
         get_server_proc().send(cmd)
         AppContext.instance().console.append(f"\n[玩家管理] 踢出玩家：{name}\n")
+        audit_log("PLAYER_KICK", f"{name} {reason}", resolve_server_dir())
         self._json({"ok": True})
 
     @register_post_route("/api/players/op")
@@ -217,6 +225,7 @@ class PostExtraRoutesMixin:
             return
         get_server_proc().send(f"op {name}")
         AppContext.instance().console.append(f"\n[玩家管理] 设置管理员：{name}\n")
+        audit_log("PLAYER_OP", name, resolve_server_dir())
         self._json({"ok": True})
 
     @register_post_route("/api/players/deop")
@@ -232,6 +241,7 @@ class PostExtraRoutesMixin:
             return
         get_server_proc().send(f"deop {name}")
         AppContext.instance().console.append(f"\n[玩家管理] 取消管理员：{name}\n")
+        audit_log("PLAYER_DEOP", name, resolve_server_dir())
         self._json({"ok": True})
 
     @register_post_route("/api/players/permission")
@@ -251,6 +261,7 @@ class PostExtraRoutesMixin:
             return
         get_server_proc().send(f"permission set {name} {level}")
         AppContext.instance().console.append(f"\n[玩家管理] 设置权限 {name} → {level}\n")
+        audit_log("PLAYER_PERMISSION", f"{name} {level}", resolve_server_dir())
         self._json({"ok": True})
 
     @register_post_route("/api/players/ban")
@@ -272,6 +283,7 @@ class PostExtraRoutesMixin:
         cmd = f"ban {name} {reason}" if reason else f"ban {name}"
         get_server_proc().send(cmd)
         AppContext.instance().console.append(f"\n[玩家管理] 封禁玩家：{name}\n")
+        audit_log("PLAYER_BAN", f"{name} {reason}", resolve_server_dir())
         self._json({"ok": True})
 
     @register_post_route("/api/players/pardon")
@@ -287,6 +299,7 @@ class PostExtraRoutesMixin:
             return
         get_server_proc().send(f"pardon {name}")
         AppContext.instance().console.append(f"\n[玩家管理] 解封玩家：{name}\n")
+        audit_log("PLAYER_PARDON", name, resolve_server_dir())
         self._json({"ok": True})
 
     @register_post_route("/api/players/allowlist/add")
@@ -304,6 +317,7 @@ class PostExtraRoutesMixin:
         ok = add_allowlist(d, name)
         if ok:
             AppContext.instance().console.append(f"\n[玩家管理] 添加白名单：{name}\n")
+            audit_log("ALLOWLIST_ADD", name, d)
             self._json({"ok": True})
         else:
             self._json({"ok": False, "error": "添加失败"})
@@ -323,6 +337,7 @@ class PostExtraRoutesMixin:
         ok = remove_allowlist(d, name)
         if ok:
             AppContext.instance().console.append(f"\n[玩家管理] 移除白名单：{name}\n")
+            audit_log("ALLOWLIST_REMOVE", name, d)
             self._json({"ok": True})
         else:
             self._json({"ok": False, "error": "移除失败"})
@@ -334,6 +349,7 @@ class PostExtraRoutesMixin:
         if not ok:
             self._json({"ok": False, "error": err})
             return
+        audit_log("SERVER_SELECT", data.get("dir", ""), None)
         self._json({"ok": True, **info})
 
     @register_post_route("/api/app/update/check")
@@ -347,4 +363,5 @@ class PostExtraRoutesMixin:
             result = check_app_update(force=force, ignore_ssl=ignore_ssl)
             self._json(result)
         except Exception as e:
+            safe_log_exception("post_extra", f"_post_app_update_check 忽略异常: {e}", "warning")
             self._json({"ok": False, "error": str(e), "has_update": False})
