@@ -11,7 +11,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-471%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-658%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -49,7 +49,7 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 
 | 🚀 一键安装 | ⚙️ 图形化配置 | 🎮 玩家管理 | 💾 世界备份 |
 |------------|-------------|------------|------------|
-| 自动下载官方服务端，支持所有历史版本 | 30+ 配置项可视化编辑，配置历史回滚 | 在线玩家列表，权限/踢出/封禁/白名单 | 手动/自动备份，一键恢复，保留策略 |
+| 自动下载官方服务端，支持所有历史版本 | 常用 17 项 / 高级 46 项配置可视化编辑，配置历史回滚 | 在线玩家列表，权限/踢出/封禁/白名单 | 手动/自动备份，一键恢复，保留策略 |
 
 | 📊 性能监控 | 📝 实时控制台 | 🕐 计划任务 | 🌐 中英双语 |
 |------------|-------------|------------|------------|
@@ -114,7 +114,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 | 模块 | 功能说明 |
 |------|----------|
 | **① 安装服务器** | 一键下载安装官方服务端，支持所有历史稳定版和预览版；自定义下载地址；自动检测已安装服务器 |
-| **② 服务器配置** | 图形化编辑 `server.properties`，支持 30+ 配置项；高级模式显示全部配置；配置历史回滚；数值范围校验 |
+| **② 服务器配置** | 图形化编辑 `server.properties`，常用 17 项；高级模式可编辑全部 46 项；配置历史回滚；数值范围校验 |
 | **③ 服务器控制台** | SSE 实时日志推送（延迟<300ms）；启动/停止/重启；命令自动补全；命令历史记录；日志搜索/导出/清空 |
 | **④ 玩家管理** | 在线玩家列表；权限设置（访客/成员/管理员）；踢出/封禁；白名单管理；黑名单管理；IP 封禁 |
 | **⑤ 世界管理** | 多世界切换；世界重命名/复制/删除；存档导入/导出（ZIP 格式）；世界信息展示 |
@@ -126,13 +126,13 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 
 ### 特色功能
 
-- **中英双语界面**：首次启动自动检测系统语言（中文→中文界面，其他→英文界面）；点击标题栏语言按钮可随时切换，选择会记住；系统托盘菜单、气泡通知与 tooltip 同步跟随所选语言
-- **系统托盘集成**：后台运行，托盘图标显示运行状态，右键菜单快速操作（菜单语言与界面语言一致）
+- **中英双语界面**：首次启动自动检测系统语言（中文→中文界面，其他→英文界面）；点击标题栏语言按钮可随时切换，选择会记住；系统托盘右键菜单与气泡通知同步跟随所选语言
+- **系统托盘集成**：后台运行，右键菜单快速操作（打开界面/启动/停止/退出），菜单与气泡语言和界面一致；托盘提示文字实时显示服务器运行状态（运行中 / 已停止）
 - **多主题支持**：10 套预设主题（Minecraft 暗色、草方块绿、红石红、钻石蓝等）+ 自定义强调色
 - **多服务器管理**：自动扫描已安装服务器，支持多服务器切换管理
 - **服务器版本更新检测**：自动检测服务器新版本，一键更新（自动备份存档）
 - **应用程序更新检测**：自动检测 MbesBeacon 软件新版本，支持手动检查更新，与服务器更新区分
-- **下载完整性校验**：ZIP 完整性 + SHA256 哈希（首次信任机制）+ 数字签名校验（Windows：PE 签名；Linux：ELF 校验）+ 文件大小校验
+- **下载完整性校验**：ZIP 完整性 + SHA256（首次信任机制或显式期望值）+ 版本号官方发行核对 + 数字签名校验（Windows：WinVerifyTrust；Linux：ELF 头）+ 文件大小校验
 - **断点续传下载**：支持 HTTP Range 请求，大文件中断后可续传
 - **崩溃自动重启**：服务器意外崩溃时自动重启，指数退避 + 最大重试次数
 - **端口占用检测**：启动前自动检测目标端口是否被占用
@@ -145,7 +145,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 |------|------|
 | **操作系统** | Windows 10 / Windows 11 或 Ubuntu 20.04+（Linux） |
 | **内存** | 建议 4GB 以上（服务器运行需要） |
-| **磁盘空间** | 至少 300MB 可用空间（安装时自动检查，不足则中止）；建议 500MB 以上（含服务端下载和世界存档） |
+| **磁盘空间** | 至少 1200MB 可用空间（安装时自动检查，不足则中止）；建议 2GB 以上（含下载的 ZIP、解压暂存与旧版本） |
 | **网络** | 首次安装需要联网下载服务端；局域网联机需要同一 WiFi |
 | **Python** | Windows 发布版 EXE 无需安装；Linux 从源码运行需要 Python 3.10+ |
 
@@ -223,14 +223,14 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 2. **安装服务器**：在「① 安装服务器」页面选择版本和安装目录，点击「开始下载并安装」
 3. **配置服务器**：在「② 服务器配置」页面修改服务器名称、端口、最大玩家数等，点击「保存配置」
 4. **启动服务器**：在「③ 服务器控制台」页面点击「启动服务器」，查看日志确认启动成功
-5. **联机游玩**：在 Minecraft 中「服务器」->「添加服务器」，填写 `127.0.0.1:19132`（默认端口）
+5. **联机游玩**：本机测试填 `127.0.0.1:19132`；其他设备/好友填服务器所在电脑的**局域网 IP**（如 `192.168.1.10:19132`，可在「性能监控」页或 `ipconfig`/`hostname -I` 查看）
 
 ### 切换界面语言
 
 - 首次启动时程序自动检测系统语言：系统为中文时使用中文界面，其他语言时使用英文界面
 - 点击标题栏的语言按钮（中文界面显示「English」，英文界面显示「中文」）可随时切换
 - 切换后语言选择会被记住，下次启动不再询问
-- 语言选择同样作用于系统托盘：右键菜单、气泡通知与托盘 tooltip 会以相同语言显示
+- 语言选择同样作用于系统托盘：右键菜单与气泡通知会以相同语言显示
 
 ### 系统托盘操作
 
@@ -288,9 +288,9 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 尝试下载源: 官方 API
 下载地址: https://www.minecraft.net/bedrockdedicatedserver/bin-win/bedrock-server-1.21.0.03.zip
 下载完成 (源: 官方 API): bedrock-server-1.21.0.03.zip (85.3 MB)
-已加载 57 个官方版本哈希用于校验
+版本 1.21.0.03 确认为官方发行版（当前稳定版 1.21.0.03）
 下载完整性校验通过（文件大小: 85.3 MB, SHA256: a1b2c3d4...）
-正在解压到: D:\MinecraftServer
+正在解压到暂存目录: D:\MinecraftServer\.install_staging\extracted
 解压完成
 ✔ 服务器安装完成！版本 1.21.0.03
   服务器程序: D:\MinecraftServer\bedrock_server.exe
@@ -324,7 +324,7 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 - 控制台日志：`[10:40:00] [INFO] Steve has been made an operator`
 - 玩家卡片权限显示更新为：`管理员 (operator)`
 - 操作审计日志（服务器目录下 `audit.log`，JSON 行格式）：
-  `{"time": "2026-09-03 10:40:00", "action": "PERMISSION_CHANGE", "detail": "player=Steve level=operator"}`
+  `{"time": "2026-09-03 10:40:00", "action": "PLAYER_PERMISSION", "detail": "Steve operator"}`
 
 ### 示例 4：世界备份
 
@@ -354,7 +354,7 @@ curl -H "X-API-Token: <your-token>" http://127.0.0.1:19100/api/status
 {
   "app": "mbesbeacon",
   "title": "MbesBeacon",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "server_dir": "D:\\MinecraftServer",
   "installed": true,
   "installed_version": "1.21.0.03",
@@ -383,31 +383,31 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── __init__.py
 │   ├── main.py                 # 程序入口，单实例检测，HTTP 服务器启动
 │   ├── app_context.py          # AppContext 应用上下文（全局状态管理）
-│   ├── di.py                   # 依赖注入容器
 │   ├── app_update.py           # 应用程序更新检测
-│   ├── constants.py            # 常量定义
+│   ├── constants.py            # 平台/路径/命令常量（数据文件名在 config.py）
 │   ├── server.py               # ServerProcess，服务器进程管理
 │   ├── console.py              # ConsoleBuffer，控制台日志缓冲
 │   ├── install.py              # 下载、安装、版本检测
 │   ├── config.py               # server.properties 读写，设置管理
 │   ├── players.py              # 玩家管理、封禁、白名单
+│   ├── packs.py                # 资源包/行为包管理
 │   ├── worlds.py               # 世界管理、存档导入导出
 │   ├── backup.py               # 备份/恢复/删除
 │   ├── performance.py          # 性能监控（CPU/内存/玩家数）
-│   ├── scheduler.py            # 计划任务调度
-│   ├── security.py             # 安全校验、审计日志
-│   ├── verify.py               # 下载完整性校验（ZIP/SHA256/PE签名）
+│   ├── scheduler.py            # 计划任务调度（执行状态持久化）
+│   ├── security.py             # 安全校验、审计日志、下载地址校验
+│   ├── verify.py               # 下载完整性校验（ZIP/SHA256/签名/TOFU）
 │   ├── tray.py                 # 系统托盘图标
-│   ├── ratelimit.py            # API 速率限制
+│   ├── ratelimit.py            # API 速率限制（令牌桶）
 │   ├── commands.py             # 命令自动补全
-│   ├── state.py                # 全局状态管理（向后兼容）
-│   ├── utils.py                # 通用工具函数
+│   ├── state.py                # AppContext 的惰性代理（向后兼容）
+│   ├── utils.py                # 通用工具函数（含原子写入、路径边界校验）
 │   ├── app_logger.py           # 应用日志
-│   ├── assets.py               # 资源管理
+│   ├── assets/                 # 打包资源（托盘图标 .ico / .png）
 │   └── web/
 │       ├── __init__.py
-│       ├── handler.py          # HTTP 请求处理
-│       ├── app.py              # AppContext 应用上下文（Web 层）
+│       ├── handler.py          # HTTP 请求处理（Host/Token/Origin 校验、SSE）
+│       ├── app.py              # Web 层门面（实时转发到全局 AppContext）
 │       ├── route_decorator.py  # 路由装饰器
 │       ├── index.html          # 前端单页面（HTML/CSS/JS）
 │       └── routes/             # 路由模块
@@ -419,33 +419,44 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── server.py       # 服务器路由
 │           ├── worlds.py       # 世界管理路由
 │           ├── backups.py      # 备份管理路由
+│           ├── packs.py        # 包管理路由
 │           ├── commands.py     # 命令路由
 │           ├── players.py      # 玩家管理路由
 │           └── config.py       # 配置管理路由
-├── tests/                      # 测试套件（20个测试文件，471个测试用例）
+├── tests/                      # 测试套件（28 个 Python 测试文件 + 1 个前端测试文件，659 个用例，658 通过 / 1 跳过）
 │   ├── __init__.py
 │   ├── test_unit.py            # 单元测试（配置/玩家/备份/安装/工具函数）
-│   ├── test_integration.py     # 集成测试（模块间协作、状态同步）
+│   ├── test_integration.py     # 集成测试（原子写入、Host 校验、端口检测）
 │   ├── test_e2e.py             # 端到端测试（完整流程模拟）
 │   ├── test_routes.py          # 路由测试（路由注册、认证、404、危险端点）
-│   ├── test_scheduler_tray.py  # 计划任务/托盘测试
+│   ├── test_scheduler_tray.py  # 计划任务/托盘测试（含调度状态持久化）
 │   ├── test_crash_restart.py   # 崩溃重启测试（指数退避、最大重试）
 │   ├── test_app_context.py     # AppContext 测试（单例、状态管理）
 │   ├── test_app_logger.py      # 应用日志测试
 │   ├── test_browse_dir.py      # 浏览目录/服务器选择测试
+│   ├── test_engineering_config.py # 工程配置：托盘状态、覆盖率门禁、CI/dependabot 一致性
 │   ├── test_console.py         # 控制台测试（日志缓冲、SSE流）
-│   ├── test_di.py              # 依赖注入容器测试
+│   ├── test_install_staging.py # 安装暂存目录、版本号净化、世界导入隔离
+│   ├── test_commands_completion.py # 命令补全、危险判定一致性、/index.html 路由
+│   ├── test_p2_hardening.py    # 限流/审计轮转/互斥量/健康检查/调度停止
+│   ├── test_p2_data_guards.py  # 包导入覆盖、调度时间校验、恢复回滚、玩家解析
+│   ├── test_review_round3.py   # 复查回归：并发原子写、PE 签名、审计代际、暂存合并原子性
+│   ├── test_review_round4.py   # 第五轮复查：调度状态隔离、重启目录、端口预检、审计覆盖
+│   ├── test_gates_coverage.py # 安装完整性门禁与调度循环（原 0 覆盖）
+│   ├── test_review_round3_tail.py # 官方版本清单、签名者精确定位、旧文件清理边界
 │   ├── test_p3_regression.py   # P3 门禁回归测试
 │   ├── test_packs.py           # 包管理测试（资源包/行为包启用禁用、导入删除）
 │   ├── test_performance.py     # 性能监控测试
 │   ├── test_ratelimit.py       # 速率限制测试（令牌桶算法）
-│   ├── test_review_fixes.py    # 全面复查修复回归测试
-│   ├── test_security.py        # 安全测试（命令校验、API Token生成）
-│   ├── test_verify.py          # 验证测试（SHA256计算、文件大小、ZIP完整性）
+│   ├── test_review_fixes.py    # 全面复查修复回归测试（路径越界、删除模式等）
+│   ├── test_security.py        # 安全测试（命令校验、下载地址 SSRF、API Token）
+│   ├── test_verify.py          # 验证测试（SHA256、文件大小、ZIP、签名、TOFU）
 │   ├── test_worlds_export.py   # 世界存档导出测试
-│   └── test_modules.py         # 模块测试（世界管理、命令模块、应用日志）
-├── dist/                       # 构建产物（MbesBeacon.exe）
-├── .github/                    # GitHub Actions CI 工作流
+│   ├── test_modules.py         # 模块测试（世界管理、命令模块、应用日志）
+│   └── js/
+│       └── frontend.test.mjs   # 前端纯函数测试（node:test，零依赖，直接测 web/index.html）
+├── docs/                       # 界面截图与操作演示（README 引用）
+├── .github/                    # GitHub Actions CI 工作流、Issue/PR 模板
 ├── BedrockServerManager.spec   # PyInstaller 打包配置
 ├── build.bat                   # 构建启动器（调用 build.ps1）
 ├── build.ps1                   # PowerShell 构建脚本（含自动签名）
@@ -456,15 +467,31 @@ MbesBeacon-Minecraft-Bedrock-Server/
 ├── smoke_test.py               # 冒烟测试脚本
 ├── requirements.txt            # Python 运行时依赖
 ├── requirements-dev.txt        # Python 开发/测试依赖
-├── pyproject.toml              # 项目配置（pytest/ruff）
+├── pyproject.toml              # 项目配置（pytest 收集范围、ruff、覆盖率门禁）
 ├── .pre-commit-config.yaml     # pre-commit 配置
 ├── .gitignore                  # Git 忽略文件
-├── LICENSE                     # MIT 许可证
-├── CODE_OF_CONDUCT.md          # 行为准则
-├── CONTRIBUTING.md             # 贡献指南
-├── SECURITY.md                 # 安全政策
-└── README.md                   # 本文档
+├── CODE_OF_CONDUCT.md          # 行为准则（EN: CODE_OF_CONDUCT_EN.md）
+├── CONTRIBUTING.md             # 贡献指南（EN: CONTRIBUTING_EN.md）
+├── SECURITY.md                 # 安全政策（EN: SECURITY_EN.md）
+├── README.md                   # 本文档（EN: README_EN.md）
+└── LICENSE                     # MIT 许可证
 ```
+
+---
+
+## 测试
+
+```bash
+# Python：28 个测试文件 / 659 个用例，附带覆盖率门禁（fail_under=52）
+pip install -r requirements-dev.txt
+pytest --cov
+
+# 前端：node:test，零外部依赖，直接从 web/index.html 抽取脚本到最小 DOM 桩中执行
+node --test "tests/js/**/*.test.mjs"
+```
+
+CI([.github/workflows/ci.yml](.github/workflows/ci.yml)) 在 Windows / Ubuntu × Python 3.10–3.12 矩阵上运行
+ruff 格式与 Lint、`pytest --cov`（覆盖率低于阈值即失败）、前端测试，以及 Windows 真实 HTTP 冒烟测试。
 
 ---
 
@@ -474,15 +501,20 @@ MbesBeacon 内置多项安全机制，确保服务器和本地数据安全：
 
 | 安全机制 | 实现方式 |
 |----------|----------|
-| **API 认证** | 随机 32 位 Token + Origin/Referer 校验，防止 CSRF 攻击 |
-| **下载完整性校验** | ZIP 完整性 + SHA256 哈希（首次信任机制 TOFU）+ 数字签名校验（Windows：PE 签名；Linux：ELF 校验）+ 文件大小范围 |
-| **签名验证** | Windows 使用 WinVerifyTrust API 验证 bedrock_server.exe 的数字签名是否存在且有效（不校验签名者身份）；Linux 校验 ELF 魔数与可执行权限 |
-| **危险操作二次确认** | 删除服务器、恢复备份等操作需确认，防止误操作 |
-| **操作审计日志** | 记录所有危险操作（启动/停止/删除、配置修改、玩家管理、备份恢复） |
-| **API 速率限制** | 令牌桶算法，防止前端 bug 或恶意脚本频繁操作 |
+| **API 认证** | 随机 32 位 Token（常量时间比较）+ Origin/Referer 校验 + **Host 头校验**（防 DNS rebinding） |
+| **本地数据完整性** | `settings.json`、`server.properties`、权限/白名单等以「临时文件 + fsync + 原子替换」写入，避免崩溃/断电造成半文件 |
+| **下载地址校验** | 仅允许 http/https；拒绝 localhost、云元数据与内网/回环/链路本地地址（SSRF）；拒绝 `user:pass@` 伪装与超长 URL；重定向后按最终地址复核 |
+| **下载完整性校验** | ZIP 完整性 + SHA256（TOFU 首次信任，或调用方显式提供的期望哈希；官方**不公开**哈希，故不宣称"官方哈希优先"）+ 版本号是否为官方发行版核对 + 数字签名（Windows：WinVerifyTrust + 签名者校验；Linux：ELF 头校验）+ 文件大小范围 |
+| **TOFU 信任库防篡改** | 哈希清单附 HMAC 签名；清单被改写、或签名文件被删除（旧版格式除外）都会校验失败并重新建立信任。**防护边界**：密钥/签名/清单同目录，能防"意外损坏"和"无权写缓存的进程"，但**不防**以当前用户身份运行的恶意程序（它可同时改写三者或删密钥重置信任） |
+| **签名验证** | Windows 用 WinVerifyTrust 校验 PE 签名：**摘要不匹配（被篡改）、证书被显式 distrust、基本约束不满足 → 无条件中止**。未签名/签名者非官方默认**告警放行**（Mojang 的 exe 是否带嵌入式签名无法离线确认，强制会中断官方安装）；设 `MBES_REQUIRE_SIGNATURE=1` 可切换为严格模式（未签名即失败） |
+| **危险操作二次确认** | 删除服务器、恢复备份、删除世界/包等需输入确认词 |
+| **命令注入防护** | 控制台指令拒绝换行/控制字符；前导 `/` 归一化后再判危险，避免绕过 |
+| **路径越界防护** | 世界名/备份路径统一做目录边界校验（真实路径比对），拒绝 `..`、绝对路径与符号链接逃逸 |
+| **操作审计日志** | 服务器目录下的 JSON 行格式 `audit.log`（按大小轮转）：服务器启停/重启/删除/切换、配置保存、世界切换/重命名/删除/复制、玩家踢出/op/deop/权限/封禁/解封、白名单与 IP 封禁、包导入/启停/删除、备份创建/打包/恢复/删除、计划任务执行 |
+| **API 速率限制** | 令牌桶算法，按端点独立配额（如重启 1 次/15 秒），桶数量有上限 |
 | **ZIP 路径遍历防护** | 解压前检查目标路径边界，防止 Zip Slip 攻击 |
 | **输入校验** | 玩家名正则校验、IP 地址格式校验、配置项数值范围校验 |
-| **单实例检测** | Windows 命名互斥量 / Linux 文件锁（flock），防止多开冲突 |
+| **单实例检测** | Windows 命名互斥量 / Linux 文件锁（flock），启动前通过 `/api/health` 探测已有实例 |
 | **本地监听** | HTTP 服务器仅绑定 `127.0.0.1`，不对外暴露 |
 
 ---
@@ -493,7 +525,7 @@ MbesBeacon 内置多项安全机制，确保服务器和本地数据安全：
 A：这是 Windows SmartScreen 警告。点击「更多信息」->「仍要运行」即可启动。
 
 ### Q：关闭管理页面后服务器还在运行吗？
-A：在。关闭浏览器页面不影响服务器，再次双击 exe 或通过系统托盘可重新打开管理界面。
+A：在。关闭浏览器页面不影响服务器。重新打开管理界面的方式：右键系统托盘图标选「打开管理界面」，或在浏览器访问 `http://127.0.0.1:19100`。
 
 ### Q：如何彻底退出（含服务器）？
 A：先在控制台「停止服务器」，再点标题栏「退出程序」，或右键托盘图标选择「退出程序」。
@@ -568,8 +600,11 @@ pip install -r requirements.txt
 # 运行开发版本
 python run.py
 
-# 运行测试
-pytest tests/ -v
+# 运行测试（含覆盖率门禁）
+pytest --cov
+
+# 前端测试（node:test，零外部依赖）
+node --test "tests/js/**/*.test.mjs"
 
 # 代码格式化
 ruff format .

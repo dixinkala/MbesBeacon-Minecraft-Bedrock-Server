@@ -10,7 +10,7 @@ import sys
 
 # ---------------- 应用常量 ----------------
 APP_TITLE = "MbesBeacon"
-APP_VERSION = "1.0.24"
+APP_VERSION = "1.0.25"
 APP_MARKER = "mbesbeacon"
 DEFAULT_PORT = 19100
 
@@ -26,6 +26,12 @@ SERVER_EXE = "bedrock_server.exe" if IS_WINDOWS else "bedrock_server"
 
 # 下载源 API（官方下载链接 API，返回各平台下载地址）
 LINKS_API = "https://net-secondary.web.minecraft-services.net/api/v1.0/download/links"
+# 第三方维护的 BDS 版本清单（只有版本号，不含哈希）。
+# verify.py（官方版本核对）与 install.py（最新版本探测）共用此常量，
+# 早期两处各写了一份相同字符串，改一处就会漂移。
+BDS_VERSIONS_JSON_URL = "https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json"
+# 版本信息缓存时长（秒）
+VERSION_CACHE_TTL = 3600
 # 官方 CDN 模板（bin-win / bin-linux 平台路径）
 CDN_TEMPLATE = f"https://www.minecraft.net/bedrockdedicatedserver/bin-{PLATFORM_TAG}/bedrock-server-{{version}}.zip"
 
@@ -64,6 +70,8 @@ __all__ = [
     "IS_WINDOWS",
     "PLATFORM_TAG",
     "LINKS_API",
+    "BDS_VERSIONS_JSON_URL",
+    "VERSION_CACHE_TTL",
     "CDN_TEMPLATE",
     "APP_DATA_DIR",
     "LOGS_DIR",

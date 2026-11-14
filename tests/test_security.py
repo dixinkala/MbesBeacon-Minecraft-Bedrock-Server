@@ -3,7 +3,6 @@ security 模块单元测试 - Minecraft 基岩版服务器管理器
 覆盖命令校验、API Token 生成等核心功能
 """
 
-import re
 import unittest
 
 from bedrock_server_manager.commands import COMMANDS, is_dangerous_command
@@ -13,8 +12,8 @@ from bedrock_server_manager.constants import (
     DANGEROUS_SINGLE_COMMANDS,
 )
 from bedrock_server_manager.security import (
-    generate_api_token,
     validate_command,
+    validate_custom_url,
 )
 
 
@@ -73,6 +72,31 @@ class TestValidateCommand(unittest.TestCase):
         ok, err, dangerous = validate_command("/list")
         self.assertTrue(ok)
 
+    def test_slash_prefixed_dangerous_detected(self):
+        """前导 / 不应成为绕过危险判定的手段"""
+        for cmd in ("/stop", "/restart", "  /kill @e", "//stop"):
+            ok, _err, dangerous = validate_command(cmd)
+            self.assertTrue(ok, cmd)
+            self.assertTrue(dangerous, f"{cmd} 应判定为危险指令")
+
+    def test_reject_newline_injection(self):
+        """换行符可向 stdin 注入多条指令，必须拒绝"""
+        for cmd in ("list\nstop", "list\r\nop Steve", "say hi\nstop", "list\rstop"):
+            ok, err, _dangerous = validate_command(cmd)
+            self.assertFalse(ok, f"{cmd!r} 不应通过校验")
+            self.assertIn("控制字符", err)
+
+    def test_reject_other_control_chars(self):
+        """其余不可打印控制字符同样拒绝"""
+        for cmd in ("list\x00", "list\x1b[2J", "say a\x7fb"):
+            ok, _err, _dangerous = validate_command(cmd)
+            self.assertFalse(ok, f"{cmd!r} 不应通过校验")
+
+    def test_allow_tab_and_unicode_payload(self):
+        """制表符与正常 Unicode 内容不应被误杀"""
+        ok, _err, _dangerous = validate_command("say 你好\t世界")
+        self.assertTrue(ok)
+
 
 class TestDangerousCommandsConsistency(unittest.TestCase):
     """危险命令清单单一事实来源一致性测试"""
@@ -126,24 +150,65 @@ class TestDangerousCommandsConsistency(unittest.TestCase):
             self.assertFalse(dangerous, f"'{cmd}' 不应是危险命令")
 
 
-class TestGenerateApiToken(unittest.TestCase):
-    """API Token 生成测试"""
+class TestValidateCustomUrl(unittest.TestCase):
+    """自定义下载地址校验（SSRF 与官方域名判定）"""
 
-    def test_token_length(self):
-        """测试 Token 长度"""
-        token = generate_api_token()
-        self.assertEqual(len(token), 32)  # 16 bytes = 32 hex chars
+    def test_official_domains_detected(self):
+        for url in (
+            "https://www.minecraft.net/x.zip",
+            "https://minecraft.net/x.zip",
+            "https://bedrock.dev/x.zip",
+            "https://example.minecraftservices.net/x.zip",
+        ):
+            ok, _err, official = validate_custom_url(url)
+            self.assertTrue(ok, url)
+            self.assertTrue(official, f"{url} 应判定为官方来源")
 
-    def test_token_is_hex(self):
-        """测试 Token 是十六进制"""
-        token = generate_api_token()
-        self.assertTrue(re.match(r"^[0-9a-f]{32}$", token))
+    def test_lookalike_domain_rejected_as_official(self):
+        """后缀伪造域名不得被判为官方（endswith 漏洞）"""
+        for url in (
+            "https://fakeminecraft.net/x.zip",
+            "https://evil-minecraft.net/x.zip",
+            "https://notminecraft.net/x.zip",
+            "https://minecraft.net.evil.com/x.zip",
+        ):
+            ok, _err, official = validate_custom_url(url)
+            self.assertTrue(ok, url)
+            self.assertFalse(official, f"{url} 不应判定为官方来源")
 
-    def test_tokens_are_unique(self):
-        """测试多次生成的 Token 是唯一的"""
-        tokens = {generate_api_token() for _ in range(100)}
-        self.assertEqual(len(tokens), 100)
+    def test_ssrf_internal_addresses_rejected(self):
+        for url in (
+            "http://169.254.169.254/latest/meta-data/",
+            "http://127.0.0.1:8080/x.zip",
+            "http://localhost/x.zip",
+            "http://[::1]/x.zip",
+            "http://10.0.0.5/x",
+            "http://192.168.1.10/x",
+            "http://172.16.0.1/x",
+            "http://0.0.0.0/x",
+        ):
+            ok, _err, _official = validate_custom_url(url)
+            self.assertFalse(ok, f"{url} 应被拒绝")
 
+    def test_userinfo_disguise_rejected(self):
+        ok, _err, _official = validate_custom_url("http://minecraft.net@evil.com/x.zip")
+        self.assertFalse(ok)
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_non_http_scheme_rejected(self):
+        for url in ("file:///C:/windows/win.ini", "ftp://example.com/x.zip", "javascript:alert(1)"):
+            ok, _err, _official = validate_custom_url(url)
+            self.assertFalse(ok, f"{url} 应被拒绝")
+
+    def test_overlong_url_rejected(self):
+        ok, _err, _official = validate_custom_url("https://example.com/" + "a" * 3000)
+        self.assertFalse(ok)
+
+    def test_effective_url_after_redirect(self):
+        """重定向到内网地址必须被兜底拒绝"""
+        from bedrock_server_manager.security import validate_effective_url
+
+        ok, err = validate_effective_url("http://169.254.169.254/latest/meta-data/")
+        self.assertFalse(ok)
+        self.assertIn("重定向", err)
+        ok, _err = validate_effective_url("https://example.com/x.zip")
+        self.assertTrue(ok)

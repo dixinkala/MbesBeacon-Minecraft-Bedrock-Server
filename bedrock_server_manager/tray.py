@@ -9,6 +9,7 @@ import ctypes
 import os
 import sys
 import threading
+import time
 import traceback
 import webbrowser
 
@@ -29,6 +30,8 @@ _TRAY_TEXTS = {
         "menu_stop": "停止服务器",
         "menu_exit": "退出程序",
         "tooltip": "MbesBeacon — Minecraft 基岩版服务器管理器",
+        "state_running": "运行中",
+        "state_stopped": "已停止",
     },
     "en": {
         "menu_open": "Open Manager",
@@ -36,6 +39,8 @@ _TRAY_TEXTS = {
         "menu_stop": "Stop Server",
         "menu_exit": "Exit",
         "tooltip": "MbesBeacon — Minecraft Bedrock Server Manager",
+        "state_running": "running",
+        "state_stopped": "stopped",
     },
 }
 
@@ -62,7 +67,8 @@ def _log(msg):
                 if not file_exists:
                     f.write("\ufeff")  # UTF-8 BOM
                 f.write(line)
-        except Exception:
+        except Exception as e:
+            safe_log_exception("tray", f"_log 忽略异常: {e}", "warning")
             # 托盘日志写入失败时静默（不阻塞托盘主流程）
             pass
         # 控制台输出（开发模式可见）
@@ -105,6 +111,7 @@ class SystemTray:
                     _log(f"浏览器打开成功 (尝试 {attempt + 1}/3)")
                     return True
             except Exception as e:
+                safe_log_exception("tray", f"_open_browser_with_retry 忽略异常: {e}", "warning")
                 _log(f"webbrowser.open 失败 (尝试 {attempt + 1}/3): {e}")
             time.sleep(0.5)
 
@@ -114,6 +121,7 @@ class SystemTray:
             _log("使用 os.startfile 打开浏览器成功")
             return True
         except Exception as e:
+            safe_log_exception("tray", f"_open_browser_with_retry 忽略异常: {e}", "warning")
             _log(f"os.startfile 失败: {e}")
 
         # 方法3: subprocess 调用默认浏览器
@@ -125,6 +133,7 @@ class SystemTray:
             _log("使用 subprocess 打开浏览器成功")
             return True
         except Exception as e:
+            safe_log_exception("tray", f"_open_browser_with_retry 忽略异常: {e}", "warning")
             _log(f"subprocess 打开浏览器失败: {e}")
 
         _log("所有浏览器打开方法均失败，请手动访问: " + url)
@@ -140,6 +149,11 @@ class SystemTray:
         self._wnd_proc_ref = None
         self._user32 = None
         self._nid = None
+        # 托盘 tooltip 的状态缓存：用来判断"状态是否真的变了"，避免每 3 秒
+        # 都发一次 NIM_MODIFY（会无谓占用 shell 通知区资源）。
+        self._nid_lock = threading.Lock()
+        self._last_state = None
+        self._watcher_thread = None
 
     def _load_icon(self):
         """加载应用图标（优先自定义图标，失败回退到默认图标）。"""
@@ -169,6 +183,7 @@ class SystemTray:
                     return hicon
                 _log("LoadImageW 两次尝试均失败，回退到默认图标")
         except Exception as e:
+            safe_log_exception("tray", f"_load_icon 忽略异常: {e}", "warning")
             _log(f"加载自定义图标失败: {e}")
         # 回退到默认应用程序图标
         try:
@@ -177,6 +192,7 @@ class SystemTray:
                 _log("加载默认图标成功")
             return hicon
         except Exception as e:
+            safe_log_exception("tray", f"_load_icon 忽略异常: {e}", "warning")
             _log(f"加载默认图标失败: {e}")
             return 0
 
@@ -219,6 +235,7 @@ class SystemTray:
                 ctypes.windll.user32.PostQuitMessage(0)
                 return 0
         except Exception as e:
+            safe_log_exception("tray", f"_wnd_proc 忽略异常: {e}", "warning")
             _log(f"窗口过程异常: {e}")
         return ctypes.windll.user32.DefWindowProcW(hwnd, msg, wparam, lparam)
 
@@ -271,6 +288,7 @@ class SystemTray:
                         self.on_open()
                         _log("打开管理界面完成")
                     except Exception as e:
+                        safe_log_exception("tray", f"_show_menu 忽略异常: {e}", "warning")
                         _log(f"打开管理界面失败: {e}")
                 elif cmd == self.ID_TOGGLE:
                     _log("菜单选择: 启动/停止服务器")
@@ -281,6 +299,7 @@ class SystemTray:
                         else:
                             _log("on_toggle 回调未设置")
                     except Exception as e:
+                        safe_log_exception("tray", f"_show_menu 忽略异常: {e}", "warning")
                         _log(f"启动/停止服务器失败: {e}")
                 elif cmd == self.ID_EXIT:
                     _log("菜单选择: 退出程序")
@@ -291,6 +310,7 @@ class SystemTray:
                         else:
                             _log("on_exit 回调未设置")
                     except Exception as e:
+                        safe_log_exception("tray", f"_show_menu 忽略异常: {e}", "warning")
                         _log(f"退出程序失败: {e}")
                 else:
                     _log(f"未知的菜单项 ID: {cmd}")
@@ -306,6 +326,7 @@ class SystemTray:
 
             _log("显示菜单完成")
         except Exception as e:
+            safe_log_exception("tray", f"_show_menu 忽略异常: {e}", "warning")
             _log(f"显示菜单异常: {e}\n{traceback.format_exc()}")
 
     def _run(self):
@@ -457,6 +478,10 @@ class SystemTray:
             self._running = True
             _log("托盘初始化完成，进入消息循环")
 
+            # 启动状态监视：服务器启停时更新托盘 tooltip（README 曾声称
+            # "托盘图标显示运行状态"，但早期实现只在创建时写一次 tooltip）
+            self._start_state_watcher()
+
             # 消息循环
             msg = ctypes.wintypes.MSG()
             while self._running and user32.GetMessageW(ctypes.byref(msg), None, 0, 0):
@@ -464,17 +489,23 @@ class SystemTray:
                 user32.DispatchMessageW(ctypes.byref(msg))
             _log("托盘消息循环结束")
         except Exception as e:
+            safe_log_exception("tray", f"_run 忽略异常: {e}", "warning")
             _log(f"托盘线程异常: {e}\n{traceback.format_exc()}")
         finally:
             self._remove_icon()
 
     def _remove_icon(self):
-        """移除托盘图标。"""
+        """移除托盘图标（幂等；移除后置空 ``_nid``）。"""
         try:
-            if hasattr(self, "_nid") and self._nid:
-                ctypes.windll.shell32.Shell_NotifyIconW(0x00000002, ctypes.byref(self._nid))
-                _log("移除托盘图标")
+            with self._nid_lock:
+                if getattr(self, "_nid", None):
+                    ctypes.windll.shell32.Shell_NotifyIconW(0x00000002, ctypes.byref(self._nid))  # NIM_DELETE
+                    # 置空：否则 stop() 之后状态 watcher 还会对已移除的图标发
+                    # NIM_MODIFY（调用无效、且 _last_state 被缓存成错误值）
+                    self._nid = None
+                    _log("移除托盘图标")
         except Exception as e:
+            safe_log_exception("tray", f"_remove_icon 忽略异常: {e}", "warning")
             _log(f"移除托盘图标异常: {e}")
 
     def start(self):
@@ -536,12 +567,80 @@ class SystemTray:
             # run_detached：在独立后台线程运行，不阻塞调用线程
             self._pystray_icon.run_detached()
             self._running = True
+            # Linux 也要启动状态监视，否则 tooltip 永远停在启动时的文案
+            self._start_state_watcher()
             _log("Linux 托盘已启动 (pystray)")
             return True
         except Exception as e:
+            safe_log_exception("tray", f"_start_linux 忽略异常: {e}", "warning")
             _log(f"Linux 托盘启动失败（可能无桌面环境）: {e}")
             self._running = False
             return False
+
+    # ---------------- 状态显示 ----------------
+
+    def _state_tooltip(self, running: bool) -> str:
+        """拼出带运行状态的 tooltip 文本。"""
+        base = tray_i18n_text("tooltip")
+        state = tray_i18n_text("state_running" if running else "state_stopped")
+        return f"{base} — {state}"
+
+    def refresh_state_tooltip(self, force: bool = False) -> None:
+        """按当前服务器状态刷新托盘 tooltip。
+
+        Windows 走 ``NIM_MODIFY`` + ``NIF_TIP``；Linux（pystray）改 ``icon.title``。
+        状态没变化时直接返回，避免频繁调用 shell API。
+
+        Args:
+            force: 忽略状态缓存，强制刷新（语言切换后使用）
+        """
+        try:
+            running = bool(server_running())
+            if not force and running == self._last_state:
+                return
+            # 先记状态再发 API：即便调用失败也不该每 3 秒重试同一状态
+            self._last_state = running
+            text = self._state_tooltip(running)
+
+            if not IS_WINDOWS:
+                icon = getattr(self, "_pystray_icon", None)
+                if icon is not None:
+                    with contextlib.suppress(Exception):
+                        icon.title = text
+                return
+
+            with self._nid_lock:
+                nid = self._nid
+                if nid is None:
+                    return
+                # 只改 tooltip：uFlags 必须显式设为 NIF_TIP，
+                # notify() 之后 uFlags 会停在 NIF_INFO，不重置会改错字段。
+                nid.uFlags = 0x00000004  # NIF_TIP
+                nid.szTip = text
+                ctypes.windll.shell32.Shell_NotifyIconW(0x00000001, ctypes.byref(nid))  # NIM_MODIFY
+        except Exception as e:
+            safe_log_exception("tray", f"刷新托盘状态失败: {e}", "warning")
+
+    def _start_state_watcher(self) -> None:
+        """启动后台线程，定期检查服务器状态并刷新 tooltip。
+
+        两个平台都会启动（早期只在 Windows 的 ``_run`` 里调用，
+        Linux 分支自己 ``run_detached()``，于是 Linux 上 tooltip 永远不变）。
+        """
+        if self._watcher_thread and self._watcher_thread.is_alive():
+            return
+
+        def _watch():
+            # 先写一次初始状态
+            self.refresh_state_tooltip(force=True)
+            while self._running:
+                time.sleep(3)
+                if not self._running:
+                    break
+                self.refresh_state_tooltip()
+
+        self._watcher_thread = threading.Thread(target=_watch, daemon=True, name="tray-state-watcher")
+        self._watcher_thread.start()
 
     def stop(self):
         """停止托盘并移除图标（平台相关）。"""
@@ -558,6 +657,7 @@ class SystemTray:
             if self._hwnd:
                 ctypes.windll.user32.PostMessageW(self._hwnd, 0x0010, 0, 0)
         except Exception as e:
+            safe_log_exception("tray", f"stop 忽略异常: {e}", "warning")
             _log(f"停止托盘异常: {e}")
         self._remove_icon()
 
@@ -570,15 +670,20 @@ class SystemTray:
                 if icon is not None:
                     icon.notify(message, title=title)
             except Exception as e:
+                safe_log_exception("tray", f"notify 忽略异常: {e}", "warning")
                 _log(f"显示通知异常(linux): {e}")
             return
         try:
-            if hasattr(self, "_nid") and self._nid:
-                self._nid.uFlags = 0x00000010  # NIF_INFO
-                self._nid.szInfo = message
-                self._nid.szInfoTitle = title
-                self._nid.dwInfoFlags = 0x00000001  # NIIF_INFO
-                result = ctypes.windll.shell32.Shell_NotifyIconW(0x00000001, ctypes.byref(self._nid))
-                _log(f"显示通知, 返回={result}")
+            # 与状态 watcher 共用同一把锁：两者都会改同一个 NOTIFYICONDATAW
+            # 的 uFlags/szTip，不加锁会出现"气泡被改成 tooltip 更新"的竞态。
+            with self._nid_lock:
+                if getattr(self, "_nid", None):
+                    self._nid.uFlags = 0x00000010  # NIF_INFO
+                    self._nid.szInfo = message
+                    self._nid.szInfoTitle = title
+                    self._nid.dwInfoFlags = 0x00000001  # NIIF_INFO
+                    result = ctypes.windll.shell32.Shell_NotifyIconW(0x00000001, ctypes.byref(self._nid))
+                    _log(f"显示通知, 返回={result}")
         except Exception as e:
+            safe_log_exception("tray", f"notify 忽略异常: {e}", "warning")
             _log(f"显示通知异常: {e}")

@@ -11,6 +11,7 @@ from ...commands import (
     get_command_suggestions,
     get_commands_by_category,
 )
+from ...constants import DANGEROUS_COMMANDS
 from ..route_decorator import register_route
 
 
@@ -35,6 +36,15 @@ class CommandsRoutesMixin:
         else:
             cmds = [{"name": name, **get_command_info(name)} for name in get_all_commands()]
         self._json({"ok": True, "commands": cmds, "categories": get_categories()})
+
+    @register_route("/api/commands/dangerous")
+    def _route_commands_dangerous(self, data):
+        """返回危险命令清单（前端二次确认用）。
+
+        单一事实来源是 ``constants.DANGEROUS_COMMANDS``，前端不再硬编码，
+        避免"后端认为危险、前端没有确认弹窗"的不一致。
+        """
+        self._json({"ok": True, "commands": sorted(DANGEROUS_COMMANDS)})
 
     @register_route("/api/commands/autocomplete")
     def _route_commands_autocomplete(self, data):

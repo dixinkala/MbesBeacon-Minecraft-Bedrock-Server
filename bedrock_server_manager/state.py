@@ -1,20 +1,22 @@
 """
-核心状态模块：集中管理所有模块级全局变量，避免循环导入。
+核心状态模块：为旧代码提供 AppContext 的惰性代理。
+
 其他模块通过 `from .state import *` 或具体导入访问全局状态。
 常量已移至 constants.py，此处保留向后兼容导入。
 
-【P1-1 迁移说明（批 4）】
-- API_TOKEN / app_start_time / settings / console / install_state 已由
+【迁移说明】
+- API_TOKEN / app_start_time / settings / console / install_state 由
   AppContext 自行生成与管理，本模块通过模块级 __getattr__ 惰性代理到
   AppContext.instance()，保证 reset 后仍与当前实例保持一致。
-- server_proc / httpd / server_lock 仅为向后兼容保留（从未写入真实值）。
+- server_proc / httpd / server_lock 三个模块级变量已删除：它们从未被写入真实值，
+  `from .state import server_proc` 永远拿到 None，是"看起来能读、实际永远是空"的陷阱。
+  需要这些状态请用 AppContext.instance().server_proc / httpd / server_lock。
 - 便捷函数与死代码已清理（log*/get_setting/set_setting/get_state_dict、
   PLAYER_NAME_RE、mutex_handle 均无引用）。
 新代码一律使用 AppContext.instance()。
 """
 
 import os
-import threading
 
 from .app_logger import safe_log_exception
 
@@ -24,13 +26,6 @@ from .constants import (
     CACHE_DIR,
     LOGS_DIR,
 )
-
-# ---------------- 全局单例状态 ----------------
-# console / install_state 经 __getattr__ 惰性代理（见下方），不再定义模块级变量
-# server_proc / httpd / server_lock 仅向后兼容保留（从未写入真实值）
-server_proc = None  # ServerProcess 单例（已由 AppContext 管理，此处兼容保留）
-server_lock = threading.Lock()  # 服务器进程锁（已由 AppContext 管理，此处兼容保留）
-httpd = None  # HTTP 服务器实例（已由 AppContext 管理，此处兼容保留）
 
 
 def __getattr__(name: str):

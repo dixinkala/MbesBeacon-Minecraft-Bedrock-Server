@@ -2,15 +2,17 @@
 通用工具模块：设置管理、服务器检测、目录历史、浏览器打开等。
 """
 
+import contextlib
+import errno
 import json
 import os
+import tempfile
 import time
 import webbrowser
 
 from .app_context import AppContext
 from .app_logger import safe_log_exception
 from .constants import APP_DATA_DIR, IS_WINDOWS, SERVER_EXE
-from .di import initialize_container, inject
 from .state import DEFAULT_THEME, THEME_FILE
 
 
@@ -31,16 +33,166 @@ def _get_server_proc():
 # 设置文件路径（统一到 APP_DATA_DIR，与 state.migrate_legacy_data 迁移目标一致）
 SETTINGS_FILE = os.path.join(APP_DATA_DIR, "settings.json")
 
+
+def _is_transient_replace_error(err: OSError) -> bool:
+    """``os.replace`` 的失败是否属于"目标被临时占用"，值得重试。
+
+    Windows 上并发写同一文件时会出现共享冲突（winerror 32）或锁定冲突（33），
+    Python 可能把它们映射成普通 ``OSError`` 而不是 ``PermissionError``；
+    早期只捕获 ``PermissionError``，并发写偶发失败（实测 CI 上 1/N 次）。
+    """
+    if isinstance(err, PermissionError):
+        return True
+    if getattr(err, "winerror", None) in (5, 32, 33):
+        return True
+    return err.errno in (errno.EACCES, errno.EBUSY, errno.ETXTBSY)
+
+
+def atomic_write_text(path: str, text: str, encoding: str = "utf-8", newline: str = "") -> None:
+    """原子写入文本文件：先写同目录临时文件，fsync 后 os.replace 覆盖目标。
+
+    直接用 ``open(path, "w")`` 时，进程崩溃/断电会在磁盘上留下截断到一半的文件；
+    对 settings.json、server.properties、权限/白名单这类"唯一副本"是致命的数据丢失。
+
+    并发安全：
+    - 临时文件名必须**每次唯一**。早期用 ``f"{path}.tmp{os.getpid()}"``，
+      同进程多线程写同一文件时共用同一个 tmp，一个线程 replace 走它、
+      另一个线程的 finally 再把它删掉，结果目标文件直接消失。
+    - ``finally`` 里只在**本线程仍持有**该临时文件时才删除（replace 成功后
+      那个路径已不存在，不会误删别人的）。
+
+    Args:
+        path: 目标文件路径
+        text: 待写入的文本内容
+        encoding: 文件编码
+        newline: 换行处理，默认 ""（不做转换，保持内容原样）
+
+    Raises:
+        OSError: 目录不可写、磁盘满等
+    """
+    directory = os.path.dirname(os.path.abspath(path))
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    # 同目录 + 唯一后缀：replace 才是同卷原子操作
+    fd, tmp = tempfile.mkstemp(prefix=os.path.basename(path) + ".", suffix=".tmp", dir=directory or ".")
+    replaced = False
+    try:
+        with os.fdopen(fd, "w", encoding=encoding, newline=newline) as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        # Windows 上目标被其它进程/线程/杀软短暂占用时 os.replace 会失败：
+        #   - PermissionError（拒绝访问）
+        #   - OSError(winerror=32/33)：共享冲突 / 锁定冲突
+        # 这些都属于**瞬时**冲突，重试即可；其它错误（磁盘满、只读）直接抛。
+        last_err = None
+        for delay in (0.0, 0.02, 0.05, 0.1, 0.2, 0.4):
+            if delay:
+                time.sleep(delay)
+            try:
+                os.replace(tmp, path)
+                replaced = True
+                break
+            except OSError as e:
+                if not _is_transient_replace_error(e):
+                    raise
+                last_err = e
+        if not replaced:
+            raise last_err if last_err else OSError("原子替换失败")
+    finally:
+        # 只有还没成功 replace 时才清理自己的临时文件
+        if not replaced:
+            with contextlib.suppress(OSError):
+                os.remove(tmp)
+
+
+def atomic_write_json(path: str, obj) -> None:
+    """原子写入 JSON 文件（UTF-8、2 空格缩进、保留中文）。"""
+    atomic_write_text(path, json.dumps(obj, ensure_ascii=False, indent=2))
+
+
+def is_path_within(path: str, base: str) -> bool:
+    """判断 path 是否位于 base 目录内（含 base 本身）。
+
+    所有删除/移动/恢复类操作都应先通过此函数做边界检查，
+    避免 ``..``、分隔符拼接或绝对路径导致越界操作。
+
+    Args:
+        path: 待校验的路径
+        base: 允许的根目录
+
+    Returns:
+        bool: True 表示 path 在 base 内（或与 base 相同）
+    """
+    if not path or not base:
+        return False
+    try:
+        p = os.path.normcase(os.path.realpath(os.path.abspath(path)))
+        b = os.path.normcase(os.path.realpath(os.path.abspath(base)))
+    except (OSError, ValueError):
+        return False
+    if p == b:
+        return True
+    # base 本身是根目录时（C:\ 或 /）它已带分隔符，再加 os.sep 会变成 "C:\\"、
+    # "//"，导致前缀比较永远失败（把根目录内的合法路径判成越界）。
+    if b.endswith(os.sep):
+        return p.startswith(b)
+    return p.startswith(b + os.sep)
+
+
+def is_dangerous_target(path: str) -> bool:
+    """判断路径是否为不应被整体删除的危险目标（盘符根目录、用户主目录、系统目录）。"""
+    try:
+        p = os.path.normcase(os.path.realpath(os.path.abspath(path)))
+    except (OSError, ValueError):
+        return True
+    if not p:
+        return True
+    # 盘符根目录（C:\）或文件系统根（/）
+    if os.path.dirname(p) == p:
+        return True
+    if len(p) <= 3 and p[1:3] == ":\\":
+        return True
+    home = os.path.normcase(os.path.realpath(os.path.expanduser("~")))
+    if p == home:
+        return True
+    for sys_dir in (
+        "c:\\windows",
+        "c:\\program files",
+        "c:\\program files (x86)",
+        "c:\\programdata",
+        "/etc",
+        "/usr",
+        "/bin",
+        "/sbin",
+        "/lib",
+        "/boot",
+        "/var",
+        "/dev",
+        "/proc",
+        "/sys",
+        "/root",
+    ):
+        try:
+            s = os.path.normcase(os.path.realpath(os.path.abspath(sys_dir)))
+        except (OSError, ValueError):
+            continue
+        # 系统目录**及其子目录**都危险（C:\Windows\System32 之类）。
+        # 必须按分隔符边界比较，避免 "C:\WindowsFoo" 被误判成 "C:\Windows" 的子路径。
+        if p == s or p.startswith(s + os.sep):
+            return True
+    return False
+
+
 # detect_servers 缓存（避免高频状态轮询时反复扫描磁盘）
 _detect_cache = {"result": None, "time": 0}
 DETECT_CACHE_TTL = 30  # 缓存有效期 30 秒
 
 
-@inject("settings")
 def load_settings(settings=None) -> dict:
     """从磁盘加载设置，合并到全局 settings 字典。
 
-    使用依赖注入获取 settings，保持向后兼容。
+    ``settings`` 参数保留用于显式传入（测试/脚本），默认取全局 AppContext。
     """
     if settings is None:
         settings = _get_settings()
@@ -55,26 +207,23 @@ def load_settings(settings=None) -> dict:
         safe_log_exception("utils", f"操作失败: {e}", "warning")
 
 
-@inject("settings")
 def save_settings(settings=None) -> bool:
-    """将全局 settings 字典保存到磁盘。
+    """将全局 settings 字典保存到磁盘（原子写）。
 
-    使用依赖注入获取 settings，保持向后兼容。
+    ``settings`` 参数保留用于显式传入（测试/脚本），默认取全局 AppContext。
     """
     if settings is None:
         settings = _get_settings()
     try:
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(settings, f, ensure_ascii=False, indent=2)
+        atomic_write_json(SETTINGS_FILE, settings)
     except Exception as e:
         safe_log_exception("utils", f"操作失败: {e}", "warning")
 
 
-@inject("settings")
 def resolve_server_dir(settings=None):
     """获取当前管理的服务器目录。
 
-    使用依赖注入获取 settings，保持向后兼容。
+    ``settings`` 参数保留用于显式传入（测试/脚本），默认取全局 AppContext。
     """
     if settings is None:
         settings = _get_settings()
@@ -82,11 +231,10 @@ def resolve_server_dir(settings=None):
     return d
 
 
-@inject("console")
 def sync_log_file(console=None):
     """根据当前服务器目录同步控制台日志文件路径。
 
-    使用依赖注入获取 console，保持向后兼容。
+    ``console`` 参数保留用于显式传入（测试/脚本），默认取全局 AppContext。
     """
     if console is None:
         console = _get_console()
@@ -339,12 +487,14 @@ def get_lan_ip() -> str:
         ip = s.getsockname()[0]
         s.close()
         return ip
-    except Exception:
+    except Exception as e:
+        safe_log_exception("utils", f"get_lan_ip 忽略异常: {e}", "warning")
         try:
             import socket as _s
 
             return _s.gethostbyname(_s.gethostname())
-        except Exception:
+        except Exception as e:
+            safe_log_exception("utils", f"get_lan_ip 忽略异常: {e}", "warning")
             return "127.0.0.1"
 
 
@@ -356,7 +506,8 @@ def check_disk_space(target_dir: str, required_mb: int = 300) -> tuple[bool, int
         usage = shutil.disk_usage(target_dir)
         free_mb = usage.free / (1024 * 1024)
         return free_mb >= required_mb, free_mb, required_mb
-    except Exception:
+    except Exception as e:
+        safe_log_exception("utils", f"check_disk_space 忽略异常: {e}", "warning")
         return True, -1, required_mb
 
 
@@ -378,10 +529,10 @@ def load_theme() -> str:
 def save_theme(theme: str) -> bool:
     """保存主题设置。"""
     try:
-        with open(THEME_FILE, "w", encoding="utf-8") as f:
-            json.dump(theme, f, ensure_ascii=False)
+        atomic_write_json(THEME_FILE, theme)
         return True
-    except Exception:
+    except Exception as e:
+        safe_log_exception("utils", f"save_theme 忽略异常: {e}", "warning")
         return False
 
 
@@ -454,9 +605,6 @@ def tr_msg(zh: str, en: str, *args) -> str:
         return tpl
     try:
         return tpl % args
-    except Exception:
+    except Exception as e:
+        safe_log_exception("utils", f"tr_msg 忽略异常: {e}", "warning")
         return tpl
-
-
-# 初始化依赖注入容器（确保在模块加载时完成）
-initialize_container()

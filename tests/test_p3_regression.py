@@ -57,14 +57,6 @@ class TestUnitSecurityVerify(unittest.TestCase):
         self.assertTrue(ok, err)
         self.assertFalse(dangerous)
 
-    def test_is_dangerous_endpoint(self):
-        """危险端点识别。"""
-        from bedrock_server_manager.security import is_dangerous_endpoint
-
-        self.assertTrue(is_dangerous_endpoint("/api/backups/restore"))
-        self.assertTrue(is_dangerous_endpoint("/api/server/delete"))
-        self.assertFalse(is_dangerous_endpoint("/api/status"))
-
     def test_check_dangerous_operation_confirm(self):
         """危险操作二次确认：正确确认值放行、缺失/错误拒绝。"""
         from bedrock_server_manager.security import check_dangerous_operation

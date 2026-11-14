@@ -300,6 +300,8 @@ def get_command_suggestions(input_text: str, online_players: list[str] = None) -
     parts = input_text.strip().split()
     if not parts:
         return {"suggestions": [], "command_info": None, "is_complete": False}
+    # 容忍前导斜杠（玩家习惯输入 /kick ...，命令表里没有斜杠）
+    parts[0] = parts[0].lstrip("/")
 
     cmd_name = parts[0].lower()
     cmd_info = COMMANDS.get(cmd_name)
@@ -312,14 +314,18 @@ def get_command_suggestions(input_text: str, online_players: list[str] = None) -
     # 如果命令已完整，提供参数提示
     if cmd_info:
         args = cmd_info.get("args", [])
-        current_arg_index = len(parts) - 1  # 减去命令本身
+        # parts[0] 是命令名，所以"正在输入的参数"下标是 len(parts) - 2。
+        # 早期写成 len(parts) - 1 整体错位一格：输入 "kick St" 时
+        # 会去查 args[1]（原因是 [原因]），玩家名补全永远不触发。
+        current_arg_index = max(0, len(parts) - 2)
+        # 正在输入的前缀（若已输入空格分隔的下一段）
+        prefix = parts[current_arg_index + 1] if current_arg_index + 1 < len(parts) else ""
 
         # 如果是玩家名参数，提供在线玩家补全
         if online_players and current_arg_index < len(args):
             arg_desc = args[current_arg_index]
             if "玩家名" in arg_desc or "目标玩家" in arg_desc:
-                player_prefix = parts[current_arg_index + 1] if current_arg_index + 1 < len(parts) else ""
-                player_matches = [p for p in online_players if p.lower().startswith(player_prefix.lower())]
+                player_matches = [p for p in online_players if p.lower().startswith(prefix.lower())]
                 return {
                     "suggestions": [{"name": p, "desc": "在线玩家", "category": "玩家"} for p in player_matches[:10]],
                     "command_info": cmd_info,
@@ -342,20 +348,25 @@ def get_command_suggestions(input_text: str, online_players: list[str] = None) -
 def is_dangerous_command(command: str) -> bool:
     """检查命令是否为危险命令。
 
-    优先依据 constants.DANGEROUS_COMMANDS 单一清单判断，
-    兼容命令库元数据（dangerous 标记已与清单同步）。
+    与安全模块共用同一套判定（``security._is_dangerous_command``），
+    保证"前端帮助/确认"与"后端校验"结论一致。
+    早期这里只取首 token 比对 ``DANGEROUS_COMMANDS``，
+    多词项（``whitelist remove`` / ``allowlist remove``）永远匹配不到，
+    导致前后端判断不一致。
 
     Args:
-        command: 命令名称
+        command: 命令文本（可含参数）
 
     Returns:
         bool: 是否为危险命令
     """
-    cmd_name = command.lower().split()[0] if command else ""
-    if cmd_name in DANGEROUS_COMMANDS:
-        return True
-    cmd_info = COMMANDS.get(cmd_name)
-    return bool(cmd_info and cmd_info.get("dangerous", False))
+    if not command:
+        return False
+    # 延迟导入避免 commands ↔ security 的模块级循环依赖
+    from .security import _is_dangerous_command
+
+    normalized = command.strip().lower().lstrip("/")
+    return _is_dangerous_command(normalized)
 
 
 def get_command_help(command: str = "") -> str:
