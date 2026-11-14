@@ -73,18 +73,21 @@ venv\Scripts\activate          # Windows
 
 # 3. Install dependencies
 pip install -r requirements.txt
-pip install -r requirements-dev.txt  # dev dependencies (if created)
+pip install -r requirements-dev.txt  # dev/test deps (pytest, pytest-cov, ruff)
 
 # 4. Run the dev version
 python run.py
 
-# 5. Run tests
-pytest tests/ -v
+# 5. Run tests (with coverage gate)
+pytest --cov
 
-# 6. Format code
+# 6. Frontend tests
+node --test "tests/js/**/*.test.mjs"
+
+# 7. Format code
 ruff format .
 
-# 7. Lint
+# 8. Lint
 ruff check .
 ```
 
@@ -109,7 +112,7 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 - Follow [PEP 8](https://peps.python.org/pep-0008/) style
 - Use `ruff` for formatting and linting
 - Functions and methods must have docstrings
-- Type annotations are required
+- Type annotations are recommended for public functions (not CI-enforced)
 - All new features must include unit tests
 
 ### Front-end Code
@@ -131,7 +134,8 @@ ruff format .
 ruff check .
 
 # 3. All tests pass
-pytest tests/ -v
+pytest --cov
+node --test "tests/js/**/*.test.mjs"
 
 # 4. Build test (optional)
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
@@ -197,7 +201,7 @@ When filing a bug report, describe the problem in as much detail as possible to 
 ### Required Information
 
 - [ ] OS version (e.g., Windows 10 22H2 / Windows 11 23H2 or Ubuntu 20.04+)
-- [ ] MbesBeacon version (e.g., v1.0.21)
+- [ ] MbesBeacon version (e.g., v1.0.25; see the title bar or `/api/health`)
 - [ ] Reproduction steps (down to each operation)
 - [ ] Expected behavior
 - [ ] Actual behavior
@@ -206,7 +210,7 @@ When filing a bug report, describe the problem in as much detail as possible to 
 
 - [ ] Screenshot or screen recording
 - [ ] Log files (`%APPDATA%\MbesBeacon\logs\`)
-- [ ] Crash report (`%APPDATA%\MbesBeacon\crash.log`)
+- [ ] Crash report (`%APPDATA%\MbesBeacon\logs\crash.log`)
 - [ ] Server config file (`server.properties`; redact any sensitive info)
 
 ---

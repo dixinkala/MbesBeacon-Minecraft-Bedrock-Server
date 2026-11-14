@@ -73,18 +73,21 @@ venv\Scripts\activate          # Windows
 
 # 3. 安装依赖
 pip install -r requirements.txt
-pip install -r requirements-dev.txt  # 开发依赖（如已创建）
+pip install -r requirements-dev.txt  # 开发/测试依赖（pytest、pytest-cov、ruff）
 
 # 4. 运行开发版本
 python run.py
 
-# 5. 运行测试
-pytest tests/ -v
+# 5. 运行测试（含覆盖率门禁）
+pytest --cov
 
-# 6. 代码格式化
+# 6. 前端测试
+node --test "tests/js/**/*.test.mjs"
+
+# 7. 代码格式化
 ruff format .
 
-# 7. 代码检查
+# 8. 代码检查
 ruff check .
 ```
 
@@ -109,7 +112,7 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 - 遵循 [PEP 8](https://peps.python.org/pep-0008/) 代码风格
 - 使用 `ruff` 进行代码格式化和检查
 - 函数和方法必须有 docstring
-- 类型注解是必须的
+- 公开函数建议添加类型注解（CI 未强制，但便于阅读与重构）
 - 所有新功能必须包含单元测试
 
 ### 前端代码
@@ -131,7 +134,8 @@ ruff format .
 ruff check .
 
 # 3. 所有测试通过
-pytest tests/ -v
+pytest --cov
+node --test "tests/js/**/*.test.mjs"
 
 # 4. 打包测试（可选）
 python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
@@ -197,7 +201,7 @@ Fixes #456
 ### 必含信息
 
 - [ ] 操作系统版本（Windows 10 22H2 / Windows 11 23H2 或 Ubuntu 20.04+）
-- [ ] MbesBeacon 版本号（v1.0.21 等）
+- [ ] MbesBeacon 版本号（v1.0.25 等，见程序标题栏或 `/api/health`）
 - [ ] 复现步骤（详细到每一步操作）
 - [ ] 预期行为
 - [ ] 实际行为
@@ -206,7 +210,7 @@ Fixes #456
 
 - [ ] 截图或录屏
 - [ ] 日志文件（`%APPDATA%\MbesBeacon\logs\`）
-- [ ] 崩溃报告（`%APPDATA%\MbesBeacon\crash.log`）
+- [ ] 崩溃报告（`%APPDATA%\MbesBeacon\logs\crash.log`）
 - [ ] 服务器配置文件（`server.properties`，如有敏感信息请脱敏）
 
 ---

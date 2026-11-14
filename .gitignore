@@ -47,3 +47,14 @@ cert.pfx
 *.pfx
 *.cer
 *.p12
+
+# 环境变量 / 凭据（不提交）
+# 本项目的签名口令通过 $env:CERT_PASS 传入，不需要 .env；
+# 这里只做防御，避免以后引入本地配置时误提交密钥。
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# 本地临时备份（历史重写/素材回滚用，仅保存在本机仓库目录内）
+_local_backup/
