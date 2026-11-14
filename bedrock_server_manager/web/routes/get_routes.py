@@ -96,9 +96,8 @@ class GetRoutesMixin:
             # psutil 未安装时使用默认值（健康检查降级）
             pass
         except Exception as e:
-            safe_log_exception("get_routes", f"_get_health 忽略异常: {e}", "warning")
             # 获取进程信息失败时使用默认值
-            pass
+            safe_log_exception("get_routes", f"_get_health 忽略异常: {e}", "warning")
         uptime = time.time() - AppContext.instance().app_start_time
 
         self._json(

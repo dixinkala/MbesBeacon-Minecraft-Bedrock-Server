@@ -490,6 +490,7 @@ class TestRequestBodyOversize(unittest.TestCase):
         h.headers = {"X-API-Token": "令牌"}
         h.path = "/api/status"
         h.command = "GET"
+        result = None
         try:
             result = h._check_auth()
         except TypeError as e:
