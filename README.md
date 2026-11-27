@@ -65,7 +65,7 @@ MbesBeacon 是一款功能完整的 Minecraft 基岩版（Bedrock Edition）专�
 - [系统要求](#系统要求)
 - [安装方法](#安装方法)
 - [使用方法](#使用方法)
-- [完整使用说明（Wiki）](docs/wiki/README.md)
+- [完整使用说明（Wiki）](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki)
 - [输入输出示例](#输入输出示例)
 - [项目结构](#项目结构)
 - [安全特性](#安全特性)
@@ -220,8 +220,8 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 ## 使用方法
 
-> 完整说明（含每个参数的边界条件、失败处理与排错）见 **[完整使用说明（Wiki）](docs/wiki/README.md)**；
-> 软件内置「⑩ 使用帮助」只保留常用功能速查。
+> 完整说明（含每个参数的边界条件、失败处理与排错）见 **[GitHub Wiki](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki)**
+> （源文件在仓库 [`docs/wiki/`](docs/wiki/README.md)）；软件内置「⑩ 使用帮助」只保留常用功能速查。
 
 ### 快速开始
 
