@@ -103,7 +103,7 @@ class TestHostAllowlist(unittest.TestCase):
     def test_loopback_always_allowed(self):
         with patch.object(remote, "enabled", return_value=False):
             names = remote.allowed_hostnames()
-        self.assertTrue({"127.0.0.1", "localhost", "::1"} <= names)
+        self.assertLessEqual({"127.0.0.1", "localhost", "::1"}, names)
 
     def test_lan_ip_allowed_only_when_enabled(self):
         with (
