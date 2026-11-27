@@ -61,6 +61,31 @@ def _find_text(node, name: str) -> str:
     return ""
 
 
+#: 网关 XML 体积上限，超过直接拒绝（正常描述/响应只有几 KB）
+MAX_XML_BYTES = 256 * 1024
+#: DTD / 实体声明：正常 UPnP 报文不会包含，出现即视为恶意（防 billion laughs）
+_FORBIDDEN_XML_DECL = re.compile(r"<\!\s*(DOCTYPE|ENTITY)", re.IGNORECASE)
+
+
+def safe_fromstring(text: str) -> ET.Element:
+    """解析来自网络的 XML，并拒绝 DTD / 实体声明与超大文档。
+
+    ``xml.etree`` 支持内部实体展开，恶意网关可构造指数级实体炸弹耗尽内存/CPU。
+    标准库没有 defusedxml，这里改为"先拒绝再解析"：正常 UPnP 描述与 SOAP 响应
+    都不含 DOCTYPE/ENTITY，直接拒绝不会误伤。
+    """
+    if not isinstance(text, str):
+        raise UpnpError("XML 内容类型不正确")
+    if len(text) > MAX_XML_BYTES:
+        raise UpnpError(f"XML 超过 {MAX_XML_BYTES // 1024} KB，已拒绝")
+    if _FORBIDDEN_XML_DECL.search(text):
+        raise UpnpError("XML 包含 DTD/实体声明，已拒绝解析")
+    try:
+        return ET.fromstring(text)
+    except ET.ParseError as exc:
+        raise UpnpError(f"XML 解析失败: {exc}") from exc
+
+
 # --------------------------------------------------------------------------- SSDP
 
 
@@ -135,10 +160,7 @@ def parse_description(xml_text: str, base_url: str = "") -> dict:
     Raises:
         UpnpError: 描述里没有可用的 WAN 连接服务
     """
-    try:
-        root = ET.fromstring(xml_text)
-    except ET.ParseError as exc:
-        raise UpnpError(f"网关描述不是合法 XML: {exc}") from exc
+    root = safe_fromstring(xml_text)
 
     device_name = _find_text(root, "friendlyName")
     # 兼容两种结构：serviceList 直接挂在 device 下，或挂在嵌套的 WANDevice/WANConnectionDevice 下
@@ -262,16 +284,14 @@ def _soap(control_url: str, service_type: str, action: str, args: dict, timeout:
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", "ignore")
         if "UPnPError" in raw:
-            code = _find_text(ET.fromstring(raw), "errorCode")
-            desc = _find_text(ET.fromstring(raw), "errorDescription")
+            fault = safe_fromstring(raw)
+            code = _find_text(fault, "errorCode")
+            desc = _find_text(fault, "errorDescription")
             raise UpnpError(f"网关返回错误 {code}: {desc}") from exc
         raise UpnpError(f"网关 HTTP {exc.code}") from exc
     except (TimeoutError, urllib.error.URLError, OSError) as exc:
         raise UpnpError(f"无法连接网关控制地址: {exc}") from exc
-    try:
-        return ET.fromstring(raw)
-    except ET.ParseError as exc:
-        raise UpnpError(f"网关响应不是合法 XML: {exc}") from exc
+    return safe_fromstring(raw)
 
 
 def _require_gateway(gateway: dict | None) -> dict:

@@ -1,10 +1,9 @@
 """UPnP 客户端测试：SSDP 解析、设备描述解析、SOAP 增删查（假网关）。"""
 
 import threading
-import unittest
 import xml.etree.ElementTree as ET
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from unittest import mock
+from unittest import TestCase, main, mock
 
 from bedrock_server_manager import upnp
 
@@ -119,7 +118,7 @@ class FakeGateway(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-class TestParsing(unittest.TestCase):
+class TestParsing(TestCase):
     def test_parse_ssdp_response(self):
         text = (
             "HTTP/1.1 200 OK\r\n"
@@ -157,6 +156,22 @@ class TestParsing(unittest.TestCase):
         with self.assertRaises(upnp.UpnpError):
             upnp.add_mapping(19132, "not-an-ip")
 
+    def test_safe_fromstring_rejects_entities(self):
+        bomb = (
+            '<?xml version="1.0"?>'
+            '<!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;">]>'
+            "<root>&lol2;</root>"
+        )
+        with self.assertRaises(upnp.UpnpError):
+            upnp.safe_fromstring(bomb)
+
+    def test_safe_fromstring_rejects_oversize(self):
+        with self.assertRaises(upnp.UpnpError):
+            upnp.safe_fromstring("<root>" + ("x" * (upnp.MAX_XML_BYTES + 1)) + "</root>")
+
+    def test_safe_fromstring_accepts_plain_xml(self):
+        self.assertIsNotNone(upnp.safe_fromstring("<root><a>1</a></root>"))
+
     def test_placeholder_ip(self):
         self.assertTrue(upnp.is_placeholder_ip("0.0.0.0"))
         self.assertFalse(upnp.is_placeholder_ip("203.0.113.7"))
@@ -164,7 +179,7 @@ class TestParsing(unittest.TestCase):
         self.assertFalse(upnp.looks_like_ipv4("example.com"))
 
 
-class TestFakeGatewayFlow(unittest.TestCase):
+class TestFakeGatewayFlow(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), FakeGateway)
@@ -229,4 +244,4 @@ class TestFakeGatewayFlow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    main(verbosity=2)

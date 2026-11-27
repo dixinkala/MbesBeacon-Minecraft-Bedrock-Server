@@ -2,13 +2,12 @@
 
 import sys
 import time
-import unittest
-from unittest import mock
+from unittest import TestCase, main, mock
 
 from bedrock_server_manager import tunnel
 
 
-class TestAddressParsing(unittest.TestCase):
+class TestAddressParsing(TestCase):
     def test_playit(self):
         lines = ["[INFO] tunnel ready", "Address: demo.playit.gg:25565"]
         self.assertEqual(tunnel.detect_address(lines, "playit"), "demo.playit.gg:25565")
@@ -43,7 +42,7 @@ class TestAddressParsing(unittest.TestCase):
         self.assertEqual(tunnel.detect_address(["x"], "custom", "([unclosed"), "")
 
 
-class TestCommandBuild(unittest.TestCase):
+class TestCommandBuild(TestCase):
     def test_port_placeholder(self):
         argv = tunnel.build_command(f'"{sys.executable}" -u -c "print(1)" {{port}}', 19132)
         self.assertEqual(argv[0], sys.executable)
@@ -62,7 +61,7 @@ class TestCommandBuild(unittest.TestCase):
             tunnel.build_command("definitely-not-a-binary-xyz", 19132)
 
 
-class TestConfig(unittest.TestCase):
+class TestConfig(TestCase):
     def setUp(self):
         from bedrock_server_manager.app_context import AppContext
 
@@ -101,7 +100,7 @@ class TestConfig(unittest.TestCase):
             tunnel.save_config("custom", 'bad "quote')
 
 
-class TestProcessLifecycle(unittest.TestCase):
+class TestProcessLifecycle(TestCase):
     """用真实 Python 子进程验证启动、输出解析与停止。"""
 
     def setUp(self):
@@ -139,4 +138,4 @@ class TestProcessLifecycle(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    main(verbosity=2)
