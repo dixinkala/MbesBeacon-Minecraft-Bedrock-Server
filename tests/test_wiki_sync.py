@@ -5,6 +5,7 @@ import importlib.util
 import io
 import pathlib
 import re
+import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -100,6 +101,21 @@ class TestDryRun(unittest.TestCase):
                 self.assertEqual(sync_wiki.main(["--dry-run"]), 2)
         finally:
             sync_wiki.SRC_DIR = original
+
+
+class TestRemoveTree(unittest.TestCase):
+    """同步结束后临时克隆必须删干净（Windows 上句柄释放有延迟）"""
+
+    def test_removes_directory_with_files(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="mbes_wiki_test_"))
+        (tmp / "a.txt").write_text("x", encoding="utf-8")
+        (tmp / "sub").mkdir()
+        (tmp / "sub" / "b.txt").write_text("y", encoding="utf-8")
+        sync_wiki.remove_tree(tmp)
+        self.assertFalse(tmp.exists())
+
+    def test_missing_path_is_noop(self):
+        sync_wiki.remove_tree(pathlib.Path(tempfile.gettempdir()) / "__mbes_no_such_dir__")
 
 
 class TestOriginUrl(unittest.TestCase):

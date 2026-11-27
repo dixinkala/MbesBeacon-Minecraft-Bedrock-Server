@@ -18,11 +18,15 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -72,6 +76,26 @@ def build_sidebar(pages: list[str], repo_url: str) -> str:
 
 def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=cwd, text=True, encoding="utf-8", capture_output=True, check=check)
+
+
+def remove_tree(path: Path, attempts: int = 4) -> None:
+    """删除临时目录，失败时重试。
+
+    git 会把 ``.git/objects/pack/*.pack`` 标成只读，Windows 上 ``shutil.rmtree``
+    遇到只读文件会失败；而 ``ignore_errors=True`` 会把失败吞掉、静默留下半个目录。
+    因此先清掉只读属性再删，并对句柄延迟释放的情况重试。
+    """
+    for attempt in range(attempts):
+        if not path.exists():
+            return
+        for root, _dirs, files in os.walk(path):
+            for name in files:
+                with contextlib.suppress(OSError):
+                    os.chmod(os.path.join(root, name), stat.S_IWRITE)
+        shutil.rmtree(path, ignore_errors=True)
+        if not path.exists():
+            return
+        time.sleep(0.2 * (attempt + 1))
 
 
 def origin_url() -> str:
@@ -178,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.keep_workdir:
             print(f"临时目录保留: {work}")
         else:
-            shutil.rmtree(work, ignore_errors=True)
+            remove_tree(work)
 
 
 if __name__ == "__main__":
