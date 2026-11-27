@@ -184,5 +184,30 @@ class TestNoSilentExceptionSwallow(unittest.TestCase):
         self.assertLessEqual(len(offenders), 15, f"静默吞异常增多: {offenders}")
 
 
+class TestInAppHelpLicense(unittest.TestCase):
+    """内置使用帮助必须带 MIT 版权声明（中英各一份）"""
+
+    def setUp(self):
+        self.html = (REPO / "bedrock_server_manager" / "web" / "index.html").read_text(encoding="utf-8")
+
+    def test_chinese_help_has_mit_notice(self):
+        block = self.html.split("const HELP=`", 1)[1].split("`;", 1)[0]
+        for expected in (
+            "MIT 许可证",
+            "Copyright (c) 2026 MbesBeacon Contributors",
+            "blob/main/LICENSE",
+        ):
+            self.assertIn(expected, block, f"中文帮助缺少 {expected}")
+
+    def test_english_help_has_mit_notice(self):
+        line = next(ln for ln in self.html.splitlines() if ln.startswith("const I18N_HELP_EN"))
+        for expected in (
+            "Released under the MIT License",
+            "Copyright (c) 2026 MbesBeacon Contributors",
+            "blob/main/LICENSE",
+        ):
+            self.assertIn(expected, line, f"英文帮助缺少 {expected}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
