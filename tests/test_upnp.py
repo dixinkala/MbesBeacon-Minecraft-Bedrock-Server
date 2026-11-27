@@ -1,7 +1,6 @@
 """UPnP 客户端测试：SSDP 解析、设备描述解析、SOAP 增删查（假网关）。"""
 
 import threading
-import xml.etree.ElementTree as ET
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest import TestCase, main, mock
 
@@ -73,7 +72,7 @@ class FakeGateway(BaseHTTPRequestHandler):
         raw = self.rfile.read(length).decode("utf-8", "ignore")
         action = (self.headers.get("SOAPACTION") or "").strip('"').split("#")[-1]
         FakeGateway.requests.append((action, raw))
-        root = ET.fromstring(raw)
+        root = upnp.safe_fromstring(raw)
 
         def arg(name):
             for node in root.iter():
