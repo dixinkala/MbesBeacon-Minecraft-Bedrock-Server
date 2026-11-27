@@ -463,6 +463,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │       └── frontend.test.mjs   # 前端纯函数测试（node:test，零依赖，直接测 web/index.html）
 ├── docs/                       # 界面截图与操作演示（README 引用）
 │   └── wiki/                   # 完整使用说明（12 篇，覆盖全部功能）
+├── tools/                      # 开发工具（sync_wiki.py：同步 docs/wiki 到 GitHub Wiki）
 ├── .github/                    # GitHub Actions CI 工作流、Issue/PR 模板
 ├── BedrockServerManager.spec   # PyInstaller 打包配置
 ├── build.bat                   # 构建启动器（调用 build.ps1）
