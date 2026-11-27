@@ -585,9 +585,29 @@ const I18N_EN = {
   "未设置密码": "no password",
   "退出远程登录": "Sign out",
   "远程设置已保存，重启程序后生效": "Remote settings saved. Restart the app to apply.",
-  "远程管理只能在运行本程序的机器上修改": "Remote settings can only be changed on the machine running the app"
+  "远程管理只能在运行本程序的机器上修改": "Remote settings can only be changed on the machine running the app",
+  "🌐 公网联机（内网穿透）": "🌐 Public Access (NAT traversal)",
+  "让互联网上的玩家连进来：优先用 UPnP 自动端口映射；路由器不支持时可用外部穿透客户端。": "Let players on the internet join: try UPnP port mapping first; otherwise use an external tunnel client.",
+  "自动开启端口映射（UDP）": "Auto-map port (UDP)",
+  "关闭端口映射": "Remove mapping",
+  "检测中…": "Checking...",
+  "已映射": "mapped",
+  "未映射": "not mapped",
+  "公网 IP：": "Public IP: ",
+  "路由器未开启 UPnP 或不支持：请在路由器上手动把 UDP 19132 映射到本机。": "Router has no UPnP: forward UDP 19132 to this machine manually.",
+  "端口映射已开启，把公网 IP 和端口告诉好友即可。": "Port mapped. Share the public IP and port with your friends.",
+  "穿透客户端": "Tunnel client",
+  "命令模板（{port} 会替换为服务器端口）": "Command template ({port} is replaced with the server port)",
+  "保存": "Save",
+  "启动": "Start",
+  "停止": "Stop",
+  "运行中": "running",
+  "未运行": "stopped",
+  "公网地址：": "Public address: ",
+  "未识别到公网地址，请查看下方日志": "No public address detected yet; check the log below",
+  "公网 IP 是内网地址：可能处于双重 NAT / 运营商 NAT，互联网玩家通常连不上，建议改用外部穿透客户端。": "Public IP is private: likely double NAT / carrier NAT, so internet players may not connect. Consider an external tunnel client."
 };
-const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
+const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Internet friends cannot join?    Use Public Access on the Install tab: UPnP mapping first,\n                                      or configure an external tunnel client (UDP port)\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
 (function(){
   let lang = null, manual = null;
   try{ lang = localStorage.getItem('mbesbeacon_lang'); manual = localStorage.getItem('mbesbeacon_lang_manual'); }catch(e){}
@@ -882,6 +902,33 @@ window.MBS_LANG = lang;
       </div>
       <div class="row"><span class="hint" id="remoteUrl"></span></div>
       <div class="msg" id="remoteMsg"></div>
+    </div>
+    <div class="card" id="cardTunnel">
+      <h3>🌐 公网联机（内网穿透）</h3>
+      <div class="row"><span class="hint">让互联网上的玩家连进来：优先用 UPnP 自动端口映射；路由器不支持时可用外部穿透客户端。</span></div>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn" id="btnUpnpOpen">自动开启端口映射（UDP）</button>
+        <button class="btn" id="btnUpnpClose">关闭端口映射</button>
+        <span class="hint" id="upnpStatus"></span>
+      </div>
+      <div class="row"><span class="hint" id="upnpHint"></span></div>
+      <hr style="border:0;border-top:1px solid #2a333f;margin:12px 0;">
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;">
+        <select id="tunnelProvider" style="min-width:130px;">
+          <option value="playit">playit</option>
+          <option value="ngrok">ngrok</option>
+          <option value="frp">frp</option>
+          <option value="custom">自定义</option>
+        </select>
+        <input id="tunnelCommand" placeholder="命令模板（{port} 会替换为服务器端口）" style="min-width:300px;flex:1;">
+        <button class="btn" id="btnTunnelSave">保存</button>
+        <button class="btn primary" id="btnTunnelStart">启动</button>
+        <button class="btn" id="btnTunnelStop">停止</button>
+      </div>
+      <div class="row"><span class="hint" id="tunnelStatus"></span></div>
+      <div class="row"><span class="hint" id="tunnelAddr"></span></div>
+      <pre id="tunnelLog" style="max-height:120px;overflow:auto;white-space:pre-wrap;font-size:12px;color:#8b949e;margin:6px 0 0;"></pre>
+      <div class="msg" id="tunnelMsg"></div>
     </div>
     <div class="card" id="cardDelete" style="display:none; border-color:var(--err);">
       <h3 style="color:var(--err);">删除服务器</h3>
@@ -1381,6 +1428,7 @@ const HELP=`【MbesBeacon — Minecraft 基岩版服务器管理器 使用帮助
   Q 关掉网页后服务器还在跑吗？      → 在，从系统托盘重新打开界面
   Q 好友进不来？                    → 防火墙放行 UDP 19132、填对局域网 IP、检查白名单
   Q 手机/别的电脑怎么管理？         → 安装页「远程管理」启用并设密码，重启后访问 http://<局域网IP>:19100
+  Q 互联网好友怎么进来？            → 安装页「公网联机」用 UPnP 自动映射；不行就配置外部穿透客户端（UDP 端口）
   Q 改了配置不生效？                → 保存后需要重启服务器
   Q 数据存在哪？                    → %APPDATA%\MbesBeacon（设置 / 日志 / 缓存）
   Q 存档在哪？                      → 服务器目录下的 worlds\ 文件夹
@@ -2046,6 +2094,84 @@ $('btnCfgReload').onclick=()=>{
       msg.style.color='var(--err)'; msg.textContent = String(e);
     }
   };
+  $('btnTunnelSave').onclick = async () => {
+    const msg = $('tunnelMsg');
+    msg.textContent = '';
+    try{
+      const r = await jpost('/api/tunnel/config', {
+        provider: $('tunnelProvider').value,
+        command: $('tunnelCommand').value.trim(),
+      });
+      msg.style.color = r.ok ? 'var(--ok, #3fb950)' : 'var(--err)';
+      msg.textContent = r.ok ? '已保存' : (r.error || '保存失败');
+      if(r.ok) loadTunnelStatus();
+    }catch(e){ msg.style.color='var(--err)'; msg.textContent=String(e); }
+  };
+  $('btnTunnelStart').onclick = async () => {
+    const msg = $('tunnelMsg'); msg.textContent = '';
+    try{
+      const r = await jpost('/api/tunnel/start', {});
+      if(!r.ok){ msg.style.color='var(--err)'; msg.textContent = r.error || '启动失败'; return; }
+      msg.style.color='var(--ok, #3fb950)'; msg.textContent = tt('运行中');
+      renderTunnel(r.status);
+    }catch(e){ msg.style.color='var(--err)'; msg.textContent=String(e); }
+  };
+  $('btnTunnelStop').onclick = async () => {
+    try{
+      const r = await jpost('/api/tunnel/stop', {});
+      renderTunnel(r.status || {});
+    }catch(e){}
+  };
+  $('btnUpnpOpen').onclick = async () => {
+    const st = $('upnpStatus'); st.textContent = tt('检测中…');
+    try{
+      const r = await jpost('/api/tunnel/upnp/open', {});
+      if(!r.ok){
+        st.textContent = r.error || '失败';
+        $('upnpHint').textContent = tt('路由器未开启 UPnP 或不支持：请在路由器上手动把 UDP 19132 映射到本机。');
+        return;
+      }
+      renderUpnp({available:true, mapped:true, external_ip: r.external_ip});
+      $('upnpHint').textContent = tt('端口映射已开启，把公网 IP 和端口告诉好友即可。');
+    }catch(e){ st.textContent = String(e); }
+  };
+  $('btnUpnpClose').onclick = async () => {
+    try{
+      const r = await jpost('/api/tunnel/upnp/close', {});
+      if(r.ok){ renderUpnp({available:true, mapped:false, external_ip:''}); $('upnpHint').textContent=''; }
+    }catch(e){}
+  };
+  function isPrivateIp(ip){
+    return /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+      || /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(ip);
+  }
+  function renderUpnp(state){
+    const st = $('upnpStatus');
+    if(!state || state.error){ st.textContent = (state && state.error) || ''; return; }
+    st.textContent = (state.mapped ? tt('已映射') : tt('未映射'))
+      + (state.external_ip ? (' · ' + tt('公网 IP：') + state.external_ip) : '');
+    if(state.external_ip && isPrivateIp(state.external_ip)){
+      $('upnpHint').textContent = tt('公网 IP 是内网地址：可能处于双重 NAT / 运营商 NAT，互联网玩家通常连不上，建议改用外部穿透客户端。');
+    }
+  }
+  function renderTunnel(status){
+    if(!status) return;
+    $('tunnelStatus').textContent = (status.running ? tt('运行中') : tt('未运行'))
+      + (status.error ? (' · ' + status.error) : '');
+    $('tunnelAddr').textContent = status.address ? (tt('公网地址：') + status.address) : '';
+    $('tunnelLog').textContent = (status.lines || []).join('\n');
+  }
+  async function loadTunnelStatus(){
+    try{
+      const r = await jget('/api/tunnel/status');
+      if(!r.ok) return;
+      $('tunnelProvider').value = r.config.provider;
+      $('tunnelCommand').value = r.config.command || '';
+      renderTunnel(r.tunnel);
+      if (r.upnp && r.upnp.available) renderUpnp(r.upnp);
+    }catch(e){}
+  }
+  loadTunnelStatus();
   $('btnDelete').onclick=()=>{
   $('delPath').textContent=tt('将删除目录：')+(curDir||'');
   $('ckDeleteConfirm').checked=false;

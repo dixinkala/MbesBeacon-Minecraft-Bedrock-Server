@@ -544,6 +544,14 @@ A：在运行程序的电脑上打开「① 安装服务器」页底部的「�
 传输是明文 HTTP，仅建议在可信局域网使用；公网访问请配合内网穿透或反向代理，并先换成强口令。
 详见 [Wiki 联机与网络](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki/09-network)。
 
+### Q：怎么让互联网上的玩家连进来（内网穿透）？
+
+A：BDS 走 UDP 19132，纯 TCP 隧道不可用。两种方式：
+① 安装页「🌐 公网联机」里点「自动开启端口映射（UDP）」，UPnP 路由器会自动映射并显示公网 IP；
+② 路由器不支持 UPnP 或显示的是内网 IP（双重 NAT / 运营商 NAT）时，用外部穿透客户端（playit / ngrok / frp），
+在界面里填好命令即可一键启动并自动识别公网地址。详见
+[Wiki 联机与网络](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki/09-network)。
+
 ### Q：别人进不来服务器？
 A：检查以下几点：
 1. 防火墙是否放行 UDP 19132

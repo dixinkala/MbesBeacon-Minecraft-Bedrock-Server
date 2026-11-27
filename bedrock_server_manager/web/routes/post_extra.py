@@ -402,3 +402,114 @@ class PostExtraRoutesMixin:
                 "message": "设置已保存，重启程序后生效" if result["restart_required"] else "设置已保存",
             }
         )
+
+    # ---- 内网穿透 ----
+
+    def _tunnel_loopback_guard(self):
+        from ...web.handler import _is_loopback_client
+
+        return _is_loopback_client(self)
+
+    @staticmethod
+    def _tunnel_port(data):
+        from ...server import get_server_port
+
+        raw = data.get("port") if isinstance(data, dict) else None
+        try:
+            port = int(raw) if raw else get_server_port(resolve_server_dir())
+        except (TypeError, ValueError):
+            port = get_server_port(resolve_server_dir())
+        if not 1 <= port <= 65535:
+            raise ValueError(f"端口不合法: {port}")
+        return port
+
+    @register_post_route("/api/tunnel/upnp/open")
+    def _post_tunnel_upnp_open(self, data):
+        """为游戏端口添加 UPnP 映射。"""
+        from ... import remote, upnp
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "端口映射只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            port = self._tunnel_port(data or {})
+            internal_ip = (data or {}).get("internal_ip") or remote.primary_lan_ip()
+            result = upnp.add_mapping(port, internal_ip, protocol="UDP")
+            state = upnp.mapping_state(port)
+            audit_log("TUNNEL_UPNP_OPEN", f"udp/{port} -> {internal_ip}", None)
+            self._json({"ok": True, "port": port, "internal_ip": internal_ip, **result, "state": state})
+        except ValueError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+        except Exception as e:
+            safe_log_exception("post_extra", f"UPnP 映射失败: {e}", "warning")
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/upnp/close")
+    def _post_tunnel_upnp_close(self, data):
+        """删除游戏端口的 UPnP 映射。"""
+        from ... import upnp
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "端口映射只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            port = self._tunnel_port(data or {})
+            upnp.delete_mapping(port, protocol="UDP")
+            audit_log("TUNNEL_UPNP_CLOSE", f"udp/{port}", None)
+            self._json({"ok": True, "port": port})
+        except ValueError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+        except Exception as e:
+            safe_log_exception("post_extra", f"删除 UPnP 映射失败: {e}", "warning")
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/config")
+    def _post_tunnel_config(self, data):
+        """保存外部穿透客户端配置。"""
+        from ... import tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "穿透设置只能在运行本程序的机器上修改"}, code=403)
+            return
+        try:
+            cfg = tunnel.save_config(
+                provider=str((data or {}).get("provider") or "playit"),
+                command=str((data or {}).get("command") or ""),
+                address_regex=str((data or {}).get("address_regex") or ""),
+                public_address=str((data or {}).get("public_address") or ""),
+                enabled=bool((data or {}).get("enabled", False)),
+            )
+            audit_log("TUNNEL_CONFIG", f"provider={cfg['provider']}", None)
+            self._json({"ok": True, "config": cfg})
+        except tunnel.TunnelError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/start")
+    def _post_tunnel_start(self, data):
+        """启动外部穿透客户端。"""
+        from ... import tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "穿透客户端只能在运行本程序的机器上启动"}, code=403)
+            return
+        try:
+            port = self._tunnel_port(data or {})
+            status = tunnel.manager.start(port)
+            audit_log("TUNNEL_START", f"provider={status.get('provider')} port={port}", None)
+            self._json({"ok": True, "status": status, "port": port})
+        except ValueError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+        except tunnel.TunnelError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/stop")
+    def _post_tunnel_stop(self, data):
+        """停止外部穿透客户端。"""
+        from ... import tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "穿透客户端只能在运行本程序的机器上停止"}, code=403)
+            return
+        status = tunnel.manager.stop()
+        audit_log("TUNNEL_STOP", "", None)
+        self._json({"ok": True, "status": status})

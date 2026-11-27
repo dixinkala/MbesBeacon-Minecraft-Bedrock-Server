@@ -222,5 +222,25 @@ class TestConfig(unittest.TestCase):
         self.assertFalse(remote.enabled())
 
 
+class TestPrimaryLanIp(unittest.TestCase):
+    """端口映射要用的地址不能被 APIPA 抢走。"""
+
+    def _pick(self, values):
+        with patch.object(remote, "local_ipv4_addresses", return_value=set(values)):
+            return remote.primary_lan_ip()
+
+    def test_prefers_private_lan(self):
+        self.assertEqual(self._pick({"127.0.0.1", "169.254.180.199", "192.168.1.10"}), "192.168.1.10")
+
+    def test_prefers_10_over_cgnat(self):
+        self.assertEqual(self._pick({"127.0.0.1", "100.64.0.5", "10.0.0.7"}), "10.0.0.7")
+
+    def test_apipa_only_when_nothing_else(self):
+        self.assertEqual(self._pick({"127.0.0.1", "169.254.1.1"}), "169.254.1.1")
+
+    def test_loopback_fallback(self):
+        self.assertEqual(self._pick({"127.0.0.1"}), "127.0.0.1")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
