@@ -235,5 +235,29 @@ class TestWikiDocuments(unittest.TestCase):
             self.assertIn(marker, html, f"内置帮助缺少 {marker}")
 
 
+class TestReadmeNoStaleCounts(unittest.TestCase):
+    """README 不应硬编码测试数量：用例数持续增长，静态数字必然过期"""
+
+    def setUp(self):
+        self.docs = {
+            "README.md": (REPO / "README.md").read_text(encoding="utf-8"),
+            "README_EN.md": (REPO / "README_EN.md").read_text(encoding="utf-8"),
+        }
+
+    def test_no_static_tests_badge(self):
+        for name, text in self.docs.items():
+            self.assertNotRegex(text, r"img\.shields\.io/badge/tests-", f"{name} 仍有静态 tests 徽章")
+
+    def test_no_hardcoded_test_counts(self):
+        patterns = (r"\d+\s*个用例", r"\d+\s*个测试文件", r"\d+\s*test cases", r"\d+\s*test files")
+        for name, text in self.docs.items():
+            for pattern in patterns:
+                self.assertIsNone(re.search(pattern, text), f"{name} 仍硬编码测试数量: {pattern}")
+
+    def test_help_row_points_to_wiki(self):
+        for name, text in self.docs.items():
+            self.assertIn("GitHub Wiki", text, f"{name} 的使用帮助说明未指向 Wiki")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

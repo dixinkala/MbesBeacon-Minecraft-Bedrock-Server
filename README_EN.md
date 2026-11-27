@@ -9,7 +9,6 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-658%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -122,7 +121,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 | **⑦ Performance Monitor** | Real-time CPU/memory usage; online player count; running status; auto-refresh (5s); operation audit log |
 | **⑧ Pack Management** | List resource/behavior packs (name/version/enabled state); enable/disable (writes to the active world config and registers in known-pack list, restart to apply); import .zip/.mcpack packs; delete packs (type DELETE to confirm) |
 | **⑨ Scheduled Tasks** | Scheduled server restart; scheduled world backup; scheduled announcements; task enable/disable/delete; catch-up execution |
-| **⑩ Usage Help** | Complete built-in documentation covering every feature in detail |
+| **⑩ Usage Help** | Built-in quick reference (start, UI & shortcuts, feature summary, FAQ); full manual on the [GitHub Wiki](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki) |
 
 ### Special Features
 
@@ -428,7 +427,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # Command routes
 │           ├── players.py      # Player management routes
 │           └── config.py       # Config management routes
-├── tests/                      # Test suite (28 Python test files + 1 frontend test file, 659 cases, 658 passed / 1 skipped)
+├── tests/                      # Test suite (pytest unit/integration/E2E + frontend node:test; count grows over time)
 │   ├── __init__.py
 │   ├── test_unit.py            # Unit tests (config/players/backup/install/utils)
 │   ├── test_integration.py     # Integration tests (module cooperation, state sync)
@@ -485,7 +484,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 ## Testing
 
 ```bash
-# Python: 28 test files / 659 cases, with a coverage gate (fail_under=52)
+# Python: pytest (coverage gate fail_under=52 — below it the run fails)
 pip install -r requirements-dev.txt
 pytest --cov
 

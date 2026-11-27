@@ -11,7 +11,6 @@
 [![GitHub release](https://img.shields.io/github/v/release/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=github&color=blue)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/codeql.yml)
-[![Tests](https://img.shields.io/badge/tests-658%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dixinkala/MbesBeacon-Minecraft-Bedrock-Server?style=for-the-badge&logo=opensourceinitiative&color=orange)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-10/11-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
@@ -123,7 +122,7 @@ Minecraft 基岩版专用服务器（BDS）的官方发布形式仅为一个 ZIP
 | **⑦ 性能监控** | 实时 CPU/内存占用；在线玩家数；运行状态；自动刷新（5秒）；操作审计日志 |
 | **⑧ 包管理** | 资源包/行为包列表查看（名称/版本/启用状态）；启用/禁用（写入活动世界配置并登记已知包列表，重启生效）；导入 .zip/.mcpack 包；删除包（输入 DELETE 确认） |
 | **⑨ 计划任务** | 定时重启服务器；定时备份世界；定时发送公告；任务启用/禁用/删除；补执行机制 |
-| **⑩ 使用帮助** | 完整的内置使用文档，涵盖所有功能的详细说明 |
+| **⑩ 使用帮助** | 内置常用操作速查（快速开始、界面与快捷键、功能摘要、常见问题）；完整说明见 [GitHub Wiki](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki) |
 
 ### 特色功能
 
@@ -429,7 +428,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │           ├── commands.py     # 命令路由
 │           ├── players.py      # 玩家管理路由
 │           └── config.py       # 配置管理路由
-├── tests/                      # 测试套件（28 个 Python 测试文件 + 1 个前端测试文件，659 个用例，658 通过 / 1 跳过）
+├── tests/                      # 测试套件（pytest 单元/集成/E2E + 前端 node:test，数量随迭代增长）
 │   ├── __init__.py
 │   ├── test_unit.py            # 单元测试（配置/玩家/备份/安装/工具函数）
 │   ├── test_integration.py     # 集成测试（原子写入、Host 校验、端口检测）
@@ -490,7 +489,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 ## 测试
 
 ```bash
-# Python：28 个测试文件 / 659 个用例，附带覆盖率门禁（fail_under=52）
+# Python：pytest（含覆盖率门禁 fail_under=52，低于阈值即失败）
 pip install -r requirements-dev.txt
 pytest --cov
 
