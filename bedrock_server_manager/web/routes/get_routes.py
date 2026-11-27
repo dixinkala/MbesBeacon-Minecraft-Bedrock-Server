@@ -521,3 +521,31 @@ class GetRoutesMixin:
                 "bind_host": "0.0.0.0" if settings.get("remote_enabled") else "127.0.0.1",
             }
         )
+
+    @register_get_route("/api/tunnel/status")
+    def _get_tunnel_status(self, q):
+        """穿透状态：UPnP 映射状态（可能较慢）与外部客户端进程状态。"""
+        from ... import remote, tunnel, upnp
+        from ...server import get_server_port
+
+        port = get_server_port(resolve_server_dir())
+        want_upnp = q.get("upnp", ["0"])[0] in ("1", "true", "yes")
+        upnp_state = {"available": False, "mapped": False, "external_ip": "", "error": ""}
+        if want_upnp:
+            try:
+                upnp_state = upnp.mapping_state(port)
+            except Exception as e:
+                safe_log_exception("get_routes", f"UPnP 状态查询失败: {e}", "warning")
+                upnp_state = {"available": False, "mapped": False, "external_ip": "", "error": str(e)}
+        self._json(
+            {
+                "ok": True,
+                "port": port,
+                "lan_ip": remote.primary_lan_ip(),
+                "upnp": upnp_state,
+                "tunnel": tunnel.manager.status(),
+                "config": tunnel.config(),
+                "providers": list(tunnel.PROVIDERS),
+                "default_commands": dict(tunnel.DEFAULT_COMMANDS),
+            }
+        )

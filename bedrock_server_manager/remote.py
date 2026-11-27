@@ -195,9 +195,37 @@ def local_ipv4_addresses(ttl: float = 60.0) -> set[str]:
 
 
 def primary_lan_ip() -> str:
-    """优先返回一个可给局域网使用的 IPv4 地址（无则回环）。"""
-    candidates = sorted(addr for addr in local_ipv4_addresses() if not addr.startswith("127."))
-    return candidates[0] if candidates else "127.0.0.1"
+    """优先返回一个可给局域网使用的 IPv4 地址（无则回环）。
+
+    排序：私有网段（192.168/10.x/172.16-31）> 其它非回环地址 > DNS 解析出的地址。
+    ``169.254.x.x``（APIPA）和 ``0.0.0.0`` 不能用于端口映射，排在最后。
+    """
+    candidates = local_ipv4_addresses()
+
+    def rank(addr: str) -> tuple:
+        if addr.startswith("127.") or addr.startswith("0."):
+            return (3, addr)
+        if addr.startswith("169.254."):
+            return (2, addr)
+        private = addr.startswith("192.168.") or addr.startswith("10.") or _is_private_172(addr)
+        return (0 if private else 1, addr)
+
+    usable = [addr for addr in candidates if not addr.startswith(("127.", "0."))]
+    if not usable:
+        return "127.0.0.1"
+    usable.sort(key=rank)
+    return usable[0]
+
+
+def _is_private_172(addr: str) -> bool:
+    parts = addr.split(".")
+    if len(parts) < 2 or parts[0] != "172":
+        return False
+    try:
+        second = int(parts[1])
+    except ValueError:
+        return False
+    return 16 <= second <= 31
 
 
 def allowed_hostnames() -> set[str]:

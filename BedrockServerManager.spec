@@ -38,6 +38,8 @@ a = Analysis(
         'bedrock_server_manager.ratelimit',
         'bedrock_server_manager.version_sources',
         'bedrock_server_manager.builtin_versions',
+        'bedrock_server_manager.upnp',
+        'bedrock_server_manager.tunnel',
         'bedrock_server_manager.app_logger',
         'bedrock_server_manager.scheduler',
         'bedrock_server_manager.app_context',
