@@ -33,7 +33,7 @@
 
 | 来源 | 说明 |
 |---|---|
-| 版本列表 | 从 Bedrock-OSS 社区仓库联网获取，含稳定版与预览版 |
+| 版本列表 | 从自建清单仓库 [`dixinkala/mbesbeacon-bds-versions`](https://github.com/dixinkala/mbesbeacon-bds-versions) 联网获取（GitHub Actions 每 6 小时更新）；取不到时回退社区清单，再失败则使用内置快照 |
 | 「检测最新版本」 | 从 Mojang 官方 API 取当前稳定版 |
 | 手动输入 | 任意版本号，程序会按官方 CDN 规则拼下载地址 |
 | 自定义下载地址 | 粘贴第三方/镜像 zip 链接，留空则走官方 CDN |

@@ -547,7 +547,7 @@ A:
 3. Check whether the network can reach minecraft.net
 
 ### Q: The version list won't load / shows very few versions?
-A: The version list comes from the Bedrock-OSS community GitHub repository; it falls back to built-in common versions when the network fails. Check GitHub connectivity, or enter a version number manually.
+A: The version list comes from the [self-hosted manifest](https://github.com/dixinkala/mbesbeacon-bds-versions) (updated every 6 hours); if it cannot be reached the app falls back to the community manifest and then to the built-in snapshot. Check GitHub connectivity, or enter a version number manually.
 
 ### Q: Config changes have no effect?
 A: Config takes effect after a server restart. Click "Stop" then "Start" in the console.
@@ -658,6 +658,6 @@ This project is open-sourced under the [MIT License](LICENSE).
 
 ## Acknowledgements
 
-- [Bedrock-OSS/BDS-Versions](https://github.com/Bedrock-OSS/BDS-Versions): Bedrock server version list
+- [Bedrock-OSS/BDS-Versions](https://github.com/Bedrock-OSS/BDS-Versions): community version list (now a fallback source)
 - [Minecraft](https://www.minecraft.net/): Official Minecraft Bedrock dedicated server (BDS)
 - All contributors and users for their feedback and support

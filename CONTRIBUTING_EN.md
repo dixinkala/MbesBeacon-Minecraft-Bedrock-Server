@@ -104,6 +104,27 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 # Build output at dist/MbesBeacon.exe
 ```
 
+### Version manifest and built-in snapshot
+
+Version lists come from a chain: **self-hosted manifest**
+([`dixinkala/mbesbeacon-bds-versions`](https://github.com/dixinkala/mbesbeacon-bds-versions)) →
+**community manifest** (Bedrock-OSS) → **built-in snapshot** (`bedrock_server_manager/builtin_versions.py`).
+
+The self-hosted manifest updates itself every 6 hours via its own GitHub Actions; this repo only consumes it.
+When a BDS release makes the built-in snapshot noticeably stale (or before cutting a release), refresh it:
+
+```bash
+# Regenerate the snapshot from the self-hosted manifest
+# (use --from <local versions.json> when offline)
+python tools/sync_builtin_versions.py
+
+# Only check whether the snapshot is behind
+python tools/sync_builtin_versions.py --check
+```
+
+`tests/test_version_sources.py` covers source ordering, both fallback layers, snapshot ordering, and that the
+front-end fallback list matches the snapshot.
+
 ---
 
 ## Documentation and the Wiki

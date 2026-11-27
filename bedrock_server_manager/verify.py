@@ -15,7 +15,8 @@ import zipfile
 from typing import Any
 
 from .app_logger import safe_log_exception
-from .constants import BDS_VERSIONS_JSON_URL, CACHE_DIR, IS_WINDOWS, PLATFORM_TAG, SERVER_EXE
+from .constants import CACHE_DIR, IS_WINDOWS, PLATFORM_TAG, SERVER_EXE
+from .version_sources import builtin_manifest, builtin_snapshot_date, fetch_manifest
 
 # BDS 服务端文件大小合理范围（字节）
 # 注意：BDS 版本持续更新，文件大小可能增长，上限设置较宽松以避免误判
@@ -29,8 +30,9 @@ _KNOWN_HASHES: dict[str, str] = {}
 # 版本清单缓存：避免每次安装都重试一个已经失败的请求（最坏情况是
 # 每次安装多等一个 10 秒连接超时）。
 _OFFICIAL_VERSIONS_CACHE: dict[str, Any] = {"data": None, "time": 0.0, "failed_at": 0.0}
-_OFFICIAL_VERSIONS_TTL = 6 * 3600.0  # 成功缓存 6 小时
-_OFFICIAL_VERSIONS_RETRY = 600.0  # 失败后 10 分钟内不再重试
+_OFFICIAL_VERSIONS_TTL = 6 * 3600.0  # 在线清单成功缓存 6 小时
+_OFFICIAL_VERSIONS_RETRY = 600.0  # 在线来源全失败后 10 分钟内不再重试
+_OFFICIAL_VERSIONS_BUILTIN_TTL = 1800.0  # 使用内置快照时 30 分钟后重试在线来源
 
 
 def fetch_official_versions(timeout: int = 10, force: bool = False) -> dict:
@@ -42,47 +44,50 @@ def fetch_official_versions(timeout: int = 10, force: bool = False) -> dict:
 
     Returns:
         dict: ``{"windows": {"stable": "1.26.63.1", "preview": ..., "versions": [...]}, "linux": {...}}``；
-        获取失败返回空字典（失败会被短时缓存，避免每次安装都等超时）
+        在线清单不可达时返回内置快照（并记录一次告警）。返回值不会为空字典。
     """
-    import urllib.error
-    import urllib.request
-
     now = time.time()
     cached = _OFFICIAL_VERSIONS_CACHE
+    ttl = _OFFICIAL_VERSIONS_BUILTIN_TTL if cached.get("builtin") else _OFFICIAL_VERSIONS_TTL
     if not force:
-        if cached["data"] and now - cached["time"] < _OFFICIAL_VERSIONS_TTL:
+        if cached["data"] and now - cached["time"] < ttl:
             return cached["data"]
         if cached["failed_at"] and now - cached["failed_at"] < _OFFICIAL_VERSIONS_RETRY:
             return {}
 
-    result = {}
-    try:
-        req = urllib.request.Request(BDS_VERSIONS_JSON_URL, headers={"User-Agent": "Mozilla/5.0 MbesBeacon"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8", "ignore"))
-        if isinstance(data, dict):
-            for platform in ("windows", "linux"):
-                info = data.get(platform)
-                if isinstance(info, dict):
-                    versions = [str(v) for v in (info.get("versions") or []) if v]
-                    previews = [str(v) for v in (info.get("preview_versions") or []) if v]
-                    result[platform] = {
-                        "stable": str(info.get("stable") or ""),
-                        "preview": str(info.get("preview") or ""),
-                        "versions": versions,
-                        "preview_versions": previews,
-                    }
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, OSError) as e:
-        safe_log_exception("verify", f"获取官方版本清单失败: {e}", "warning")
-        result = {}
-    except Exception as e:
-        safe_log_exception("verify", f"获取官方版本清单异常: {e}", "warning")
-        result = {}
+    def _normalize(data: dict) -> dict:
+        normalized = {}
+        for platform in ("windows", "linux"):
+            info = data.get(platform)
+            if isinstance(info, dict):
+                versions = [str(v) for v in (info.get("versions") or []) if v]
+                previews = [str(v) for v in (info.get("preview_versions") or []) if v]
+                normalized[platform] = {
+                    "stable": str(info.get("stable") or ""),
+                    "preview": str(info.get("preview") or ""),
+                    "versions": versions,
+                    "preview_versions": previews,
+                }
+        return normalized
+
+    # 来源链：自建清单（主）-> 社区清单（兜底）-> 内置快照
+    data, source = fetch_manifest(timeout=timeout)
+    used_builtin = False
+    if not data:
+        data = builtin_manifest()
+        used_builtin = True
+        safe_log_exception(
+            "verify",
+            f"在线版本清单不可达，使用内置快照 {builtin_snapshot_date()}",
+            "warning",
+        )
+    result = _normalize(data)
 
     if result:
         cached["data"] = result
         cached["time"] = now
         cached["failed_at"] = 0.0
+        cached["builtin"] = used_builtin
     else:
         cached["failed_at"] = now
     return result

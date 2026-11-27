@@ -104,6 +104,24 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 # 打包产物在 dist/MbesBeacon.exe
 ```
 
+### 版本清单与内置快照
+
+版本列表的来源链：**自建清单**（[`dixinkala/mbesbeacon-bds-versions`](https://github.com/dixinkala/mbesbeacon-bds-versions)）
+→ **社区清单**（Bedrock-OSS）→ **内置快照**（`bedrock_server_manager/builtin_versions.py`）。
+
+自建清单由它自己的 GitHub Actions 每 6 小时更新；本仓库只负责消费它。当官方发布新版本、
+而内置快照明显落后时（或发版前），刷新快照：
+
+```bash
+# 从自建清单重新生成内置快照（网络不可用时可用 --from 指向本地 versions.json）
+python tools/sync_builtin_versions.py
+
+# 只检查是否落后（不发请求写入）
+python tools/sync_builtin_versions.py --check
+```
+
+`tests/test_version_sources.py` 会校验：来源顺序、两层兜底、快照排序、前台兜底列表与快照一致。
+
 ---
 
 ## 文档与 Wiki

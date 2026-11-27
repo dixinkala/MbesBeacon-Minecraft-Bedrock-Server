@@ -26,10 +26,14 @@ SERVER_EXE = "bedrock_server.exe" if IS_WINDOWS else "bedrock_server"
 
 # 下载源 API（官方下载链接 API，返回各平台下载地址）
 LINKS_API = "https://net-secondary.web.minecraft-services.net/api/v1.0/download/links"
-# 第三方维护的 BDS 版本清单（只有版本号，不含哈希）。
-# verify.py（官方版本核对）与 install.py（最新版本探测）共用此常量，
-# 早期两处各写了一份相同字符串，改一处就会漂移。
-BDS_VERSIONS_JSON_URL = "https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json"
+# 版本清单的主来源：自建仓库（GitHub Actions 每 6 小时从官方 links API 更新）。
+# 清单结构兼容 Bedrock-OSS，只有版本号，不含哈希。
+VERSIONS_JSON_URL = "https://raw.githubusercontent.com/dixinkala/mbesbeacon-bds-versions/main/versions.json"
+# 兜底来源 1：Bedrock-OSS 社区清单（仅当自建仓库不可达时使用）
+# 兜底来源 2：内置快照 builtin_versions.BUILTIN_VERSIONS（完全离线时使用）
+FALLBACK_VERSIONS_JSON_URL = "https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json"
+# 旧名保留（等价于兜底来源），避免外部脚本/旧代码引用时断掉
+BDS_VERSIONS_JSON_URL = FALLBACK_VERSIONS_JSON_URL
 # 版本信息缓存时长（秒）
 VERSION_CACHE_TTL = 3600
 # 官方 CDN 模板（bin-win / bin-linux 平台路径）
@@ -70,6 +74,8 @@ __all__ = [
     "IS_WINDOWS",
     "PLATFORM_TAG",
     "LINKS_API",
+    "VERSIONS_JSON_URL",
+    "FALLBACK_VERSIONS_JSON_URL",
     "BDS_VERSIONS_JSON_URL",
     "VERSION_CACHE_TTL",
     "CDN_TEMPLATE",
