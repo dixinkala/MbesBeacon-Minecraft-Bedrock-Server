@@ -523,7 +523,7 @@ const I18N_EN = {
   "尚未安装服务器": "Server not installed",
   "联网获取失败，使用内置 ": "Failed to fetch online; using built-in ",
   "共 ": "Total ",
-  " 个版本（从 Bedrock-OSS 社区仓库获取）": " versions (from Bedrock-OSS community repo)",
+  " 个版本（来自自建版本清单）": " versions (from the self-hosted manifest)",
   " 个版本": " versions",
   "⏳ 检查中...": "⏳ Checking...",
   "下载中 ": "Downloading ",
@@ -1695,11 +1695,11 @@ function startConsoleStream(){
 }
 startConsoleStream();
 
-// ---- 版本选择器（PCL2风格，联网从 Bedrock-OSS 社区仓库获取完整列表） ----
+// ---- 版本选择器（PCL2风格，联网从自建版本清单获取；失败时回退内置快照） ----
 const FALLBACK_VERSIONS=[
-  "1.26.44.3","1.26.30.5","1.26.20.4","1.26.10.4","1.26.0.2",
-  "1.21.130.3","1.21.120.4","1.21.110.2","1.21.100.6","1.21.90.3",
-  "1.21.80.3","1.21.60.10"
+  "1.26.66.1","1.26.65.1","1.26.63.1","1.26.62.1",
+  "1.26.61.1","1.26.60.6","1.26.52.3","1.26.51.1",
+  "1.26.45.1","1.26.44.3","1.26.43.1","1.26.42.1"
 ];
 let versionList=[...FALLBACK_VERSIONS];
 let latestVersion='';
@@ -1713,10 +1713,10 @@ async function loadVersions(force){
       versionList=r.versions;
       latestVersion=r.versions[0]||'';
       renderVersionDropdown();
-      $('verCountInfo').textContent=tt('共 ')+r.count+tt(' 个版本（从 Bedrock-OSS 社区仓库获取）');
+      $('verCountInfo').textContent=tt('共 ')+r.count+tt(' 个版本（来自自建版本清单）');
     }
   }catch(e){
-    $('verCountInfo').textContent=tt('联网获取失败，使用内置 ')+FALLBACK_VERSIONS.length+tt(' 个版本');
+    $('verCountInfo').textContent=tt('联网获取失败，使用内置快照 ')+FALLBACK_VERSIONS.length+tt(' 个版本');
   }
   versionsLoaded=true;
 }

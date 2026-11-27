@@ -18,7 +18,6 @@ import zipfile
 from .app_context import AppContext
 from .app_logger import safe_log_exception
 from .constants import (
-    BDS_VERSIONS_JSON_URL,
     CDN_TEMPLATE,
     IS_WINDOWS,
     LINKS_API,
@@ -29,6 +28,7 @@ from .constants import (
 from .server import get_server_proc, server_running
 from .utils import add_server_dir_history, atomic_write_json, detect_servers, save_settings, tr_msg
 from .verify import get_official_version_info, verify_download_full
+from .version_sources import builtin_manifest, fetch_manifest, platform_key
 
 # 版本号允许的字符集：数字开头，只含数字/字母/点/下划线/连字符。
 # 版本号会被拼进下载 URL 与临时文件名，不校验则可写入安装目录之外
@@ -403,62 +403,33 @@ DOWNLOAD_SOURCES = [
     },
 ]
 
-# 已验证可下载的基岩版服务端版本（历史版本列表）
-# 官方 API 现在只返回最新版本，历史版本需从此列表获取
-# 下载使用 CDN 模板 URL: https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip
-VERIFIED_VERSIONS = [
-    # 1.26.x
-    "1.26.44.3",
-    "1.26.30.5",
-    "1.26.20.4",
-    "1.26.10.4",
-    "1.26.0.2",
-    # 1.21.x
-    "1.21.130.3",
-    "1.21.120.4",
-    "1.21.110.2",
-    "1.21.100.6",
-    "1.21.90.3",
-    "1.21.80.3",
-    "1.21.60.10",
-    "1.21.50.4",
-    "1.21.40.3",
-    "1.21.30.4",
-    "1.21.20.3",
-    "1.21.10.3",
-    "1.21.0.3",
-    # 1.20.x
-    "1.20.80.3",
-    "1.20.70.3",
-    "1.20.60.3",
-    "1.20.50.3",
-    "1.20.40.3",
-    "1.20.30.3",
-    "1.20.20.3",
-    "1.20.10.3",
-    "1.20.0.3",
-    # 1.19.x
-    "1.19.80.3",
-    "1.19.70.3",
-    "1.19.60.3",
-    "1.19.50.3",
-    "1.19.40.3",
-    "1.19.30.3",
-    "1.19.20.3",
-    "1.19.10.3",
-    "1.19.0.3",
-    # 1.18.x
-    "1.18.30.3",
-    "1.18.20.3",
-    "1.18.10.3",
-    "1.18.0.3",
-    # 1.17.x
-    "1.17.40.3",
-    "1.17.30.3",
-    "1.17.20.3",
-    "1.17.10.3",
-    "1.17.0.3",
-]
+
+def _version_key(ver):
+    """将版本号字符串转换为可比较的元组，用于正确排序。
+
+    例如 "1.21.130.3" -> (1, 21, 130, 3)
+    处理不完整版本号，缺失部分补0。
+    """
+    parts = []
+    for p in ver.split("."):
+        try:
+            parts.append(int(p))
+        except ValueError:
+            parts.append(0)
+    # 补齐到4段
+    while len(parts) < 4:
+        parts.append(0)
+    return tuple(parts[:4])
+
+
+# 内置版本快照（离线兜底）：由 tools/sync_builtin_versions.py 从自建清单生成。
+# 运行时先取自建清单、再取社区清单，两者都不可达时才用这份快照。
+_BUILTIN = builtin_manifest()
+VERIFIED_VERSIONS = sorted(
+    set(_BUILTIN[platform_key()]["versions"]),
+    key=_version_key,
+    reverse=True,
+)
 FALLBACK_VERSIONS = list(VERIFIED_VERSIONS)
 
 
@@ -753,115 +724,80 @@ def get_cached_versions(include_preview=False):
         return FALLBACK_VERSIONS, False
 
 
-def _version_key(ver):
-    """将版本号字符串转换为可比较的元组，用于正确排序。
+def fetch_versions_from_manifest(ignore_ssl=False, include_preview=False):
+    """从版本清单获取完整版本列表。
 
-    例如 "1.21.130.3" -> (1, 21, 130, 3)
-    处理不完整版本号，缺失部分补0。
-    """
-    parts = []
-    for p in ver.split("."):
-        try:
-            parts.append(int(p))
-        except ValueError:
-            parts.append(0)
-    # 补齐到4段
-    while len(parts) < 4:
-        parts.append(0)
-    return tuple(parts[:4])
+    来源链在 :mod:`version_sources` 中定义：自建清单（主）-> 社区清单（兜底），
+    都取不到时返回空列表，由调用方决定是否使用内置快照。
 
-
-# Bedrock-OSS/BDS-Versions 项目的 versions.json 地址
-# 该项目维护了完整的基岩版服务端版本列表（188+稳定版 + 预览版）
-# 版本清单 URL 与缓存时长统一来自 constants（此处不再重复定义）
-
-
-def fetch_versions_from_bds_oss(ignore_ssl=False, include_preview=False):
-    """从 Bedrock-OSS/BDS-Versions GitHub 项目获取完整版本列表。
-
-    该项目维护了从 1.6.0.15 到最新版的所有基岩版服务端版本，
-    下载使用官方 CDN: https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip
+    下载使用官方 CDN:
+    https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip
 
     Returns:
-        tuple: (stable_versions, preview_versions) 两个列表
+        tuple: ``(stable_versions, preview_versions, source_url)``；失败时列表为空、
+        ``source_url`` 为空串
     """
-    try:
-        data = json.loads(_http_get(BDS_VERSIONS_JSON_URL, timeout=30, ignore_ssl=ignore_ssl).decode("utf-8", "ignore"))
-        # versions.json 按平台分组：windows / linux
-        platform_data = data.get("windows" if IS_WINDOWS else "linux", {})
-        stable = platform_data.get("versions", [])
-        preview = platform_data.get("preview_versions", [])
-        # 去重并排序
-        stable = sorted(set(stable), key=_version_key, reverse=True)
-        preview = sorted(set(preview), key=_version_key, reverse=True)
-        return stable, preview
-    except Exception as e:
-        safe_log_exception("install", f"fetch_versions_from_bds_oss 忽略异常: {e}", "warning")
-        return [], []
+    data, source = fetch_manifest(ignore_ssl=ignore_ssl, timeout=30)
+    if not data:
+        return [], [], ""
+    info = data.get(platform_key()) or {}
+    stable = sorted({str(v) for v in (info.get("versions") or []) if v}, key=_version_key, reverse=True)
+    preview = sorted({str(v) for v in (info.get("preview_versions") or []) if v}, key=_version_key, reverse=True)
+    return stable, preview, source
 
 
 def get_bedrock_versions(ignore_ssl=False, include_preview=False):
     """获取基岩版服务端版本列表。
 
-    版本来源优先级：
-    1. Bedrock-OSS/BDS-Versions (GitHub) - 完整历史版本列表（188+稳定版）
-    2. 官方 API - 最新版本（补充最新版，确保及时更新）
-    3. 硬编码后备列表 - 网络不可用时使用
+    版本来源优先级（逐层兜底）：
+    1. **自建清单** ``dixinkala/mbesbeacon-bds-versions``（GitHub Actions 每 6 小时更新）
+    2. **社区清单** ``Bedrock-OSS/BDS-Versions``（自建清单不可达时）
+    3. **官方 links API**（补充当前稳定版/预览版，确保及时）
+    4. **内置快照**（完全离线时使用，见 ``builtin_versions``）
 
     所有版本均可通过官方 CDN 下载:
     https://www.minecraft.net/bedrockdedicatedserver/bin-{platform}/bedrock-server-{version}.zip
     """
-
     all_versions = []
 
-    # 1. 从 Bedrock-OSS/BDS-Versions 获取完整历史版本列表
-    stable_from_oss, preview_from_oss = fetch_versions_from_bds_oss(
+    # 1) + 2) 自建清单优先，社区清单兜底
+    stable_from_manifest, preview_from_manifest, source = fetch_versions_from_manifest(
         ignore_ssl=ignore_ssl, include_preview=include_preview
     )
-    if stable_from_oss:
-        all_versions.extend(stable_from_oss)
-    if include_preview and preview_from_oss:
-        all_versions.extend(preview_from_oss)
+    if stable_from_manifest:
+        all_versions.extend(stable_from_manifest)
+    if include_preview and preview_from_manifest:
+        all_versions.extend(preview_from_manifest)
 
-    # 2. 从官方 API 获取最新版本（补充可能的最新版，仅取当前平台对应条目）
+    # 3) 官方 links API 补充最新版本（清单更新有延迟时兜住"刚发布"的版本）
     try:
         data = json.loads(_http_get(LINKS_API, timeout=15, ignore_ssl=ignore_ssl).decode("utf-8", "ignore"))
         links = data.get("result", {}).get("links", [])
-        platform_key = "Windows" if IS_WINDOWS else "Linux"
+        platform_key_ = "Windows" if IS_WINDOWS else "Linux"
         for it in links:
             url = it.get("downloadUrl", "")
             m = re.search(r"bedrock-server-([0-9.]+)\.zip", url)
             if m:
                 ver = m.group(1)
                 dt = it.get("downloadType", "")
-                if platform_key not in dt:
+                if platform_key_ not in dt:
                     continue
                 is_preview = "preview" in dt.lower() or "beta" in dt.lower()
                 if (include_preview or not is_preview) and ver not in all_versions:
                     all_versions.append(ver)
     except Exception as e:
-        safe_log_exception("install", f"操作失败: {e}", "warning")
+        safe_log_exception("install", f"官方 links API 补充失败: {e}", "warning")
 
-    # 3. 如果网络获取失败，使用硬编码后备列表
+    # 4) 前两层清单都不可达时使用内置快照
     if not all_versions:
-        all_versions = list(VERIFIED_VERSIONS)
+        builtin = builtin_manifest()[platform_key()]
+        all_versions = list(builtin.get("versions") or [])
         if include_preview:
-            all_versions.extend(
-                [
-                    "1.26.50.27",
-                    "1.26.40.3",
-                    "1.26.30.4",
-                    "1.26.20.3",
-                    "1.26.10.3",
-                    "1.21.140.3",
-                    "1.21.130.4",
-                    "1.21.120.3",
-                    "1.21.110.3",
-                    "1.21.100.3",
-                ]
-            )
+            all_versions.extend(builtin.get("preview_versions") or [])
+        safe_log_exception("install", "版本清单不可达，使用内置快照", "warning")
+    elif stable_from_manifest or preview_from_manifest:
+        safe_log_exception("install", f"版本清单来源: {source}", "debug")
 
-    # 去重并按版本号排序（最新版在最前面）
     all_versions = sorted(set(all_versions), key=_version_key, reverse=True)
     return all_versions
 
