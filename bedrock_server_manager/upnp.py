@@ -20,6 +20,7 @@ import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin
+from xml.parsers import expat
 
 SSDP_ADDR = "239.255.255.250"
 SSDP_PORT = 1900
@@ -63,30 +64,58 @@ def _find_text(node, name: str) -> str:
 
 #: 网关 XML 体积上限，超过直接拒绝（正常描述/响应只有几 KB）
 MAX_XML_BYTES = 256 * 1024
-#: DTD / 实体声明：正常 UPnP 报文不会包含，出现即视为恶意（防 billion laughs）
-_FORBIDDEN_XML_DECL = re.compile(r"<\!\s*(DOCTYPE|ENTITY)", re.IGNORECASE)
 
 
 def safe_fromstring(text: str) -> ET.Element:
-    """解析来自网络的 XML，并拒绝 DTD / 实体声明与超大文档。
+    """解析来自网络的 XML，拒绝 DTD / 实体声明与超大文档。
 
-    ``xml.etree`` 支持内部实体展开，恶意网关可构造指数级实体炸弹耗尽内存/CPU。
-    标准库没有 defusedxml，这里改为"先拒绝再解析"：正常 UPnP 描述与 SOAP 响应
-    都不含 DOCTYPE/ENTITY，直接拒绝不会误伤。
+    用 ``xml.parsers.expat`` 直接构建元素树：注册 EntityDeclHandler 与
+    ExternalEntityRefHandler 一律拒绝，并关闭参数实体解析，因此指数级实体
+    （billion laughs）在声明阶段就失败，不会进入展开。
     """
     if not isinstance(text, str):
         raise UpnpError("XML 内容类型不正确")
     if len(text) > MAX_XML_BYTES:
         raise UpnpError(f"XML 超过 {MAX_XML_BYTES // 1024} KB，已拒绝")
-    if _FORBIDDEN_XML_DECL.search(text):
-        raise UpnpError("XML 包含 DTD/实体声明，已拒绝解析")
+
+    parser = expat.ParserCreate()
+    parser.SetParamEntityParsing(expat.XML_PARAM_ENTITY_PARSING_NEVER)
+    holder: dict = {"root": None}
+    stack: list[ET.Element] = []
+
+    def start_element(name: str, attrs: dict) -> None:
+        element = ET.Element(name, attrs)
+        if stack:
+            stack[-1].append(element)
+        else:
+            holder["root"] = element
+        stack.append(element)
+
+    def end_element(name: str) -> None:
+        if stack:
+            stack.pop()
+
+    def char_data(data: str) -> None:
+        if stack:
+            stack[-1].text = (stack[-1].text or "") + data
+
+    def reject_entity(*args, **kwargs):
+        raise UpnpError("XML 包含实体声明，已拒绝解析")
+
+    parser.StartElementHandler = start_element
+    parser.EndElementHandler = end_element
+    parser.CharacterDataHandler = char_data
+    parser.EntityDeclHandler = reject_entity
+    parser.UnparsedEntityDeclHandler = reject_entity
+    parser.ExternalEntityRefHandler = reject_entity
+
     try:
-        return ET.fromstring(text)
-    except ET.ParseError as exc:
+        parser.Parse(text, True)
+    except expat.ExpatError as exc:
         raise UpnpError(f"XML 解析失败: {exc}") from exc
-
-
-# --------------------------------------------------------------------------- SSDP
+    if holder["root"] is None:
+        raise UpnpError("XML 没有根节点")
+    return holder["root"]
 
 
 def parse_ssdp_response(text: str) -> dict:

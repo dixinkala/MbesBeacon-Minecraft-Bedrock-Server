@@ -267,8 +267,10 @@ class TunnelManager:
                     proc.kill()
                 with contextlib.suppress(subprocess.TimeoutExpired):
                     proc.wait(timeout=timeout)
-            except OSError:
-                pass
+            except OSError as exc:
+                # 进程可能已自行退出（terminate 失败属正常情况），
+                # 后续 status 查询会反映真实状态，无需中断停止流程。
+                safe_log_exception("tunnel", f"停止穿透客户端时出错: {exc}", "debug")
         with self._lock:
             self._proc = None
             self._address = ""
