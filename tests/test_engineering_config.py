@@ -209,5 +209,31 @@ class TestInAppHelpLicense(unittest.TestCase):
             self.assertIn(expected, line, f"英文帮助缺少 {expected}")
 
 
+class TestWikiDocuments(unittest.TestCase):
+    """docs/wiki 是完整说明的唯一来源，内置帮助只保留速查"""
+
+    def setUp(self):
+        self.wiki = REPO / "docs" / "wiki"
+
+    def test_index_links_every_page(self):
+        index = (self.wiki / "README.md").read_text(encoding="utf-8")
+        pages = sorted(p.name for p in self.wiki.glob("*.md") if p.name != "README.md")
+        self.assertGreaterEqual(len(pages), 10, "wiki 页面过少")
+        for name in pages:
+            self.assertIn(f"({name})", index, f"wiki 索引未链接 {name}")
+
+    def test_pages_link_back_to_index(self):
+        for page in self.wiki.glob("*.md"):
+            if page.name == "README.md":
+                continue
+            text = page.read_text(encoding="utf-8")
+            self.assertIn("(README.md)", text, f"{page.name} 缺少返回索引链接")
+
+    def test_in_app_help_points_to_wiki(self):
+        html = (REPO / "bedrock_server_manager" / "web" / "index.html").read_text(encoding="utf-8")
+        for marker in ("tree/main/docs/wiki", "📚 完整文档", "📚 Full manual"):
+            self.assertIn(marker, html, f"内置帮助缺少 {marker}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
