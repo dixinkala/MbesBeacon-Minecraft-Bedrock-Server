@@ -11,6 +11,7 @@ import time
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
+from .. import remote
 from ..app_context import AppContext
 from ..app_logger import safe_log_exception
 from ..ratelimit import check_rate_limit
@@ -56,6 +57,89 @@ def _release_stream_slot() -> None:
     """
     with contextlib.suppress(ValueError):
         _stream_slots.release()
+
+
+def _client_ip(handler) -> str:
+    """取客户端 IP（缺失时按回环处理，便于本地测试/单实例探测）。"""
+    addr = getattr(handler, "client_address", None)
+    return addr[0] if addr else "127.0.0.1"
+
+
+def _is_loopback_client(handler) -> bool:
+    return remote.is_loopback_value(_client_ip(handler))
+
+
+def _login_page_html(server_port, error: str = "") -> str:
+    """最小登录页：提交密码换取会话 Cookie。"""
+    error_html = f'<p class="err">{error}</p>' if error else ""
+    return f"""<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MbesBeacon 远程登录</title>
+<style>
+  :root {{ color-scheme: dark; }}
+  body {{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:#0e1116; color:#c9d1d9; font-family:system-ui,"Segoe UI",sans-serif; }}
+  .box {{ width:min(360px,90vw); background:#161b22; border:1px solid #30363d; border-radius:12px;
+          padding:24px; box-shadow:0 8px 30px rgba(0,0,0,.4); }}
+  h1 {{ font-size:18px; margin:0 0 6px; }}
+  p  {{ font-size:13px; color:#8b949e; margin:0 0 16px; }}
+  input {{ width:100%; box-sizing:border-box; padding:10px 12px; border-radius:8px; border:1px solid #30363d;
+           background:#0d1117; color:#c9d1d9; font-size:14px; }}
+  button {{ width:100%; margin-top:12px; padding:10px 12px; border:0; border-radius:8px; cursor:pointer;
+            background:#238636; color:#fff; font-size:14px; }}
+  button:disabled {{ opacity:.6; cursor:default; }}
+  .err {{ color:#f85149; }}
+  .ok  {{ color:#3fb950; }}
+</style>
+</head>
+<body>
+  <form class="box" id="form">
+    <h1>MbesBeacon 远程管理</h1>
+    <p>请输入访问密码（端口 {server_port}）</p>
+    <input type="password" id="pwd" placeholder="访问密码" autocomplete="current-password" autofocus>
+    <button type="submit" id="btn">登录</button>
+    {error_html}
+    <p id="msg"></p>
+  </form>
+<script>
+document.getElementById('form').addEventListener('submit', async (e) => {{
+  e.preventDefault();
+  const btn = document.getElementById('btn');
+  const msg = document.getElementById('msg');
+  btn.disabled = true; msg.textContent = '';
+  try {{
+    const resp = await fetch('/api/auth/login', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ password: document.getElementById('pwd').value }}),
+    }});
+    const data = await resp.json();
+    if (data.ok) {{ location.href = '/'; return; }}
+    msg.className = 'err';
+    msg.textContent = data.error || '登录失败';
+  }} catch (err) {{
+    msg.className = 'err';
+    msg.textContent = '网络错误：' + err;
+  }} finally {{
+    btn.disabled = false;
+  }}
+}});
+</script>
+</body>
+</html>"""
+
+
+def _redirect(handler, location: str) -> None:
+    handler.send_response(302)
+    handler.send_header("Location", location)
+    # 302 必须显式给 Content-Length: 0：否则 keep-alive 连接上客户端
+    # 不知道响应体何时结束，会一直等到超时。
+    handler.send_header("Content-Length", "0")
+    handler.send_header("Cache-Control", "no-store")
+    handler.end_headers()
 
 
 def _handler_server_port(handler):
@@ -145,12 +229,27 @@ class Handler(
         parsed = urlparse(self.path)
         path = parsed.path
         q = parse_qs(parsed.query)
-        # Host 头必须指向本机，否则视为 DNS rebinding 攻击
+        # Host 头必须指向允许的地址，否则视为 DNS rebinding 攻击
         if not self._check_host():
             self._json({"ok": False, "error": "请求来源不合法，已拒绝"}, code=403)
             return
+        # 远程登录页与登录状态端点：不需要认证（但受限速与 Host 校验）
+        if path == "/login":
+            self._serve_login()
+            return
+        if path == "/api/auth/status":
+            self._json(
+                {
+                    "ok": True,
+                    "remote_enabled": remote.enabled(),
+                    "authenticated": self._check_auth(),
+                    "loopback": _is_loopback_client(self),
+                }
+            )
+            return
         # 放行静态首页和健康检查端点，其余 API 均需认证
-        # （/ 与 /index.html 是同一个页面的两个入口，都需要免认证下发 token）
+        # （/ 与 /index.html 是同一个页面的两个入口：回环页面下发 token，
+        #   远程页面依赖会话 Cookie）
         if path not in ("/", "/index.html", "/api/health") and not self._check_auth():
             self._json({"ok": False, "error": "请求来源不合法，已拒绝"}, code=403)
             return
@@ -294,11 +393,14 @@ class Handler(
             os._exit(1)
 
     def _check_host(self):
-        """校验 Host 头只指向本机回环地址。
+        """校验 Host 头只指向本机允许的地址。
 
         防御 DNS rebinding：攻击者把自己的域名解析到 127.0.0.1 后，
         浏览器会以该域名同源访问本服务；若只校验 Origin/Referer 而不校验 Host，
         攻击页面即可通过免认证的 ``GET /`` 读取页面里的 API token，进而控制全部接口。
+
+        远程管理启用后放行范围扩大为"本机网卡 IP + 本机主机名 + 用户配置的主机名"，
+        仍然拒绝任意域名。
         """
         host = self.headers.get("Host", "")
         if not host:
@@ -306,23 +408,23 @@ class Handler(
             return False
         try:
             parsed = urlparse(f"//{host}")
-            hostname = parsed.hostname
+            hostname = (parsed.hostname or "").lower()
             port = parsed.port
         except Exception as e:
             safe_log_exception("handler", f"_check_host 忽略异常: {e}", "warning")
             return False
-        if hostname not in _LOCAL_HOSTNAME:
+        if hostname not in remote.allowed_hostnames():
             return False
         server_port = _handler_server_port(self)
         return server_port is None or port is None or port == server_port
 
     def _check_auth(self):
-        """校验请求来源：API token 或 Origin/Referer 必须匹配本地地址和端口。
+        """校验请求来源：API token、回环 Origin/Referer，或远程会话 Cookie。
 
         安全增强：
-        1. 优先使用 API Token 认证（常量时间比较）
+        1. 优先使用 API Token 认证（常量时间比较），仅注入给回环页面
         2. Origin/Referer 必须匹配本程序实际监听的端口（防止本地其他服务的 XSS 攻击）
-        3. 只允许 127.0.0.1 和 localhost，不允许其他本地地址
+        3. 远程会话必须带 HttpOnly Cookie，且（若带 Origin）必须同源
         """
 
         token = self.headers.get("X-API-Token", "")
@@ -351,7 +453,78 @@ class Handler(
                     return True
             except Exception as e:
                 safe_log_exception("handler", f"校验 Referer 失败: {e}", "warning")
+        # 远程会话：Cookie 里的会话 token 有效即通过；带 Origin 时必须同源（防 CSRF）
+        if remote.enabled():
+            session_token = remote.parse_cookie(self.headers.get("Cookie", ""))
+            if session_token and remote.sessions.validate(session_token):
+                if origin:
+                    try:
+                        if urlparse(origin).netloc != self.headers.get("Host", ""):
+                            return False
+                    except Exception:
+                        return False
+                return True
         return False
+
+    # ---- 远程登录 ----
+
+    def _serve_login(self):
+        """返回登录页；已登录则直接回首页。"""
+        if remote.enabled() and self._check_auth():
+            _redirect(self, "/")
+            return
+        self._send(200, _login_page_html(_handler_server_port(self)), "text/html; charset=utf-8")
+
+    def _handle_login(self):
+        """处理登录请求：限速 -> 校验密码 -> 下发会话 Cookie。"""
+        ip = _client_ip(self)
+        wait = remote.login_limiter.retry_after(ip)
+        if wait > 0:
+            self._json(
+                {"ok": False, "error": f"尝试过于频繁，请 {int(wait) + 1} 秒后再试", "retry_after": round(wait, 1)},
+                code=429,
+            )
+            return
+        data = self._post_data() or {}
+        password = data.get("password") if isinstance(data, dict) else None
+        if not isinstance(password, str) or not password:
+            self._json({"ok": False, "error": "请输入密码"}, code=400)
+            return
+        stored = AppContext.instance().settings.get("remote_password_hash", "")
+        if not remote.verify_password(password, stored):
+            locked = remote.login_limiter.record_failure(ip)
+            remote.audit("REMOTE_LOGIN_FAIL", f"ip={ip}")
+            message = "密码错误"
+            if locked:
+                message += f"，已锁定 {int(locked)} 秒"
+            self._json({"ok": False, "error": message}, code=401)
+            return
+        remote.login_limiter.record_success(ip)
+        token = remote.sessions.create(ip)
+        remote.audit("REMOTE_LOGIN_OK", f"ip={ip}")
+        payload = json.dumps({"ok": True}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Set-Cookie", remote.session_cookie(token))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def _handle_logout(self):
+        """注销当前会话。"""
+        token = remote.parse_cookie(self.headers.get("Cookie", ""))
+        if token:
+            remote.sessions.revoke(token)
+            remote.audit("REMOTE_LOGOUT", f"ip={_client_ip(self)}")
+        payload = json.dumps({"ok": True}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Set-Cookie", remote.clear_cookie())
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(payload)
 
     def do_POST(self):
         """POST 请求处理：使用路由表分发。"""
@@ -360,6 +533,13 @@ class Handler(
         path = parsed.path
         if not self._check_host():
             self._json({"ok": False, "error": "请求来源不合法，已拒绝"}, code=403)
+            return
+        # 登录/注销不需要已有会话（登录本身受限速保护）
+        if path == "/api/auth/login":
+            self._handle_login()
+            return
+        if path == "/api/auth/logout":
+            self._handle_logout()
             return
         if not self._check_auth():
             self._json({"ok": False, "error": "请求来源不合法，已拒绝"}, code=403)

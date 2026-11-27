@@ -198,18 +198,27 @@ def _main():
         except Exception as e:
             safe_log_exception("main", f"操作失败: {e}", "warning")
 
-    # 绑定端口
+    # 绑定端口：远程管理启用且已设置密码时监听 0.0.0.0，否则保持仅本机
+    from . import remote as remote_mod
+
+    bind_host = "0.0.0.0" if remote_mod.enabled() else "127.0.0.1"
     httpd = None
     port = DEFAULT_PORT
     for port in range(DEFAULT_PORT, DEFAULT_PORT + 20):
         try:
-            httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+            httpd = ThreadingHTTPServer((bind_host, port), Handler)
             break
         except OSError:
             continue
     if httpd is None:
         print("无法绑定端口，程序退出")
         return
+    if bind_host == "0.0.0.0":
+        print(f"远程管理已启用：http://{remote_mod.primary_lan_ip()}:{port}/")
+    else:
+        settings = AppContext.instance().settings
+        if settings.get("remote_enabled") and not remote_mod.configured():
+            print("远程管理开关已打开但未设置密码，已回退为仅本机监听")
 
     # 保存到全局状态
 
