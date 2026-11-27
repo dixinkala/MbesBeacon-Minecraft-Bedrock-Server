@@ -11,6 +11,7 @@
 - [行为准则](#行为准则)
 - [如何贡献](#如何贡献)
 - [开发环境搭建](#开发环境搭建)
+- [文档与 Wiki](#文档与-wiki)
 - [代码规范](#代码规范)
 - [提交信息规范](#提交信息规范)
 - [报告 Bug](#报告-bug)
@@ -102,6 +103,36 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 # 打包产物在 dist/MbesBeacon.exe
 ```
+
+---
+
+## 文档与 Wiki
+
+用户文档分三处，职责不同：
+
+| 位置 | 用途 |
+|---|---|
+| `docs/wiki/` | **文档源文件**（13 篇 markdown），随代码一起 review |
+| GitHub Wiki | 面向用户的在线版本，由同步脚本从 `docs/wiki/` 发布 |
+| 软件内置帮助 | `web/index.html` 里的 `HELP` / `I18N_HELP_EN`，只放常用操作速查，详情指向 Wiki |
+
+**修改文档的流程：**
+
+1. 只改 `docs/wiki/`，不要直接编辑 Wiki 网页（下次同步会覆盖）
+2. 本地预览（不接触远端）：`python tools/sync_wiki.py --dry-run`
+3. 发布到 Wiki：`python tools/sync_wiki.py`
+4. 内置帮助如需调整，改 `web/index.html`，保持"速查"定位，不要重新写成长篇
+
+**同步脚本 `tools/sync_wiki.py` 的约定：**
+
+- `docs/wiki/README.md` → Wiki 的 `Home` 页
+- `docs/wiki/01-xxx.md` → Wiki 的 `01-xxx` 页（页面名 = 文件名去掉 `.md`）
+- 页内 `.md` 链接自动去掉后缀；`../LICENSE` 等仓库相对链接转成 GitHub 绝对地址
+- 自动生成 `_Sidebar.md` / `_Footer.md`
+- 没有变化时不会产生空提交
+- 参数：`--dry-run` 只看计划、`--no-push` 只提交本地、`--prune` 删除 Wiki 上多余页面、`--keep-workdir` 保留临时克隆
+
+> 首次启用需要先在 GitHub 网页端创建 Wiki 首页，否则 wiki 仓库不存在，脚本会提示并退出。
 
 ---
 

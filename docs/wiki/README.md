@@ -4,7 +4,8 @@
 > 软件内置的「⑩ 使用帮助」只保留常用功能的速查说明，详细内容请看本目录。
 >
 > **在线版本**：<https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki>
-> 本目录是 Wiki 的**源文件**；Wiki 侧由维护者手动同步（页面名与文件名一致，`README.md` 对应 `Home`）。
+> 本目录是 Wiki 的**源文件**：改这里，然后用 `python tools/sync_wiki.py` 发布
+> （页面名与文件名一致，`README.md` 对应 `Home`；脚本会自动转换链接并生成侧边栏）。
 
 ## 目录
 

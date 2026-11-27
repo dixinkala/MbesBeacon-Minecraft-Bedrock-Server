@@ -11,6 +11,7 @@ We welcome any form of contribution — bug reports, feature suggestions, or dir
 - [Code of Conduct](#code-of-conduct)
 - [How to Contribute](#how-to-contribute)
 - [Setting Up the Dev Environment](#setting-up-the-dev-environment)
+- [Documentation and the Wiki](#documentation-and-the-wiki)
 - [Code Standards](#code-standards)
 - [Commit Message Convention](#commit-message-convention)
 - [Reporting Bugs](#reporting-bugs)
@@ -102,6 +103,36 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 
 # Build output at dist/MbesBeacon.exe
 ```
+
+---
+
+## Documentation and the Wiki
+
+User-facing docs live in three places:
+
+| Location | Purpose |
+|---|---|
+| `docs/wiki/` | **Source of truth** (13 markdown pages), reviewed with the code |
+| GitHub Wiki | Published version, generated from `docs/wiki/` by the sync script |
+| In-app help | `HELP` / `I18N_HELP_EN` in `web/index.html` — quick reference only, links to the Wiki |
+
+**Workflow for doc changes:**
+
+1. Edit `docs/wiki/` only — do not edit the Wiki pages in the browser (they get overwritten on the next sync)
+2. Preview locally (touches nothing remote): `python tools/sync_wiki.py --dry-run`
+3. Publish: `python tools/sync_wiki.py`
+4. For in-app help, edit `web/index.html` and keep it a quick reference, not a full manual
+
+**What `tools/sync_wiki.py` does:**
+
+- `docs/wiki/README.md` → Wiki `Home` page
+- `docs/wiki/01-xxx.md` → Wiki `01-xxx` page (page name = filename without `.md`)
+- In-page `.md` links lose the extension; `../LICENSE`-style links become absolute GitHub URLs
+- Generates `_Sidebar.md` / `_Footer.md`
+- Produces no empty commit when nothing changed
+- Flags: `--dry-run` (plan only), `--no-push` (commit locally only), `--prune` (remove stale Wiki pages), `--keep-workdir` (keep the temp clone)
+
+> The very first time, create the Wiki home page in the GitHub web UI; until then the wiki repo does not exist and the script exits with a hint.
 
 ---
 
