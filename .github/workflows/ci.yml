@@ -179,3 +179,24 @@ jobs:
         tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.event.inputs.release_version }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # Release 正文必须带 MIT 许可证声明（历史 Release 已统一补齐）。
+    # 用 gh 而不是 action 的 append_body：先检查标记再决定是否追加，重复运行不会写两遍。
+    - name: 📄 追加 MIT 许可证声明
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.event.inputs.release_version }}
+      run: |
+        set -euo pipefail
+        body=$(gh release view "$TAG" --json body --jq .body)
+        if printf '%s' "$body" | grep -q '完整条款见 \[LICENSE\]'; then
+          echo "Release $TAG 已包含许可证声明，跳过"
+          exit 0
+        fi
+        {
+          printf '%s\n\n' "$body"
+          cat .github/release-license.md
+        } > release_notes_with_license.md
+        gh release edit "$TAG" --notes-file release_notes_with_license.md
+        echo "已为 Release $TAG 追加 MIT 许可证声明"
