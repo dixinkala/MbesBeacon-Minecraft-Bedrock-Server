@@ -64,6 +64,7 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 - [System Requirements](#system-requirements)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Full Manual (Wiki, Chinese)](docs/wiki/README.md)
 - [Input / Output Examples](#input--output-examples)
 - [Project Structure](#project-structure)
 - [Security Features](#security-features)
