@@ -185,8 +185,10 @@ def local_ipv4_addresses(ttl: float = 60.0) -> set[str]:
         try:
             hostname_ip = socket.gethostbyname(socket.gethostname())
             values.add(hostname_ip)
-        except OSError:
-            pass
+        except OSError as exc:
+            # 主机名无法解析（离线/无 hosts 记录）：保留回环地址即可，
+            # 远程访问仍可通过网卡 IP 进入，不必中断启动流程。
+            safe_log_exception("remote", f"解析主机名 IP 失败: {exc}", "debug")
     _ip_cache["values"] = set(values)
     _ip_cache["time"] = now
     return values
