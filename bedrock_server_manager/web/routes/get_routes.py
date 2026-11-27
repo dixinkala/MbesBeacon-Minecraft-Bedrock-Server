@@ -7,6 +7,7 @@ import contextlib
 import os
 import time
 
+from ... import remote
 from ...app_context import AppContext
 from ...backup import get_backup_root, list_backups
 from ...config import (
@@ -65,10 +66,21 @@ class GetRoutesMixin:
         self._serve_index()
 
     def _serve_index(self):
-        """渲染并返回单页前端（注入 API token 与平台信息）。"""
+        """渲染并返回单页前端（回环注入 API token；远程依赖会话 Cookie）。"""
         from ..handler import get_index_html  # 必要的延迟导入，避免循环依赖
 
-        html = get_index_html().replace("__API_TOKEN__", AppContext.instance().api_token)
+        loopback = remote.is_loopback_value(str(self.client_address[0])) if self.client_address else True
+        if remote.enabled() and not loopback and not self._check_auth():
+            # 远程未登录：先去登录页，避免把页面结构暴露给匿名访问者
+            self.send_response(302)
+            self.send_header("Location", "/login")
+            self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return
+        # 只有回环请求才下发 token；远程会话不接触 token，靠 Cookie 认证
+        token = AppContext.instance().api_token if loopback else ""
+        html = get_index_html().replace("__API_TOKEN__", token)
         # 平台信息注入：帮助文本平台化（数据目录显示文案 / Windows 平台标志）
         if IS_WINDOWS:
             html = html.replace("__IS_WINDOWS__", "true").replace("__DATA_DIR_TEXT__", "%APPDATA%\\MbesBeacon")
@@ -483,3 +495,29 @@ class GetRoutesMixin:
 
         d = resolve_server_dir()
         self._json({"ok": True, "allowed": read_allowlist(d)})
+
+    @register_get_route("/api/remote/config")
+    def _get_remote_config(self, q):
+        """远程管理配置（仅回环可查看，避免向远程会话泄露主机信息）。"""
+        from ...web.handler import _handler_server_port, _is_loopback_client
+
+        if not _is_loopback_client(self):
+            self._json({"ok": False, "error": "只能在运行本程序的机器上查看远程设置"}, code=403)
+            return
+        settings = AppContext.instance().settings
+        port = _handler_server_port(self)
+        lan_ip = remote.primary_lan_ip()
+        self._json(
+            {
+                "ok": True,
+                "enabled": remote.enabled(),
+                "configured": remote.configured(),
+                "min_password_length": remote.MIN_PASSWORD_LENGTH,
+                "port": port,
+                "lan_ip": lan_ip,
+                "url": f"http://{lan_ip}:{port}/" if port else "",
+                "hosts": sorted(remote.extra_hosts()),
+                "sessions": remote.sessions.count(),
+                "bind_host": "0.0.0.0" if settings.get("remote_enabled") else "127.0.0.1",
+            }
+        )

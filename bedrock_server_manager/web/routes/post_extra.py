@@ -7,6 +7,7 @@ import contextlib
 import os
 import threading
 
+from ... import remote
 from ...app_context import AppContext
 from ...app_logger import safe_log_exception
 from ...app_update import check_app_update
@@ -365,3 +366,39 @@ class PostExtraRoutesMixin:
         except Exception as e:
             safe_log_exception("post_extra", f"_post_app_update_check 忽略异常: {e}", "warning")
             self._json({"ok": False, "error": str(e), "has_update": False})
+
+    @register_post_route("/api/remote/config")
+    def _post_remote_config(self, data):
+        """启用/关闭远程管理、设置访问密码（仅限本机操作）。"""
+        from ...web.handler import _client_ip, _is_loopback_client
+
+        if not _is_loopback_client(self):
+            self._json({"ok": False, "error": "只能在运行本程序的机器上修改远程设置"}, code=403)
+            return
+        enabled_flag = bool(data.get("enabled", False))
+        password = data.get("password")
+        if password is not None and not isinstance(password, str):
+            self._json({"ok": False, "error": "密码格式不正确"}, code=400)
+            return
+        hosts = data.get("hosts")
+        if hosts is not None and not isinstance(hosts, list):
+            self._json({"ok": False, "error": "hosts 必须是数组"}, code=400)
+            return
+        try:
+            result = remote.set_config(enabled_flag, password=password or None, hosts=hosts)
+        except ValueError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+            return
+        audit_log(
+            "REMOTE_CONFIG",
+            f"enabled={result['enabled']} password_set={bool(password)} ip={_client_ip(self)}",
+            None,
+        )
+        self._json(
+            {
+                "ok": True,
+                "enabled": result["enabled"],
+                "restart_required": result["restart_required"],
+                "message": "设置已保存，重启程序后生效" if result["restart_required"] else "设置已保存",
+            }
+        )

@@ -571,9 +571,23 @@ const I18N_EN = {
   "（": "(",
   "最新": "Latest",
   "目录: ": "Dir: ",
-  " MB　路径: ": " MB Path: "
+  " MB　路径: ": " MB Path: ",
+  "🌐 远程管理（局域网访问）": "🌐 Remote Management (LAN access)",
+  "开启后可从同一局域网的手机/电脑管理服务器；默认仅本机可访问，公网访问请配合内网穿透或反向代理。": "Allow phones/computers on the same LAN to manage the server. Off by default; use a tunnel or reverse proxy for internet access.",
+  "启用远程访问（重启程序生效）": "Enable remote access (takes effect after restart)",
+  "访问密码（至少 8 位）": "Access password (at least 8 characters)",
+  "保存远程设置": "Save remote settings",
+  "远程访问地址：": "Remote URL: ",
+  "当前：": "Current: ",
+  "未启用": "disabled",
+  "已启用": "enabled",
+  "已设置密码": "password set",
+  "未设置密码": "no password",
+  "退出远程登录": "Sign out",
+  "远程设置已保存，重启程序后生效": "Remote settings saved. Restart the app to apply.",
+  "远程管理只能在运行本程序的机器上修改": "Remote settings can only be changed on the machine running the app"
 };
-const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
+const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
 (function(){
   let lang = null, manual = null;
   try{ lang = localStorage.getItem('mbesbeacon_lang'); manual = localStorage.getItem('mbesbeacon_lang_manual'); }catch(e){}
@@ -581,7 +595,25 @@ const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n
     // 无手动选择记录（含旧版本遗留的自动记录）：跟随系统语言。
     // 先用浏览器语言同步渲染，再请求后端检测的 Windows 系统语言校正。
     lang = (navigator.language||'zh-CN').toLowerCase().startsWith('zh') ? 'zh' : 'en';
-    window.MBS_LANG = lang;
+    // 远程会话模式：没有 token 时显示退出按钮，未登录则跳转登录页
+(async () => {
+  const btn = document.getElementById('btnRemoteLogout');
+  if (btn) {
+    btn.onclick = async () => {
+      try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+      location.href = '/login';
+    };
+  }
+  try {
+    const r = await fetch('/api/auth/status').then((x) => x.json());
+    if (r && r.remote_enabled) {
+      if (!r.authenticated) { location.href = '/login'; return; }
+      const tok = document.querySelector('meta[name="api-token"]')?.content || '';
+      if (btn && !tok) btn.style.display = '';
+    }
+  } catch (e) {}
+})();
+window.MBS_LANG = lang;
     const meta=document.querySelector('meta[name="api-token"]');
     const token=meta?meta.content:'';
     fetch('/api/lang',{headers: token?{'X-API-Token':token}:{}})
@@ -738,6 +770,7 @@ const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n
     <button class="btn" id="btnTheme" title="自定义界面风格">🎨 界面风格</button>
     <button class="btn" id="btnLang" title="中文 / English">🌐 中文</button>
 
+    <button class="btn" id="btnRemoteLogout" style="display:none;" title="Sign out">退出远程登录</button>
     <button class="btn danger" id="btnExit" title="关闭本程序">退出程序</button>
 
 
@@ -833,6 +866,22 @@ const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n
       <h3>⚙ 服务器设置</h3>
       <div class="row" style="flex-wrap:wrap;gap:16px;">
       </div>
+    </div>
+    <div class="card" id="cardRemote">
+      <h3>🌐 远程管理（局域网访问）</h3>
+      <div class="row"><span class="hint">开启后可从同一局域网的手机/电脑管理服务器；默认仅本机可访问，公网访问请配合内网穿透或反向代理。</span></div>
+      <div class="row" style="align-items:center;gap:14px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="remoteEnabled"> 启用远程访问（重启程序生效）
+        </label>
+        <span class="hint" id="remoteStatus"></span>
+      </div>
+      <div class="row" style="gap:10px;flex-wrap:wrap;">
+        <input type="password" id="remotePassword" placeholder="访问密码（至少 8 位）" autocomplete="new-password" style="min-width:260px;">
+        <button class="btn" id="btnRemoteSave">保存远程设置</button>
+      </div>
+      <div class="row"><span class="hint" id="remoteUrl"></span></div>
+      <div class="msg" id="remoteMsg"></div>
     </div>
     <div class="card" id="cardDelete" style="display:none; border-color:var(--err);">
       <h3 style="color:var(--err);">删除服务器</h3>
@@ -1331,6 +1380,7 @@ const HELP=`【MbesBeacon — Minecraft 基岩版服务器管理器 使用帮助
   Q 提示「Windows 已保护你的电脑」？ → 更多信息 → 仍要运行
   Q 关掉网页后服务器还在跑吗？      → 在，从系统托盘重新打开界面
   Q 好友进不来？                    → 防火墙放行 UDP 19132、填对局域网 IP、检查白名单
+  Q 手机/别的电脑怎么管理？         → 安装页「远程管理」启用并设密码，重启后访问 http://<局域网IP>:19100
   Q 改了配置不生效？                → 保存后需要重启服务器
   Q 数据存在哪？                    → %APPDATA%\MbesBeacon（设置 / 日志 / 缓存）
   Q 存档在哪？                      → 服务器目录下的 worlds\ 文件夹
@@ -1967,7 +2017,36 @@ $('btnCfgReload').onclick=()=>{
 };
 
 // ---- 删除服务器 ----
-$('btnDelete').onclick=()=>{
+// ---- 远程管理 ----
+  async function loadRemoteConfig(){
+    try{
+      const r = await jget('/api/remote/config');
+      if(!r.ok) return;
+      $('remoteEnabled').checked = !!r.enabled;
+      $('remoteStatus').textContent = tt('当前：') + (r.enabled ? tt('已启用') : tt('未启用'))
+        + ' · ' + (r.configured ? tt('已设置密码') : tt('未设置密码'));
+      $('remoteUrl').textContent = r.url ? (tt('远程访问地址：') + r.url) : '';
+    }catch(e){}
+  }
+  $('btnRemoteSave').onclick = async () => {
+    const msg = $('remoteMsg');
+    const password = $('remotePassword').value.trim();
+    msg.textContent = '';
+    try{
+      const r = await jpost('/api/remote/config', {
+        enabled: $('remoteEnabled').checked,
+        password: password || null,
+      });
+      if(!r.ok){ msg.style.color='var(--err)'; msg.textContent = r.error || '保存失败'; return; }
+      msg.style.color='var(--ok, #3fb950)';
+      msg.textContent = r.restart_required ? tt('远程设置已保存，重启程序后生效') : (r.message || tt('远程设置已保存，重启程序后生效'));
+      $('remotePassword').value = '';
+      loadRemoteConfig();
+    }catch(e){
+      msg.style.color='var(--err)'; msg.textContent = String(e);
+    }
+  };
+  $('btnDelete').onclick=()=>{
   $('delPath').textContent=tt('将删除目录：')+(curDir||'');
   $('ckDeleteConfirm').checked=false;
   $('delMsg').textContent='';
