@@ -127,6 +127,7 @@ class TestInstallFallbacks(unittest.TestCase):
             "windows": {"stable": "1.0.0.9", "preview": "", "versions": ["1.0.0.8", "1.0.0.9"]},
             "linux": {"stable": "1.0.0.9", "preview": "", "versions": ["1.0.0.9"]},
         }
+        platform = version_sources.platform_key()
         with patch.object(version_sources.urllib.request, "urlopen") as mocked:
             mocked.return_value = type(
                 "R",
@@ -138,7 +139,8 @@ class TestInstallFallbacks(unittest.TestCase):
                 },
             )()
             stable, preview, source = install.fetch_versions_from_manifest()
-        self.assertEqual(stable[:2], ["1.0.0.9", "1.0.0.8"])
+        expected = sorted(set(payload[platform]["versions"]), key=install._version_key, reverse=True)
+        self.assertEqual(stable, expected)
         self.assertEqual(preview, [])
         self.assertTrue(source)
 
