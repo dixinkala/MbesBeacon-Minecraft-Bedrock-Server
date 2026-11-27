@@ -64,7 +64,7 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 - [System Requirements](#system-requirements)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Full Manual (Wiki, Chinese)](docs/wiki/README.md)
+- [Full Manual (Wiki)](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki)
 - [Input / Output Examples](#input--output-examples)
 - [Project Structure](#project-structure)
 - [Security Features](#security-features)
@@ -219,6 +219,10 @@ python -m PyInstaller --noconfirm --clean BedrockServerManager.spec
 ---
 
 ## Usage
+
+> The full manual (parameter boundaries, failure handling, troubleshooting) lives in the
+> **[GitHub Wiki](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki)**
+> (source files in [`docs/wiki/`](docs/wiki/README.md)); the in-app "⑩ Help" tab keeps only a quick reference.
 
 ### Quick Start
 
