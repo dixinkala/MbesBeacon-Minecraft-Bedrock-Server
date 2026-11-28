@@ -2565,12 +2565,13 @@ class TestHandlerHttp(_HttpCase):
         with (
             mock.patch.object(H, "check_rate_limit", return_value=(True, 0)),
             mock.patch.object(H.Handler, "_serve_console_stream", fake_stream),
+            mock.patch.object(H, "_acquire_stream_slot", return_value=True) as acquire,
+            mock.patch.object(H, "_release_stream_slot") as release,
         ):
-            before = H._stream_slots._value
             status, _, body = self.request("GET", "/api/console/stream", headers={"X-API-Token": "test-token"})
-            after = H._stream_slots._value
         self.assertEqual((status, body), (200, b"stream"))
-        self.assertEqual(before, after)
+        acquire.assert_called_once()
+        release.assert_called_once()
 
     def test_post_host_mismatch_403(self):
         status, _, _ = self.request("POST", "/api/auth/logout", host="evil.example.com")
