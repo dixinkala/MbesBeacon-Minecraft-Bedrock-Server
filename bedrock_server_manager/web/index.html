@@ -605,9 +605,26 @@ const I18N_EN = {
   "未运行": "stopped",
   "公网地址：": "Public address: ",
   "未识别到公网地址，请查看下方日志": "No public address detected yet; check the log below",
-  "公网 IP 是内网地址：可能处于双重 NAT / 运营商 NAT，互联网玩家通常连不上，建议改用外部穿透客户端。": "Public IP is private: likely double NAT / carrier NAT, so internet players may not connect. Consider an external tunnel client."
+  "公网 IP 是内网地址：可能处于双重 NAT / 运营商 NAT，互联网玩家通常连不上，建议改用外部穿透客户端。": "Public IP is private: likely double NAT / carrier NAT, so internet players may not connect. Consider an external tunnel client.",
+  "内置穿透工具（无需手动安装客户端）": "Built-in tunnels (no manual client setup)",
+  "下载并安装": "Download & install",
+  "生成领取链接": "Generate claim link",
+  "检查领取状态": "Check claim status",
+  "领取链接：": "Claim link: ",
+  "已领取": "claimed",
+  "未领取": "not claimed",
+  "已安装": "installed",
+  "未安装": "not installed",
+  "下载中…": "Downloading...",
+  "服务器地址": "Server address",
+  "可选 token": "Token (optional)",
+  "远程端口": "Remote port",
+  "本地端口": "Local port",
+  "先安装": "Install first",
+  "playit 需要账号：打开领取链接登录后，在网页上创建一条 UDP 隧道指向本机 19132，再点启动。": "playit needs an account: open the claim link, create a UDP tunnel to port 19132, then press Start.",
+  "frp 需要你自己的公网服务器（frps）。": "frp needs your own public server (frps)."
 };
-const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Internet friends cannot join?    Use Public Access on the Install tab: UPnP mapping first,\n                                      or configure an external tunnel client (UDP port)\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
+const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Internet friends cannot join?    Public Access tab: UPnP first, then built-in playit (account),\n                                      or built-in frp (own server)\n                                      or configure an external tunnel client (UDP port)\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
 (function(){
   let lang = null, manual = null;
   try{ lang = localStorage.getItem('mbesbeacon_lang'); manual = localStorage.getItem('mbesbeacon_lang_manual'); }catch(e){}
@@ -929,6 +946,38 @@ window.MBS_LANG = lang;
       <div class="row"><span class="hint" id="tunnelAddr"></span></div>
       <pre id="tunnelLog" style="max-height:120px;overflow:auto;white-space:pre-wrap;font-size:12px;color:#8b949e;margin:6px 0 0;"></pre>
       <div class="msg" id="tunnelMsg"></div>
+      <hr style="border:0;border-top:1px solid #2a333f;margin:14px 0;">
+      <div class="row"><h4 style="margin:0 0 4px;">内置穿透工具（无需手动安装客户端）</h4></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;">
+        <b style="min-width:48px;">playit</b>
+        <span class="hint" id="playitStatus"></span>
+        <button class="btn" id="btnPlayitInstall">下载并安装</button>
+        <button class="btn" id="btnPlayitClaim">生成领取链接</button>
+        <button class="btn" id="btnPlayitCheck">检查领取状态</button>
+        <button class="btn primary" id="btnPlayitStart">启动</button>
+        <button class="btn" id="btnPlayitStop">停止</button>
+      </div>
+      <div class="row"><a id="playitClaimUrl" target="_blank" rel="noopener" style="display:none;font-size:12px;"></a></div>
+      <div class="row"><span class="hint" id="playitHint"></span></div>
+      <div class="row"><span class="hint" id="playitAddr"></span></div>
+      <pre id="playitLog" style="max-height:100px;overflow:auto;white-space:pre-wrap;font-size:12px;color:#8b949e;margin:6px 0 0;"></pre>
+      <hr style="border:0;border-top:1px solid #2a333f;margin:12px 0;">
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;">
+        <b style="min-width:48px;">frp</b>
+        <span class="hint" id="frpStatus"></span>
+        <button class="btn" id="btnFrpInstall">下载并安装</button>
+        <input id="frpServer" placeholder="服务器地址" style="min-width:150px;">
+        <input id="frpServerPort" placeholder="7000" style="width:80px;">
+        <input id="frpToken" placeholder="可选 token" style="min-width:120px;">
+        <input id="frpRemotePort" placeholder="远程端口" style="width:100px;">
+        <button class="btn" id="btnFrpSave">保存</button>
+        <button class="btn primary" id="btnFrpStart">启动</button>
+        <button class="btn" id="btnFrpStop">停止</button>
+      </div>
+      <div class="row"><span class="hint" id="frpHint"></span></div>
+      <div class="row"><span class="hint" id="frpAddr"></span></div>
+      <pre id="frpLog" style="max-height:100px;overflow:auto;white-space:pre-wrap;font-size:12px;color:#8b949e;margin:6px 0 0;"></pre>
+      <div class="msg" id="builtinMsg"></div>
     </div>
     <div class="card" id="cardDelete" style="display:none; border-color:var(--err);">
       <h3 style="color:var(--err);">删除服务器</h3>
@@ -1428,7 +1477,7 @@ const HELP=`【MbesBeacon — Minecraft 基岩版服务器管理器 使用帮助
   Q 关掉网页后服务器还在跑吗？      → 在，从系统托盘重新打开界面
   Q 好友进不来？                    → 防火墙放行 UDP 19132、填对局域网 IP、检查白名单
   Q 手机/别的电脑怎么管理？         → 安装页「远程管理」启用并设密码，重启后访问 http://<局域网IP>:19100
-  Q 互联网好友怎么进来？            → 安装页「公网联机」用 UPnP 自动映射；不行就配置外部穿透客户端（UDP 端口）
+  Q 互联网好友怎么进来？            → 安装页「公网联机」：UPnP 自动映射 → 内置 playit（账号领取）→ 内置 frp（自备服务器）
   Q 改了配置不生效？                → 保存后需要重启服务器
   Q 数据存在哪？                    → %APPDATA%\MbesBeacon（设置 / 日志 / 缓存）
   Q 存档在哪？                      → 服务器目录下的 worlds\ 文件夹
@@ -2172,6 +2221,98 @@ $('btnCfgReload').onclick=()=>{
     }catch(e){}
   }
   loadTunnelStatus();
+  // ---- 内置穿透工具 ----
+  function setBuiltinMsg(text, ok){
+    const el = $('builtinMsg');
+    el.textContent = text || '';
+    el.style.color = ok ? 'var(--ok, #3fb950)' : 'var(--err)';
+  }
+  function renderPlayit(p){
+    if(!p) return;
+    $('playitStatus').textContent = (p.installed ? (tt('已安装') + (p.version ? ' ' + p.version : '')) : tt('未安装'))
+      + ' · ' + (p.claimed ? tt('已领取') : tt('未领取'))
+      + ' · ' + (p.running ? tt('运行中') : tt('未运行'));
+    $('playitHint').textContent = p.installed && !p.claimed
+      ? tt('playit 需要账号：打开领取链接登录后，在网页上创建一条 UDP 隧道指向本机 19132，再点启动。') : '';
+    const link = $('playitClaimUrl');
+    const claim = (p.claim && p.claim.url) || '';
+    if(claim){ link.style.display=''; link.href = claim; link.textContent = tt('领取链接：') + claim; }
+    else { link.style.display='none'; }
+    $('playitAddr').textContent = p.address ? (tt('公网地址：') + p.address) : '';
+    $('playitLog').textContent = (p.lines || []).join('\n');
+  }
+  function renderFrp(f){
+    if(!f) return;
+    $('frpStatus').textContent = (f.installed ? (tt('已安装') + (f.version ? ' ' + f.version : '')) : tt('未安装'))
+      + ' · ' + (f.running ? tt('运行中') : tt('未运行'));
+    $('frpHint').textContent = f.installed ? '' : tt('frp 需要你自己的公网服务器（frps）。');
+    const cfg = f.config || {};
+    if($('frpServer').value === '' && cfg.server_addr) $('frpServer').value = cfg.server_addr;
+    if($('frpServerPort').value === '' && cfg.server_port) $('frpServerPort').value = cfg.server_port;
+    if($('frpRemotePort').value === '' && cfg.remote_port) $('frpRemotePort').value = cfg.remote_port;
+    $('frpAddr').textContent = f.address ? (tt('公网地址：') + f.address) : '';
+    $('frpLog').textContent = (f.lines || []).join('\n');
+  }
+  async function loadBuiltinStatus(){
+    try{
+      const r = await jget('/api/tunnel/builtin');
+      if(!r.ok) return;
+      renderPlayit(r.playit); renderFrp(r.frp);
+    }catch(e){}
+  }
+  async function builtinAction(url, body, button, busyText){
+    const label = button ? button.textContent : '';
+    if(button){ button.disabled = true; button.textContent = busyText || tt('下载中…'); }
+    try{
+      const r = await jpost(url, body || {});
+      if(!r.ok) setBuiltinMsg(r.error || '失败', false);
+      else setBuiltinMsg('', true);
+      return r;
+    }catch(e){ setBuiltinMsg(String(e), false); return {ok:false}; }
+    finally{ if(button){ button.disabled = false; button.textContent = label; } }
+  }
+  $('btnPlayitInstall').onclick = async () => {
+    setBuiltinMsg('', true);
+    const r = await builtinAction('/api/tunnel/builtin/install', {tool:'playit'}, $('btnPlayitInstall'), tt('下载中…'));
+    if(r.ok) setBuiltinMsg('playit ' + (r.version || ''), true);
+    loadBuiltinStatus();
+  };
+  $('btnFrpInstall').onclick = async () => {
+    setBuiltinMsg('', true);
+    const r = await builtinAction('/api/tunnel/builtin/install', {tool:'frp'}, $('btnFrpInstall'), tt('下载中…'));
+    if(r.ok) setBuiltinMsg('frp ' + (r.version || ''), true);
+    loadBuiltinStatus();
+  };
+  $('btnPlayitClaim').onclick = async () => {
+    const r = await builtinAction('/api/tunnel/playit/claim', {action:'start'});
+    if(r.ok){
+      const link = $('playitClaimUrl');
+      link.style.display=''; link.href = r.url; link.textContent = tt('领取链接：') + r.url;
+      try{ await navigator.clipboard.writeText(r.url); setBuiltinMsg('链接已复制：' + r.url, true); }catch(e){ setBuiltinMsg(r.url, true); }
+    }
+    loadBuiltinStatus();
+  };
+  $('btnPlayitCheck').onclick = async () => {
+    const r = await builtinAction('/api/tunnel/playit/claim', {action:'check'}, $('btnPlayitCheck'), tt('检测中…'));
+    if(r.ok) setBuiltinMsg(r.claimed ? tt('已领取') : tt('未领取'), r.claimed);
+    loadBuiltinStatus();
+  };
+  $('btnPlayitStart').onclick = async () => { await builtinAction('/api/tunnel/playit/start', {}, $('btnPlayitStart')); loadBuiltinStatus(); };
+  $('btnPlayitStop').onclick = async () => { await builtinAction('/api/tunnel/playit/stop'); loadBuiltinStatus(); };
+  $('btnFrpSave').onclick = async () => {
+    const r = await builtinAction('/api/tunnel/frp/config', {
+      server_addr: $('frpServer').value.trim(),
+      server_port: $('frpServerPort').value.trim() || 7000,
+      token: $('frpToken').value.trim(),
+      remote_port: $('frpRemotePort').value.trim() || 19132,
+      local_port: 19132,
+    });
+    if(r.ok) setBuiltinMsg('已保存', true);
+    loadBuiltinStatus();
+  };
+  $('btnFrpStart').onclick = async () => { await builtinAction('/api/tunnel/frp/start', {}, $('btnFrpStart')); loadBuiltinStatus(); };
+  $('btnFrpStop').onclick = async () => { await builtinAction('/api/tunnel/frp/stop'); loadBuiltinStatus(); };
+  loadBuiltinStatus();
   $('btnDelete').onclick=()=>{
   $('delPath').textContent=tt('将删除目录：')+(curDir||'');
   $('ckDeleteConfirm').checked=false;

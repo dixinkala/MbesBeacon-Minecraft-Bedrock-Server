@@ -513,3 +513,123 @@ class PostExtraRoutesMixin:
         status = tunnel.manager.stop()
         audit_log("TUNNEL_STOP", "", None)
         self._json({"ok": True, "status": status})
+
+    # ---- 内置穿透工具 ----
+
+    @register_post_route("/api/tunnel/builtin/install")
+    def _post_builtin_tunnel_install(self, data):
+        """下载并安装内置穿透工具（playit / frp）。"""
+        from ... import builtin_tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "内置穿透工具只能在运行本程序的机器上安装"}, code=403)
+            return
+        tool = str((data or {}).get("tool") or "")
+        try:
+            if tool == "playit":
+                result = builtin_tunnel.install_playit()
+            elif tool == "frp":
+                result = builtin_tunnel.install_frp()
+            else:
+                self._json({"ok": False, "error": "tool 只能是 playit 或 frp"}, code=400)
+                return
+            audit_log("TUNNEL_INSTALL", f"{tool} {result.get('version', '')}", None)
+            self._json({"ok": True, "tool": tool, **result})
+        except builtin_tunnel.BuiltinTunnelError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+        except Exception as e:
+            safe_log_exception("post_extra", f"安装 {tool} 失败: {e}", "warning")
+            self._json({"ok": False, "error": str(e)}, code=500)
+
+    @register_post_route("/api/tunnel/playit/claim")
+    def _post_playit_claim(self, data):
+        """playit 领取：action=start 生成链接，action=check 检查是否已领取。"""
+        from ... import builtin_tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        action = str((data or {}).get("action") or "start")
+        try:
+            if action == "start":
+                result = builtin_tunnel.playit.claim_start()
+                audit_log("TUNNEL_PLAYIT_CLAIM", result.get("url", ""), None)
+                self._json({"ok": True, "action": "start", **result})
+            elif action == "check":
+                result = builtin_tunnel.playit.claim_check()
+                self._json({"ok": True, "action": "check", **result})
+            else:
+                self._json({"ok": False, "error": "action 只能是 start 或 check"}, code=400)
+        except builtin_tunnel.BuiltinTunnelError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/playit/start")
+    def _post_playit_start(self, data):
+        from ... import builtin_tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            status = builtin_tunnel.playit.start()
+            audit_log("TUNNEL_PLAYIT_START", status.get("address", ""), None)
+            self._json({"ok": True, "status": status})
+        except builtin_tunnel.BuiltinTunnelError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/playit/stop")
+    def _post_playit_stop(self, data):
+        from ... import builtin_tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        status = builtin_tunnel.playit.stop()
+        audit_log("TUNNEL_PLAYIT_STOP", "", None)
+        self._json({"ok": True, "status": status})
+
+    @register_post_route("/api/tunnel/frp/config")
+    def _post_frp_config(self, data):
+        from ... import builtin_tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        payload = data or {}
+        try:
+            cfg = builtin_tunnel.save_frp_config(
+                server_addr=payload.get("server_addr", ""),
+                server_port=payload.get("server_port", 7000),
+                token=payload.get("token", ""),
+                remote_port=payload.get("remote_port", 19132),
+                local_port=payload.get("local_port", 19132),
+            )
+            audit_log("TUNNEL_FRP_CONFIG", f"{cfg['server_addr']}:{cfg['remote_port']}", None)
+            self._json({"ok": True, "config": cfg})
+        except builtin_tunnel.BuiltinTunnelError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/frp/start")
+    def _post_frp_start(self, data):
+        from ... import builtin_tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            status = builtin_tunnel.frp.start()
+            audit_log("TUNNEL_FRP_START", status.get("address", ""), None)
+            self._json({"ok": True, "status": status})
+        except builtin_tunnel.BuiltinTunnelError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/tunnel/frp/stop")
+    def _post_frp_stop(self, data):
+        from ... import builtin_tunnel
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        status = builtin_tunnel.frp.stop()
+        audit_log("TUNNEL_FRP_STOP", "", None)
+        self._json({"ok": True, "status": status})
