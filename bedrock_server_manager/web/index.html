@@ -641,9 +641,18 @@ const I18N_EN = {
   "启用 LeviLamina 会按兼容版本重装服务端文件（约 100 MB 下载），配置文件会自动备份。继续？": "Enabling LeviLamina reinstalls server files for the compatible BDS version (~100 MB download). Config files are backed up automatically. Continue?",
   "禁用后改用官方服务端启动，mods 与 lip 数据会保留。继续？": "After disabling, the official server is used. mods and lip data are kept. Continue?",
   "当前平台不支持 LeviLamina（仅 Windows x64）。": "This platform does not support LeviLamina (Windows x64 only).",
-  "启用中…（下载约 100 MB，请稍候）": "Enabling... (~100 MB download)"
+  "启用中…（下载约 100 MB，请稍候）": "Enabling... (~100 MB download)",
+  "实例": "Instance",
+  "➕ 收录当前目录": "➕ Add current folder",
+  "✕ 移除实例": "✕ Remove instance",
+  "▶ 启动": "▶ Start",
+  "■ 停止": "■ Stop",
+  "当前实例：": "Active instance: ",
+  "实例已切换": "Instance switched",
+  "已收录当前目录": "Current folder added",
+  "移除该实例？服务端会先停止。": "Remove this instance? Its server will be stopped first."
 };
-const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Install LeviLamina mods?         Packs tab: download lip, enable LeviLamina, then install .zip mods or lip packages\n  Q Internet friends cannot join?    Public Access tab: UPnP first, then built-in playit (account),\n                                      or built-in frp (own server)\n                                      or configure an external tunnel client (UDP port)\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
+const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Install LeviLamina mods?         Packs tab: download lip, enable LeviLamina, then install .zip mods or lip packages\n  Q Run several servers at once?     Top 'Instance' selector: add folder, pick it, press Start; each has its own port/console\n  Q Internet friends cannot join?    Public Access tab: UPnP first, then built-in playit (account),\n                                      or built-in frp (own server)\n                                      or configure an external tunnel client (UDP port)\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
 (function(){
   let lang = null, manual = null;
   try{ lang = localStorage.getItem('mbesbeacon_lang'); manual = localStorage.getItem('mbesbeacon_lang_manual'); }catch(e){}
@@ -821,6 +830,14 @@ window.MBS_LANG = lang;
     </div>
     <div class="spacer"></div>
     <span class="pill off" id="pillState">检测中...</span>
+    <span style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:12px;color:var(--dim);">实例</span>
+      <select id="instSelect" style="max-width:220px;padding:6px 8px;border-radius:6px;border:1px solid #2a333f;background:#0d1117;color:#c9d1d9;"></select>
+      <button class="btn" id="btnInstAdd" title="把当前服务器目录收录为实例">➕ 收录当前目录</button>
+      <button class="btn" id="btnInstRemove" title="从实例列表移除当前实例">✕ 移除实例</button>
+      <button class="btn" id="btnInstStart" title="启动当前实例">▶ 启动</button>
+      <button class="btn" id="btnInstStop" title="停止当前实例">■ 停止</button>
+    </span>
     <button class="btn" id="btnCheckUpdate" title="检测 Minecraft 服务器新版本">🔄 服务器更新</button>
     <button class="btn" id="btnCheckAppUpdate" title="检测 MbesBeacon 软件新版本">📦 软件更新</button>
     <button class="btn" id="btnTheme" title="自定义界面风格">🎨 界面风格</button>
@@ -1517,6 +1534,7 @@ const HELP=`【MbesBeacon — Minecraft 基岩版服务器管理器 使用帮助
   Q 手机/别的电脑怎么管理？         → 安装页「远程管理」启用并设密码，重启后访问 http://<局域网IP>:19100
   Q 互联网好友怎么进来？            → 安装页「公网联机」：UPnP 自动映射 → 内置 playit（账号领取）→ 内置 frp（自备服务器）
   Q 想装 LeviLamina 插件？          → ⑧ 包管理页：下载 lip → 启用 LeviLamina → 安装 .zip 插件或 lip 包
+  Q 想同时开多个服务器？            → 顶部「实例」下拉：➕ 收录当前目录 → 选中 → ▶ 启动；各实例端口/控制台独立
   Q 改了配置不生效？                → 保存后需要重启服务器
   Q 数据存在哪？                    → %APPDATA%\MbesBeacon（设置 / 日志 / 缓存）
   Q 存档在哪？                      → 服务器目录下的 worlds\ 文件夹
@@ -3116,7 +3134,62 @@ async function addIpBan(){
   else showAlert('封禁失败：'+r.error);
 }
 
-// ---- LeviLamina ----
+// ---- 多实例 ----
+  async function loadInstances(){
+    try{
+      const r = await jget('/api/instances');
+      if(!r.ok) return;
+      const sel = $('instSelect');
+      const current = sel.value;
+      sel.innerHTML = '';
+      for(const inst of (r.instances || [])){
+        const opt = document.createElement('option');
+        opt.value = inst.dir;
+        opt.textContent = (inst.name || inst.dir) + (inst.running ? ' ●' : ' ○')
+          + (inst.port ? (' :' + inst.port) : '') + (inst.active ? ' ✓' : '');
+        sel.appendChild(opt);
+      }
+      const active = (r.instances || []).find(x => x.active);
+      if(active) sel.value = active.dir;
+      else if(current) sel.value = current;
+      $('btnInstRemove').disabled = !(r.instances || []).length;
+      $('btnInstStart').disabled = !sel.value;
+      $('btnInstStop').disabled = !sel.value;
+    }catch(e){}
+  }
+  $('instSelect').onchange = async () => {
+    const r = await jpost('/api/instances/activate', {dir: $('instSelect').value});
+    if(!r.ok){ setLevMsg(r.error || '切换失败', false); return; }
+    await refreshAll();
+    loadInstances();
+  };
+  $('btnInstAdd').onclick = async () => {
+    let dir = '';
+    try{ const st = await jget('/api/status'); dir = (st && st.server_dir) || ''; }catch(e){}
+    if(!dir){ showAlert('请先在「① 安装服务器」选择或安装一个服务器目录', 'error'); return; }
+    const r = await jpost('/api/instances/add', {dir});
+    if(!r.ok){ showAlert(r.error || '添加失败', 'error'); return; }
+    loadInstances();
+  };
+  $('btnInstRemove').onclick = async () => {
+    if(!confirm(tt('移除该实例？服务端会先停止。'))) return;
+    const r = await jpost('/api/instances/remove', {dir: $('instSelect').value});
+    if(!r.ok){ showAlert(r.error || '移除失败', 'error'); return; }
+    loadInstances();
+  };
+  $('btnInstStart').onclick = async () => {
+    const r = await jpost('/api/instances/start', {dir: $('instSelect').value});
+    if(!r.ok){ showAlert(r.error || '启动失败', 'error'); return; }
+    loadInstances();
+  };
+  $('btnInstStop').onclick = async () => {
+    const r = await jpost('/api/instances/stop', {dir: $('instSelect').value});
+    if(!r.ok){ showAlert(r.error || '停止失败', 'error'); return; }
+    loadInstances();
+  };
+  loadInstances();
+  setInterval(loadInstances, 8000);
+  // ---- LeviLamina ----
   let levPollTimer = null;
   function setLevMsg(text, ok){
     const el = $('levMsg');

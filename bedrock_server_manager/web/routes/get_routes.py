@@ -585,3 +585,10 @@ class GetRoutesMixin:
                 "server_running": bool(server_running()),
             }
         )
+
+    @register_get_route("/api/instances")
+    def _get_instances(self, q):
+        """多实例列表（含运行状态/端口/版本）。"""
+        from ...server import list_instances
+
+        self._json({"ok": True, "instances": list_instances()})

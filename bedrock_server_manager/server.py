@@ -12,6 +12,7 @@ import time
 from .app_context import AppContext
 from .app_logger import safe_log_exception
 from .config import load_properties
+from .console import ConsoleBuffer
 from .constants import IS_WINDOWS, SERVER_EXE
 
 
@@ -321,32 +322,203 @@ class ServerProcess:
         self.on_state(False)
 
 
-def get_server_proc():
-    """获取或创建 ServerProcess 单例。"""
+# ---------------------------------------------------------------------------
+# 多实例注册表
+#
+# 每个服务器目录拥有独立的 ServerProcess 与 ConsoleBuffer；"当前实例"由
+# settings["server_dir"] 表示（沿用原有语义，66 处调用无需改动），
+# 切换实例时把 AppContext.console / server_proc 指向该实例的对象。
+# 注册表持久化在 settings["instances"]。
+# ---------------------------------------------------------------------------
+
+_instances_lock = threading.RLock()
+_instances: dict[str, dict] = {}
+
+
+def _instance_key(dir_path: str) -> str:
+    return os.path.normcase(os.path.abspath(dir_path)) if dir_path else ""
+
+
+def _get_instance(server_dir: str) -> dict:
+    """获取/创建某目录的实例运行对象（进程 + 独立控制台）。"""
+    key = _instance_key(server_dir)
+    if not key:
+        raise ValueError("未设置服务器目录")
+    with _instances_lock:
+        inst = _instances.get(key)
+        if inst is not None:
+            return inst
+        console = ConsoleBuffer()
+
+        def on_out(line, _console=console):
+            _console.append(line)
+
+        def on_state(running):
+            pass
+
+        proc = ServerProcess(server_dir, on_output=on_out, on_state=on_state)
+        inst = {"dir": server_dir, "console": console, "proc": proc}
+        _instances[key] = inst
+        return inst
+
+
+def instance_dirs() -> list[dict]:
+    """注册表内容（settings["instances"]）。"""
+    raw = AppContext.instance().settings.get("instances")
+    result: list[dict] = []
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, dict) and item.get("dir"):
+                result.append({"dir": str(item["dir"]), "name": str(item.get("name") or "")})
+    return result
+
+
+def _save_instance_dirs(entries: list[dict]) -> None:
+    from .utils import save_settings
+
+    settings = AppContext.instance().settings
+    settings["instances"] = entries
+    save_settings(settings)
+
+
+def register_instance(server_dir: str, name: str = "") -> dict:
+    """把服务器目录加入注册表（幂等）。"""
+    server_dir = os.path.abspath(server_dir)
+    if not os.path.isdir(server_dir):
+        raise ValueError("目录不存在")
+    entries = instance_dirs()
+    for entry in entries:
+        if _instance_key(entry["dir"]) == _instance_key(server_dir):
+            if name and name != entry["name"]:
+                entry["name"] = name
+                _save_instance_dirs(entries)
+            return entry
+    entry = {"dir": server_dir, "name": name or os.path.basename(server_dir.rstrip("\\/")) or server_dir}
+    entries.append(entry)
+    _save_instance_dirs(entries)
+    return entry
+
+
+def unregister_instance(server_dir: str) -> bool:
+    """从注册表移除（运行中会先停止）。"""
+    key = _instance_key(server_dir)
+    inst = _instances.get(key)
+    if inst is not None and inst["proc"].running:
+        inst["proc"].stop()
+    with _instances_lock:
+        _instances.pop(key, None)
+    entries = [e for e in instance_dirs() if _instance_key(e["dir"]) != key]
+    _save_instance_dirs(entries)
+    if _instance_key(AppContext.instance().settings.get("server_dir", "")) == key:
+        if entries:
+            activate_instance(entries[0]["dir"])
+        else:
+            AppContext.instance().settings["server_dir"] = ""
+            _save_instance_dirs(entries)
+    return True
+
+
+def list_instances() -> list[dict]:
+    """实例列表（含运行状态/端口/版本/是否为当前实例）。"""
+    settings = AppContext.instance().settings
+    active_key = _instance_key(settings.get("server_dir", ""))
+    result: list[dict] = []
+    for entry in instance_dirs():
+        dir_path = entry["dir"]
+        key = _instance_key(dir_path)
+        inst = _instances.get(key)
+        running = bool(inst and inst["proc"].running)
+        port = 19132
+        version = ""
+        with contextlib.suppress(Exception):
+            port = get_server_port(dir_path)
+        with contextlib.suppress(Exception):
+            from .install import detect_server_version
+
+            version = detect_server_version(dir_path)
+        result.append(
+            {
+                "dir": dir_path,
+                "name": entry.get("name") or os.path.basename(dir_path),
+                "running": running,
+                "port": port,
+                "version": version,
+                "active": key == active_key,
+            }
+        )
+    return result
+
+
+def activate_instance(server_dir: str) -> dict:
+    """切换当前实例：settings.server_dir、AppContext.console/server_proc 一起切。"""
+    server_dir = os.path.abspath(server_dir)
+    if not os.path.isdir(server_dir):
+        raise ValueError("目录不存在")
     ctx = AppContext.instance()
-    settings = ctx.settings
-    console = ctx.console
-    server_proc = ctx.server_proc
-    server_lock = ctx.server_lock
+    inst = _get_instance(server_dir)
+    ctx.settings["server_dir"] = server_dir
+    ctx.console = inst["console"]
+    ctx.server_proc = inst["proc"]
+    with contextlib.suppress(Exception):
+        from .utils import save_settings
 
-    with server_lock:
-        if server_proc is None:
+        save_settings(ctx.settings)
+    for item in list_instances():
+        if _instance_key(item["dir"]) == _instance_key(server_dir):
+            return item
+    return {"dir": server_dir, "name": os.path.basename(server_dir), "active": True}
 
-            def on_out(line):
-                if console:
-                    console.append(line)
 
-            def on_state(running):
-                pass
+def sync_active_instance() -> None:
+    """启动时对齐：注册表为空则收录当前 server_dir，并让 ctx 指向当前实例。"""
+    ctx = AppContext.instance()
+    current = str(ctx.settings.get("server_dir") or "").strip()
+    if current and os.path.isdir(current) and not instance_dirs():
+        with contextlib.suppress(Exception):
+            register_instance(current)
+    if current and os.path.isdir(current):
+        with contextlib.suppress(Exception):
+            inst = _get_instance(current)
+            ctx.console = inst["console"]
+            ctx.server_proc = inst["proc"]
 
-            server_proc = ServerProcess(settings["server_dir"], on_output=on_out, on_state=on_state)
-            ctx.server_proc = server_proc
-        return server_proc
+
+def instance_running(server_dir: str) -> bool:
+    inst = _instances.get(_instance_key(server_dir))
+    return bool(inst and inst["proc"].running)
+
+
+def start_instance(server_dir: str) -> None:
+    _get_instance(server_dir)["proc"].start()
+
+
+def stop_instance(server_dir: str) -> None:
+    inst = _instances.get(_instance_key(server_dir))
+    if inst is not None:
+        inst["proc"].stop()
+
+
+def send_to_instance(server_dir: str, command: str) -> bool:
+    inst = _instances.get(_instance_key(server_dir))
+    if inst is None or not inst["proc"].running:
+        return False
+    inst["proc"].send(command)
+    return True
+
+
+def get_server_proc():
+    """获取当前实例的 ServerProcess（保持原函数语义）。"""
+    ctx = AppContext.instance()
+    current = str(ctx.settings.get("server_dir") or "")
+    if not current:
+        return ServerProcess("", on_output=lambda line: None, on_state=lambda running: None)
+    return _get_instance(current)["proc"]
 
 
 def server_running() -> bool:
-    """检查服务器进程是否正在运行。"""
-
-    server_proc, server_lock = _get_server_proc_state()
-    with server_lock:
-        return server_proc is not None and server_proc.running
+    """当前实例是否在运行。"""
+    current = str(AppContext.instance().settings.get("server_dir") or "")
+    if not current:
+        return False
+    inst = _instances.get(_instance_key(current))
+    return bool(inst and inst["proc"].running)
