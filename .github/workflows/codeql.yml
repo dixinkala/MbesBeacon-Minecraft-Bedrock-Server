@@ -36,6 +36,7 @@ jobs:
       uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
+        config-file: ./.github/codeql/codeql-config.yml
         # 配置查询规则:
         # - security-and-quality: 安全 + 质量规则（推荐，包含以下所有）
         # - security-extended: 安全扩展规则

@@ -56,7 +56,13 @@ jobs:
 
     - name: 🧪 运行测试
       run: |
-        pytest tests/ -v --cov=bedrock_server_manager --cov-report=xml --cov-report=term
+        pytest tests/ -v --cov=bedrock_server_manager --cov-report=xml --cov-report=term --cov-report=json:.coverage.json
+
+    - name: 📏 逐文件覆盖率门槛（重要 85% / 其余 80%）
+      # 覆盖率门槛在 Windows 上执行：PE 签名/注册表等 Windows-only 代码
+      # 在 Linux 上不可达，按平台统计会造成假失败。
+      if: matrix.os == 'windows-latest' && matrix.python-version == '3.12'
+      run: python tools/check_coverage.py --strict
 
     - name: 📊 上传覆盖率报告
       uses: actions/upload-artifact@v7

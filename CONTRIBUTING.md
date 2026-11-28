@@ -80,8 +80,12 @@ pip install -r requirements-dev.txt  # 开发/测试依赖（pytest、pytest-cov
 # 4. 运行开发版本
 python run.py
 
-# 5. 运行测试（含覆盖率门禁）
+# 5. 运行测试（含总覆盖率下限 85%）
 pytest --cov
+
+# 5.1 逐文件覆盖率门槛（重要模块 85% / 其余 80%）
+pytest --cov --cov-report=json:.coverage.json
+python tools/check_coverage.py --strict
 
 # 6. 前端测试
 node --test "tests/js/**/*.test.mjs"

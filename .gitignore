@@ -61,4 +61,7 @@ _local_backup/
 
 # 本地验证产物
 _verify/
-
+# 覆盖率产物（coverage_baseline.json 需要提交）
+.coverage
+.coverage.*
+coverage.xml
