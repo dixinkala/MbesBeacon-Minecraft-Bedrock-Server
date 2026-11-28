@@ -2571,6 +2571,10 @@ class TestHandlerHttp(_HttpCase):
             status, _, body = self.request("GET", "/api/console/stream", headers={"X-API-Token": "test-token"})
         self.assertEqual((status, body), (200, b"stream"))
         acquire.assert_called_once()
+        # 客户端可能先收到响应，handler 线程稍后才执行 finally 里的 release
+        deadline = time.time() + 2
+        while not release.called and time.time() < deadline:
+            time.sleep(0.02)
         release.assert_called_once()
 
     def test_post_host_mismatch_403(self):
