@@ -124,6 +124,14 @@ python tools/sync_builtin_versions.py --check
 
 ---
 
+## 多实例架构
+
+每个服务器目录对应一个 `ServerProcess` 与一个 `ConsoleBuffer`，实例注册表存放在
+`settings["instances"]`，当前实例沿用 `settings["server_dir"]` 语义（因此大量
+`resolve_server_dir()` 调用无需改动）。切换实例时同时切换 `AppContext.console` 与
+`AppContext.server_proc`；新增按实例读取的接口请走 `server.list_instances()` 等函数，
+不要直接读全局 console。
+
 ## 文档与 Wiki
 
 用户文档分三处，职责不同：

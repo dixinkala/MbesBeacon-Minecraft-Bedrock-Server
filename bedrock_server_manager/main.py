@@ -137,6 +137,10 @@ def _main():
         # 加载磁盘设置（迁移完成后从 APP_DATA_DIR/settings.json 恢复上次状态：
         # server_dir、installed_version、历史目录、ignore_ssl 等）
         load_settings()
+        # 多实例：注册表为空时收录当前目录，并让 ctx 指向当前实例的进程/控制台
+        from .server import sync_active_instance
+
+        sync_active_instance()
 
     # windowed(exe无控制台)模式下 stdout/stderr 为 None，需重定向
     if sys.stdout is None:

@@ -800,3 +800,76 @@ class PostExtraRoutesMixin:
             self._json({"ok": True, **result})
         except levilamina.LeviLaminaError as e:
             self._json({"ok": False, "error": str(e)}, code=400)
+
+    # ---- 多实例 ----
+
+    @register_post_route("/api/instances/add")
+    def _post_instance_add(self, data):
+        from ...server import list_instances, register_instance
+        from ...utils import resolve_server_exe
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "添加实例只能在运行本程序的机器上操作"}, code=403)
+            return
+        dir_path = str((data or {}).get("dir") or "").strip()
+        if not dir_path:
+            self._json({"ok": False, "error": "请提供服务器目录"}, code=400)
+            return
+        if not resolve_server_exe(dir_path):
+            self._json({"ok": False, "error": "该目录不是已安装的服务端"}, code=400)
+            return
+        try:
+            entry = register_instance(dir_path, str((data or {}).get("name") or ""))
+            audit_log("INSTANCE_ADD", entry["dir"], None)
+            self._json({"ok": True, "instance": entry, "instances": list_instances()})
+        except ValueError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/instances/remove")
+    def _post_instance_remove(self, data):
+        from ...server import list_instances, unregister_instance
+
+        dir_path = str((data or {}).get("dir") or "").strip()
+        if not dir_path:
+            self._json({"ok": False, "error": "缺少 dir"}, code=400)
+            return
+        try:
+            unregister_instance(dir_path)
+            audit_log("INSTANCE_REMOVE", dir_path, None)
+            self._json({"ok": True, "instances": list_instances()})
+        except ValueError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/instances/activate")
+    def _post_instance_activate(self, data):
+        from ...server import activate_instance, list_instances
+
+        dir_path = str((data or {}).get("dir") or "").strip()
+        try:
+            entry = activate_instance(dir_path)
+            audit_log("INSTANCE_ACTIVATE", entry["dir"], None)
+            self._json({"ok": True, "instance": entry, "instances": list_instances()})
+        except (ValueError, OSError) as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/instances/start")
+    def _post_instance_start(self, data):
+        from ...server import list_instances, start_instance
+
+        dir_path = str((data or {}).get("dir") or "").strip()
+        try:
+            start_instance(dir_path)
+            self._json({"ok": True, "instances": list_instances()})
+        except (ValueError, OSError, FileNotFoundError) as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/instances/stop")
+    def _post_instance_stop(self, data):
+        from ...server import list_instances, stop_instance
+
+        dir_path = str((data or {}).get("dir") or "").strip()
+        try:
+            stop_instance(dir_path)
+            self._json({"ok": True, "instances": list_instances()})
+        except (ValueError, OSError) as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
