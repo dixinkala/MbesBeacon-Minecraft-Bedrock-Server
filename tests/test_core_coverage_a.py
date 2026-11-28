@@ -1717,6 +1717,7 @@ class TestUtilsMisc(_Base):
     @win_only
     def test_browse_directory_dispatch_windows(self):
         fake_windll = mock.MagicMock()
+        fake_windll.user32.GetForegroundWindow.return_value = 1
         fake_windll.shell32.SHBrowseForFolderW.return_value = 42
         fake_windll.shell32.SHGetPathFromIDListW.return_value = 1
         with (
@@ -1731,6 +1732,7 @@ class TestUtilsMisc(_Base):
     @win_only
     def test_browse_directory_windows_cancel(self):
         fake_windll = mock.MagicMock()
+        fake_windll.user32.GetForegroundWindow.return_value = 1
         fake_windll.shell32.SHBrowseForFolderW.return_value = 0
         with (
             mock.patch.object(utils, "IS_WINDOWS", True),
@@ -1742,6 +1744,7 @@ class TestUtilsMisc(_Base):
     @win_only
     def test_browse_directory_windows_path_conversion_failure(self):
         fake_windll = mock.MagicMock()
+        fake_windll.user32.GetForegroundWindow.return_value = 1
         fake_windll.shell32.SHBrowseForFolderW.return_value = 7
         fake_windll.shell32.SHGetPathFromIDListW.return_value = 0
         with (
