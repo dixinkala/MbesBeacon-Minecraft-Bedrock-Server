@@ -680,5 +680,7 @@ ruff check .
 - [Bedrock-OSS/BDS-Versions](https://github.com/Bedrock-OSS/BDS-Versions)：社区版本清单（现作为兜底数据源）
 - [playit.gg](https://github.com/playit-cloud/playit-agent)：内置穿透工具（BSD-2-Clause，按需下载）
 - [frp](https://github.com/fatedier/frp)：内置穿透工具（Apache-2.0，按需下载）
+- [LeviLamina](https://github.com/LiteLDev/LeviLamina)：BDS 模组加载器（LGPL-3.0，按需下载）
+- [lip](https://github.com/LiteLDev/lip)：LeviLamina 包管理器（按需下载）
 - [Minecraft](https://www.minecraft.net/)：基岩版专用服务器（BDS）官方发布
 - 所有贡献者和用户的反馈与支持

@@ -54,6 +54,32 @@
 | 同名包导入失败 | 设计如此，避免静默覆盖；确认后重新导入并选择覆盖 |
 | `.mcpack` 打不开 | 确认文件是 ZIP 容器（`.mcpack` 本质是 zip） |
 
+## LeviLamina 插件（mods）
+
+「⑧ 包管理」页底部提供 LeviLamina 支持（仅 Windows x64；LeviLamina 只发布 Windows 服务端包）。
+
+### 启用 / 禁用加载器
+
+1. 点「下载 lip」（从官方 GitHub Releases 下载并校验 SHA256）
+2. 点「启用 LeviLamina」→ 确认后程序执行 `lip setup --game <版本> --build windows --loader levilamina`
+3. 下载约 100 MB，完成后服务端变为 `bedrock_server_mod.exe`，程序会自动改用它启动
+4. 「禁用」会把 `bedrock_server_mod.exe` 改名并恢复官方 `bedrock_server.exe`，`mods/` 与 lip 数据保留
+
+> 启用会**按 LeviLamina 兼容版本重装服务端文件**（例如当前 LeviLamina 26.60.9 对应 BDS 1.26.60），
+> 配置文件会先备份到 `mbes_backup/ll_<时间戳>/`。世界存档不受影响，但仍建议先做一次备份。
+
+### 管理插件
+
+| 操作 | 说明 |
+|---|---|
+| 安装插件包（.zip） | 上传 zip；lip 工作区优先走 `lip install`，否则安全解压到 `mods/<名>/` |
+| lip 安装 / 卸载 | 填包名或 URL，执行 `lip install` / `lip uninstall` |
+| 启用 / 禁用 | 在 `mods/` 与 `mods.disabled/` 之间移动 |
+| 删除 | 删除插件目录/文件（需确认） |
+
+- 插件名、版本、类型来自插件包里的 `manifest.json`
+- `mods/LeviLamina` 是加载器本身，不会出现在插件列表里
+
 ## 相关
 
 - 包会被更新覆盖：见 [01 安装与更新](01-install-update.md)（`resource_packs/` 属官方内容目录，随版本更新）
