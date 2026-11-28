@@ -69,7 +69,7 @@ def _relative(path: str) -> str:
 
 def load_measurements() -> dict[str, float]:
     if not COVERAGE_JSON.is_file():
-        raise SystemExit(f"找不到 {COVERAGE_JSON}，请先运行 pytest --cov-report=json")
+        raise SystemExit(f"Missing {COVERAGE_JSON}; run pytest with --cov-report=json first")
     data = json.loads(COVERAGE_JSON.read_text(encoding="utf-8"))
     result: dict[str, float] = {}
     for path, info in data.get("files", {}).items():
@@ -117,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
     measurements = load_measurements()
     if args.update_baseline:
         write_baseline(measurements)
-        print(f"已更新基线: {BASELINE_JSON.relative_to(ROOT)}（{len(measurements)} 个文件）")
+        print(f"Baseline updated: {BASELINE_JSON.relative_to(ROOT)} ({len(measurements)} files)")
         return 0
 
     baseline = {} if args.strict else load_baseline()
@@ -133,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         # 债务文件只要求不低于基线（防回退），不直接判失败
         floor = target if args.strict or pct >= target else baseline.get(name, 0.0)
         if pct + TOLERANCE < floor:
-            failures.append(f"{name}: {pct:.1f}% < 要求 {floor:.1f}%")
+            failures.append(f"{name}: {pct:.1f}% < required {floor:.1f}%")
             status = "FAIL"
         elif pct + TOLERANCE < target:
             debt.append((name, pct, target))
@@ -144,18 +144,18 @@ def main(argv: list[str] | None = None) -> int:
 
     width = max(len(name) for name, *_ in rows) if rows else 20
     for name, pct, target, status in rows:
-        print(f"  {name:<{width}}  {pct:5.1f}%  目标 {target:5.1f}%  [{status}]")
+        print(f"  {name:<{width}}  {pct:5.1f}%  target {target:5.1f}%  [{status}]")
 
     if debt:
-        print(f"\n⚠ 仍低于目标的文件（{len(debt)} 个，防回退模式只要求不下降）：")
+        print(f"\n[WARN] {len(debt)} file(s) still below target (ratchet mode: no regression):")
         for name, pct, target in debt:
-            print(f"    {name:<{width}} {pct:5.1f}% → {target:.0f}%")
+            print(f"    {name:<{width}} {pct:5.1f}% -> {target:.0f}%")
     if failures:
-        print("\n✗ 覆盖率门槛未通过：", file=sys.stderr)
+        print("\n[FAIL] coverage gate not met:", file=sys.stderr)
         for line in failures:
             print(f"    {line}", file=sys.stderr)
         return 1
-    print(f"\n✓ 覆盖率门槛通过（重要模块 {IMPORTANT_TARGET:.0f}% / 其余 {DEFAULT_TARGET:.0f}%）")
+    print(f"\n[OK] coverage gate passed (important {IMPORTANT_TARGET:.0f}% / others {DEFAULT_TARGET:.0f}%)")
     return 0
 
 
