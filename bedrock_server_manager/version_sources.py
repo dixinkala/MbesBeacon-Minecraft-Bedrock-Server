@@ -2,7 +2,7 @@
 
 优先级（逐层兜底）：
 
-1. **自建清单**：``dixinkala/mbesbeacon-bds-versions``（由 GitHub Actions 每 6 小时更新）
+1. **自建清单**：``dixinkala/mbesbeacon-bds-versions``（由 GitHub Actions 每小时更新）
 2. **社区清单**：``Bedrock-OSS/BDS-Versions``（自建清单不可达时的备份数据源）
 3. **内置快照**：``builtin_versions.BUILTIN_VERSIONS``（完全离线时使用，随版本同步更新）
 

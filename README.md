@@ -600,7 +600,7 @@ A：
 3. 检查网络是否能访问 minecraft.net
 
 ### Q：版本列表加载不出来 / 显示版本很少？
-A：版本列表来自[自建清单仓库](https://github.com/dixinkala/mbesbeacon-bds-versions)（每 6 小时自动更新）；取不到时依次回退社区清单与内置快照。可检查网络是否能访问 GitHub，或直接手动输入版本号。
+A：版本列表来自[自建清单仓库](https://github.com/dixinkala/mbesbeacon-bds-versions)（每小时自动更新）；取不到时依次回退社区清单与内置快照。可检查网络是否能访问 GitHub，或直接手动输入版本号。
 
 ### Q：修改配置后不生效？
 A：配置需重启服务器后生效。在控制台点「停止」再「启动」即可。
