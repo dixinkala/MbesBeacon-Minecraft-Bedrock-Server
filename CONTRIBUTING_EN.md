@@ -262,7 +262,7 @@ When filing a bug report, describe the problem in as much detail as possible to 
 ### Required Information
 
 - [ ] OS version (e.g., Windows 10 22H2 / Windows 11 23H2 or Ubuntu 20.04+)
-- [ ] MbesBeacon version (e.g., v1.0.25; see the title bar or `/api/health`)
+- [ ] MbesBeacon version (e.g., v1.0.26; see the title bar or `/api/health`)
 - [ ] Reproduction steps (down to each operation)
 - [ ] Expected behavior
 - [ ] Actual behavior

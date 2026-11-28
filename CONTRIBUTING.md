@@ -259,7 +259,7 @@ Fixes #456
 ### 必含信息
 
 - [ ] 操作系统版本（Windows 10 22H2 / Windows 11 23H2 或 Ubuntu 20.04+）
-- [ ] MbesBeacon 版本号（v1.0.25 等，见程序标题栏或 `/api/health`）
+- [ ] MbesBeacon 版本号（v1.0.26 等，见程序标题栏或 `/api/health`）
 - [ ] 复现步骤（详细到每一步操作）
 - [ ] 预期行为
 - [ ] 实际行为
