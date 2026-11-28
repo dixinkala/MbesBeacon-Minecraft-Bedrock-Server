@@ -32,7 +32,7 @@ We will confirm receipt within **48 hours** and do our best to provide a fix pla
 ## Security Recommendations
 
 - Always download MbesBeacon.exe from the official [GitHub Releases](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/releases) page; never use unverified third-party distributions
-- The software only listens on the local loopback address (127.0.0.1); do not expose it to the public internet
+- By default the app only listens on the loopback address (127.0.0.1). Remote Management is intended for LAN access: when enabled it binds `0.0.0.0` and requires a password login — do not expose it directly to the internet; use a tunnel or reverse proxy with TLS for public access
 - Do not enable "Ignore SSL verification" on untrusted networks
 - Update the software and server versions regularly to receive security fixes
 

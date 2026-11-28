@@ -49,6 +49,10 @@ MbesBeacon is a full-featured management tool for Minecraft Bedrock Edition dedi
 |------------|-------------|------------|------------|
 | Automatic download of the official server, all historical versions supported | 17 common / 46 advanced config items with visual editing, config history rollback | Online player list, permission/kick/ban/allow-list | Manual/automatic backup, one-click restore, retention policy |
 
+| 🌐 Remote Management | 🔌 NAT Traversal | 🧩 LeviLamina Mods | 🧵 Parallel Instances |
+|------------|-------------|------------|------------|
+| LAN access with password + session login | UPnP auto-mapping, built-in playit / frp | Loader + mods management (Windows) | Run several servers at once |
+
 | 📊 Performance Monitor | 📝 Live Console | 🕐 Scheduled Tasks | 🔒 Secure & Reliable |
 |------------|-------------|------------|------------|
 | Real-time CPU/memory/player count monitoring | SSE real-time log push, command auto-completion | Scheduled restart/backup/announcement, automated ops | API Token auth, download integrity verification, audit log |
@@ -112,14 +116,14 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 
 | Module | Description |
 |------|----------|
-| **① Install Server** | One-click download and install of the official server; all historical stable and preview versions supported; custom download URL; auto-detects installed servers |
+| **① Install Server** | One-click download and install of the official server; all historical stable and preview versions supported; custom download URL; auto-detects installed servers; **LAN remote management** (password + session) and **public access** (UPnP auto-mapping / built-in playit, frp) |
 | **② Server Config** | Graphical editing of `server.properties`, 17 common items; advanced mode edits all 46; config history rollback; numeric range validation |
 | **③ Server Console** | SSE real-time log push (latency <300ms); start/stop/restart; command auto-completion; command history; log search/export/clear |
 | **④ Player Management** | Online player list; permissions (visitor/member/operator); kick/ban; allow-list management; blacklist management; IP ban |
 | **⑤ World Management** | Multi-world switching; world rename/copy/delete; world import/export (ZIP); world info display |
 | **⑥ World Backup** | Manual backup; automatic backup (before delete/update); backup list management; one-click restore; retention policy (10 by default) |
 | **⑦ Performance Monitor** | Real-time CPU/memory usage; online player count; running status; auto-refresh (5s); operation audit log |
-| **⑧ Pack Management** | List resource/behavior packs (name/version/enabled state); enable/disable (writes to the active world config and registers in known-pack list, restart to apply); import .zip/.mcpack packs; delete packs (type DELETE to confirm) |
+| **⑧ Pack Management** | List resource/behavior packs (name/version/enabled state); enable/disable (writes to the active world config and registers in known-pack list, restart to apply); import .zip/.mcpack packs; delete packs (type DELETE to confirm); **LeviLamina** loader and mods management (Windows) |
 | **⑨ Scheduled Tasks** | Scheduled server restart; scheduled world backup; scheduled announcements; task enable/disable/delete; catch-up execution |
 | **⑩ Usage Help** | Built-in quick reference (start, UI & shortcuts, feature summary, FAQ); full manual on the [GitHub Wiki](https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/wiki) |
 
@@ -128,7 +132,7 @@ The official Minecraft Bedrock dedicated server (BDS) is distributed only as a Z
 - **Bilingual UI (i18n)**: Detects the system language on first launch (Chinese system → Chinese UI, anything else → English UI); the language button in the header switches anytime and the choice is remembered; tray menu, balloon notifications and tooltip follow the chosen language
 - **System tray integration**: Runs in the background; right-click menu for quick actions (open manager / start / stop / exit) with menu and balloon text following the UI language; the tray tooltip shows live server state (running / stopped)
 - **Multiple themes**: 10 preset themes (Minecraft dark, grass green, redstone red, diamond blue, etc.) + custom accent colors
-- **Multi-server management**: Automatically scans for installed servers, switch between multiple servers
+- **Parallel instances**: each server directory gets its own process and console, so several instances can run at once; the top "Instance" selector switches the active one and every page follows it
 - **Server version update detection**: Auto-detects new server versions, one-click update (with automatic world backup)
 - **App update detection**: Auto-detects new MbesBeacon releases, manual check supported, distinct from server updates
 - **Download integrity verification**: ZIP integrity + SHA256 (trust-on-first-use or an explicit expected hash) + official-release version check + signature check (WinVerifyTrust on Windows / ELF header on Linux) + file size check
@@ -250,13 +254,13 @@ After launch, the program minimizes to the system tray:
 
 > **Tip**: Closing the browser page does not stop the server; reopen the UI from the tray icon anytime.
 
-### Multi-server Management
+### Parallel Instances
 
 - On startup the program automatically scans common locations for installed servers (Windows: Desktop, Documents, Downloads, and C/D/E drives; Linux: common directories under the user's home)
-- **1 server**: manages it automatically, no dialog
-- **Multiple servers**: a dialog asks which server to manage
-- **0 servers**: shows a guide banner, install manually
-- Switch anytime from the "Current Server" dropdown, or click "Browse" to pick a directory manually
+- The top "Instance" dropdown lists registered folders: `●` running / `○` stopped / `✓` active / `:port`
+- "➕ Add current folder" registers the current directory; "▶ Start / ■ Stop" act on the selected instance, and **several instances can run at the same time**
+- Switching the active instance re-points config / worlds / backups / packs / console to it; it does not stop the others
+- Each instance uses its own `server.properties` port; one UDP port cannot be bound twice
 
 ### Player Management
 
@@ -405,6 +409,13 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── tray.py                 # System tray icon
 │   ├── ratelimit.py            # API rate limiting
 │   ├── commands.py             # Command auto-completion
+│   ├── remote.py               # Remote management (password hash, sessions, rate limit, host allowlist)
+│   ├── upnp.py                 # UPnP IGD client (automatic port mapping)
+│   ├── tunnel.py               # External tunnel clients (playit/ngrok/frp/custom)
+│   ├── builtin_tunnel.py       # Built-in tunnels (download and supervise playit/frpc)
+│   ├── levilamina.py           # LeviLamina loader and mods management
+│   ├── version_sources.py      # Manifest chain (self-hosted -> community -> built-in)
+│   ├── builtin_versions.py     # Built-in version snapshot (offline fallback)
 │   ├── state.py                # Lazy proxies to AppContext (backward compatible)
 │   ├── utils.py                # Utility functions
 │   ├── app_logger.py           # Application logging
@@ -455,9 +466,16 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_security.py        # Security tests (command validation, API token generation)
 │   ├── test_verify.py          # Verification tests (SHA256, file size, ZIP integrity)
 │   ├── test_worlds_export.py   # World save export tests
-│   └── test_modules.py         # Module tests (world management, commands, app log)
-├── dist/                       # Build output (MbesBeacon.exe)
-├── docs/                       # Screenshots and demo (referenced by README)
+│   ├── test_modules.py         # Module tests (world management, commands, app log)
+│   ├── test_version_sources.py # Version manifest chain and built-in snapshot
+│   ├── test_remote.py          # Remote management (password/session/limit/host)
+│   ├── test_upnp.py            # UPnP client (fake gateway add/query/delete)
+│   ├── test_tunnel.py          # External tunnel client (address/command/lifecycle)
+│   ├── test_builtin_tunnel.py  # Built-in tunnels (downloads/extraction/playit/frp)
+│   ├── test_levilamina.py      # LeviLamina (enable/disable, mods management)
+│   └── test_instances.py       # Parallel instances (registry/switch/isolation)
+├── docs/                       # Screenshots, demo and the wiki sources (12 chapters)
+├── tools/                      # Dev tools (sync_wiki.py; sync_builtin_versions.py)
 ├── .github/                    # GitHub Actions CI workflows
 ├── BedrockServerManager.spec   # PyInstaller build config
 ├── build.bat                   # Build launcher (calls build.ps1)
@@ -504,7 +522,7 @@ MbesBeacon ships with multiple security mechanisms to keep your server and local
 
 | Mechanism | Implementation |
 |----------|----------|
-| **API auth** | Random 32-char token (constant-time comparison) + Origin/Referer validation + **Host header validation** (blocks DNS rebinding) |
+| **API auth** | Random 32-character token (16 random bytes, constant-time comparison) + Origin/Referer validation + **Host header validation** (blocks DNS rebinding) |
 | **Download integrity** | ZIP integrity + SHA256 (TOFU, or an expected hash supplied by the caller; the official source publishes **no** hashes) + official-release version check + signature check (PE on Windows / ELF on Linux) + file size range |
 | **Local data integrity** | `settings.json`, `server.properties`, allowlists and permissions are written with temp file + fsync + atomic replace, so a crash or power loss cannot leave a half-written file |
 | **Download URL validation** | http/https only; localhost, cloud metadata and private/loopback/link-local addresses are rejected (SSRF), including IPv4-mapped IPv6; `user:pass@` disguises and over-long URLs are refused; redirect targets are re-checked |
@@ -518,7 +536,11 @@ MbesBeacon ships with multiple security mechanisms to keep your server and local
 | **ZIP path traversal protection** | Checks target path boundaries before extraction to prevent Zip Slip |
 | **Input validation** | Player name regex, IP address format, config numeric range validation |
 | **Single-instance check** | Named mutex on Windows / file lock (flock) on Linux to prevent multiple instances |
-| **Local only** | HTTP server binds only to `127.0.0.1`, never exposed externally |
+| **Loopback by default** | Binds `127.0.0.1` unless Remote Management is enabled; enabling it binds `0.0.0.0` and requires a password login, session cookie and login rate limiting — trusted LAN only |
+| **Remote authentication** | Password stored as PBKDF2-SHA256 (random salt, 200k iterations); sessions slide-expire after 12 h, at most 20; 5 failures from one IP within 5 minutes lock it for 10 minutes |
+| **Remote CSRF defence** | `HttpOnly` + `SameSite=Strict` cookie; session requests with an Origin header must be same-origin |
+| **Tunnel and plugin commands are local-only** | Tunnel clients and lip / LeviLamina installs or plugin actions can only run on the machine hosting the app |
+| **Third-party tool verification** | lip / playit / frp are downloaded from official GitHub Releases and SHA256-verified; plugin archives are extracted with path-traversal checks |
 
 ---
 
@@ -532,6 +554,22 @@ A: Yes. Closing the browser page does not stop the server. Double-click the exe 
 
 ### Q: How do I fully exit (including the server)?
 A: Stop the server in the console first, then click "Exit Program" in the title bar, or right-click the tray icon and choose "Exit Program".
+
+### Q: Can I run several servers at once?
+
+A: Yes. Use the top "Instance" selector and "➕ Add current folder" to register several server directories, pick one and press "▶ Start" — they run in parallel. Each instance has its own port, console and config; switching the active instance re-points every page. The players/performance pages follow the active instance, and one UDP port cannot be used by two instances at the same time.
+
+### Q: How do I manage the server from my phone or another PC?
+
+A: On the machine running the app open the "🌐 Remote Management" card at the bottom of the Install tab, enable it and set a password, then **restart the app** and open `http://<LAN IP>:19100/` on the other device. Traffic is plain HTTP, so use it on a trusted LAN only; for internet access use a tunnel or reverse proxy, and set a strong password first.
+
+### Q: How do internet friends join (NAT traversal)?
+
+A: BDS uses UDP 19132, so TCP-only tunnels do not work. Either click "Auto-map port (UDP)" in the "Public Access" card (UPnP routers map it automatically and show the public IP), or use a built-in/external tunnel client (playit / frp). If the shown public IP is private, you are behind double NAT / carrier NAT — use a tunnel client instead.
+
+### Q: How do I install LeviLamina mods?
+
+A: At the bottom of the Packs tab: download lip, enable LeviLamina (server files are reinstalled for the compatible BDS version; configs are backed up automatically), then install a .zip mod or type a lip package. Windows x64 only.
 
 ### Q: Friends can't join my server?
 A: Check the following:

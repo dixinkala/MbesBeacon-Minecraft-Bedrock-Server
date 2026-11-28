@@ -11,6 +11,7 @@ We welcome any form of contribution — bug reports, feature suggestions, or dir
 - [Code of Conduct](#code-of-conduct)
 - [How to Contribute](#how-to-contribute)
 - [Setting Up the Dev Environment](#setting-up-the-dev-environment)
+- [Parallel-instance architecture](#parallel-instance-architecture)
 - [Documentation and the Wiki](#documentation-and-the-wiki)
 - [Code Standards](#code-standards)
 - [Commit Message Convention](#commit-message-convention)
@@ -126,6 +127,14 @@ python tools/sync_builtin_versions.py --check
 front-end fallback list matches the snapshot.
 
 ---
+
+## Parallel-instance architecture
+
+Each server directory owns one `ServerProcess` and one `ConsoleBuffer`. The registry lives in
+`settings["instances"]`, while the active instance still uses `settings["server_dir"]` (which keeps
+the many `resolve_server_dir()` call sites unchanged). Activating an instance also re-points
+`AppContext.console` and `AppContext.server_proc`; new per-instance APIs should go through
+`server.list_instances()` and friends instead of reading the global console directly.
 
 ## Documentation and the Wiki
 
