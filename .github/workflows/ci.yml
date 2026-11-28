@@ -165,6 +165,12 @@ jobs:
       actions: read
 
     steps:
+    # 追加许可证声明时要读 .github/release-license.md 并调用 gh（需要 git 仓库上下文），
+    # 因此必须先 checkout；早期 release job 没 checkout，导致 v1.0.26 首次在 tag 上
+    # 执行该步骤时报 "not a git repository"。
+    - name: 📥 检出代码（许可证声明文件）
+      uses: actions/checkout@v4
+
     - name: 📥 下载构建产物
       uses: actions/download-artifact@v8
       with:
@@ -189,7 +195,18 @@ jobs:
         TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.event.inputs.release_version }}
       run: |
         set -euo pipefail
-        body=$(gh release view "$TAG" --json body --jq .body)
+        body=""
+        for attempt in 1 2 3 4 5; do
+          if body=$(gh release view "$TAG" --json body --jq .body 2>/dev/null); then
+            break
+          fi
+          echo "Release $TAG 暂不可读，重试第 $attempt 次…"
+          sleep 3
+        done
+        if [ -z "$body" ]; then
+          echo "::error::无法读取 Release $TAG 的正文"
+          exit 1
+        fi
         if printf '%s' "$body" | grep -q '完整条款见 \[LICENSE\]'; then
           echo "Release $TAG 已包含许可证声明，跳过"
           exit 0
