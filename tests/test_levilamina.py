@@ -6,12 +6,12 @@ import os
 import tempfile
 import threading
 import time
-import unittest
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from unittest import mock
+from unittest import TestCase, main, mock
 
 from bedrock_server_manager import levilamina as L
+from bedrock_server_manager.constants import SERVER_EXE
 from bedrock_server_manager.utils import MODDED_SERVER_EXE, resolve_server_exe
 
 
@@ -25,7 +25,7 @@ def _manifest(name: str, version: str = "1.0.0", type_: str = "native") -> str:
     return json.dumps({"name": name, "version": version, "type": type_})
 
 
-class TestVersionMapping(unittest.TestCase):
+class TestVersionMapping(TestCase):
     def test_four_segment_trimmed(self):
         self.assertEqual(L.game_version_for_lip("1.26.60.6"), "1.26.60")
 
@@ -41,27 +41,27 @@ class TestVersionMapping(unittest.TestCase):
                 L.game_version_for_lip(bad)
 
 
-class TestResolveServerExe(unittest.TestCase):
+class TestResolveServerExe(TestCase):
     def test_prefers_modded(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, L.OFFICIAL_EXE))
+            _write(os.path.join(tmp, SERVER_EXE))
             _write(os.path.join(tmp, L.MODDED_EXE))
             self.assertEqual(resolve_server_exe(tmp), MODDED_SERVER_EXE)
 
     def test_falls_back_to_official(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, L.OFFICIAL_EXE))
-            self.assertEqual(resolve_server_exe(tmp), L.OFFICIAL_EXE)
+            _write(os.path.join(tmp, SERVER_EXE))
+            self.assertEqual(resolve_server_exe(tmp), SERVER_EXE)
 
     def test_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(resolve_server_exe(tmp), "")
 
 
-class TestState(unittest.TestCase):
+class TestState(TestCase):
     def test_not_installed(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, L.OFFICIAL_EXE))
+            _write(os.path.join(tmp, SERVER_EXE))
             st = L.state(tmp)
         self.assertFalse(st["installed"])
         self.assertFalse(st["enabled"])
@@ -79,13 +79,13 @@ class TestState(unittest.TestCase):
     def test_disabled_when_official_present(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write(os.path.join(tmp, L.MODDED_EXE))
-            _write(os.path.join(tmp, L.OFFICIAL_EXE))
+            _write(os.path.join(tmp, SERVER_EXE))
             st = L.state(tmp)
         self.assertTrue(st["installed"])
         self.assertFalse(st["enabled"])
 
 
-class TestModsListing(unittest.TestCase):
+class TestModsListing(TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = self.tmp.name
@@ -127,7 +127,7 @@ class TestModsListing(unittest.TestCase):
             L.delete_mod(self.dir, "missing")
 
 
-class TestInstallModZip(unittest.TestCase):
+class TestInstallModZip(TestCase):
     def _zip(self, path: str, members: dict) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with zipfile.ZipFile(path, "w") as zf:
@@ -187,7 +187,7 @@ class TestInstallModZip(unittest.TestCase):
         self.assertEqual(mocked.call_args[0][0][:1], ["install"])
 
 
-class TestEnableDisable(unittest.TestCase):
+class TestEnableDisable(TestCase):
     def test_enable_requires_support_and_lip(self):
         with tempfile.TemporaryDirectory() as tmp:
             with (
@@ -220,7 +220,7 @@ class TestEnableDisable(unittest.TestCase):
 
     def test_enable_job_success(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, L.OFFICIAL_EXE))
+            _write(os.path.join(tmp, SERVER_EXE))
 
             def fake_run(argv, cwd, on_line, timeout=0):
                 _write(os.path.join(cwd, L.MODDED_EXE))
@@ -242,7 +242,7 @@ class TestEnableDisable(unittest.TestCase):
 
     def test_enable_job_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, L.OFFICIAL_EXE))
+            _write(os.path.join(tmp, SERVER_EXE))
             with (
                 mock.patch.object(L, "supported", return_value=True),
                 mock.patch.object(L, "lip_installed", return_value=True),
@@ -268,7 +268,7 @@ class TestEnableDisable(unittest.TestCase):
             L.disable_loader(tmp)
 
 
-class TestLipList(unittest.TestCase):
+class TestLipList(TestCase):
     def test_parses_json(self):
         payload = {"ExplicitInstalled": ["github.com/LiteLDev/LeviLamina@26.60.9"]}
         with mock.patch.object(L, "run_lip", return_value=(0, json.dumps(payload))):
@@ -297,7 +297,7 @@ class _ZipHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
 
-class TestInstallModUrl(unittest.TestCase):
+class TestInstallModUrl(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), _ZipHandler)
@@ -346,4 +346,4 @@ def _fake_urlopen(url, timeout=None):  # noqa: ARG001
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    main(verbosity=2)

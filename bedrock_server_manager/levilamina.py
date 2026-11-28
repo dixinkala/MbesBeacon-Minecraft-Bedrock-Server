@@ -581,8 +581,9 @@ def lip_list(server_dir: str) -> dict:
         data = json.loads(output)
         if isinstance(data, dict):
             return data
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as exc:
+        # 输出不是 JSON（例如 lip 打印了提示行）：统一按"无法解析"处理
+        raise LeviLaminaError(f"lip list 输出无法解析: {exc}") from exc
     raise LeviLaminaError("lip list 输出无法解析")
 
 
