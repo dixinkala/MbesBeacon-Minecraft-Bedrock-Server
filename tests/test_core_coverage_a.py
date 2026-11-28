@@ -1323,12 +1323,7 @@ class TestDoInstall(_Base):
         download.assert_not_called()
 
     def test_verify_failure_aborts_without_installing(self):
-        """校验失败必须中止安装（不落盘）。
-
-        已知缺陷（见报告）：失败后 download_ok 仍为 True 且 RuntimeError 被
-        "换源重试"循环吞掉，最终以 FileNotFoundError（ZIP 已删除）结束，
-        而不是把"完整性校验失败"作为最终错误抛给界面。
-        """
+        """校验失败必须中止安装（不落盘），并直接把校验错误报给界面。"""
 
         def _verify_fail(*a, **k):
             return {"ok": False, "errors": ["sha256 mismatch"], "checks": {}, "warnings": []}
@@ -1336,8 +1331,9 @@ class TestDoInstall(_Base):
         snap = self._run(verify=_verify_fail)
         self.assertEqual(snap["phase"], "error")
         self.assertFalse(os.path.exists(os.path.join(self.target, SERVER_EXE)))
-        self.assertIn("download integrity check failed", self._logs().lower())
-        self.assertIn("sha256 mismatch", self._logs())
+        self.assertIn("integrity", snap["error"].lower())
+        self.assertIn("sha256 mismatch", snap["error"])
+        self.assertNotIn("FileNotFound", snap["error"])
         self.assertFalse(os.path.exists(os.path.join(self.target, install.STAGING_DIRNAME)))
 
     def test_verify_exception_is_skipped(self):
@@ -1400,7 +1396,8 @@ class TestDoInstall(_Base):
         with mock.patch("os.remove", _remove):
             snap = self._run(verify=_verify_fail)
         self.assertEqual(snap["phase"], "error")
-        self.assertGreaterEqual(len(removed), 2)
+        # 校验失败只删一次 ZIP，不再进入换源重试
+        self.assertEqual(len(removed), 1)
         self.assertFalse(os.path.exists(os.path.join(self.target, SERVER_EXE)))
 
     def test_source_failure_zip_delete_failure_is_ignored(self):
@@ -2168,17 +2165,11 @@ class TestConfigHistory(_Base):
         self.assertIn("不存在", err)
 
     def test_rollback_restores_and_backs_up_current(self):
-        """回滚会先备份当前配置再恢复旧备份。
-
-        注意：用受控时间戳，避免"同一秒内两次备份同名互相覆盖"的已知缺陷
-        影响断言（该缺陷见最终报告）。
-        """
-        timestamps = iter(["20260101_000000", "20260101_000001"])
-        with mock.patch.object(config.time, "strftime", lambda *a, **k: next(timestamps)):
-            backup_path = config.backup_config_history(self.server)
-            _write(self.props, "server-name=B\n")
-            name = os.path.basename(backup_path)
-            ok, err = config.rollback_config(self.server, name)
+        """回滚会先备份当前配置再恢复旧备份；同一秒内也不会互相覆盖。"""
+        backup_path = config.backup_config_history(self.server)
+        _write(self.props, "server-name=B\n")
+        name = os.path.basename(backup_path)
+        ok, err = config.rollback_config(self.server, name)
         self.assertTrue(ok, err)
         self.assertEqual(open(self.props, encoding="utf-8").read(), "server-name=A\n")
         # 回滚前已再次备份（当前 B 版本）

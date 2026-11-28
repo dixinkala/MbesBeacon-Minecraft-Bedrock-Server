@@ -343,7 +343,12 @@ def backup_config_history(server_dir: str) -> str | None:
     history_dir = os.path.join(server_dir, CONFIG_HISTORY_DIR)
     os.makedirs(history_dir, exist_ok=True)
     timestamp = time.strftime("%Y%m%d_%H%M%S")
+    # 同一秒内可能连续备份（保存后立即回滚）：追加序号，避免同名覆盖。
     backup_path = os.path.join(history_dir, f"server.properties.{timestamp}.bak")
+    suffix = 1
+    while os.path.exists(backup_path):
+        backup_path = os.path.join(history_dir, f"server.properties.{timestamp}_{suffix}.bak")
+        suffix += 1
     try:
         shutil.copy2(props_path, backup_path)
         # 只保留最近 20 个备份
