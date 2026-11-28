@@ -676,7 +676,10 @@ class TestHttpGetAndLatestInfo(_Base):
                 ]
             }
         }
-        with mock.patch.object(install, "_http_get", return_value=json.dumps(payload).encode()):
+        with (
+            mock.patch.object(install, "_http_get", return_value=json.dumps(payload).encode()),
+            mock.patch.object(install, "IS_WINDOWS", True),
+        ):
             info = install.get_latest_server_info(ignore_ssl=True)
         self.assertEqual(info["version"], "1.21.0.03")
         self.assertEqual(info["win_url"], "https://x/bedrock-server-1.21.0.03.zip")
@@ -736,6 +739,7 @@ class TestVersionQueries(_Base):
                 install, "fetch_versions_from_manifest", return_value=(["1.20.0.1"], ["1.22.0.1"], "src")
             ),
             mock.patch.object(install, "_http_get", return_value=json.dumps(links).encode()),
+            mock.patch.object(install, "IS_WINDOWS", True),
         ):
             stable_only = install.get_bedrock_versions()
             with_preview = install.get_bedrock_versions(include_preview=True)

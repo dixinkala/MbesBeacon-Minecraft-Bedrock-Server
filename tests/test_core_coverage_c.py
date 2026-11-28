@@ -1057,8 +1057,8 @@ class TestBuiltinRelease(_SettingsCase):
     def test_playit_installed_and_version(self):
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(bt, "PLAYIT_DIR", tmp):
             self.assertFalse(bt.playit_installed())
-            _write(os.path.join(tmp, "playit.exe"))
-            _write(os.path.join(tmp, "playitd.exe"))
+            _write(os.path.join(tmp, bt._exe("playit")))
+            _write(os.path.join(tmp, bt._exe("playitd")))
             self.assertTrue(bt.playit_installed())
             bt._write_meta(tmp, {"version": "9.9"})
             self.assertEqual(bt.PlayitManager().installed_version(), "9.9")

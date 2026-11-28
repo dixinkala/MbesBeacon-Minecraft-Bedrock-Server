@@ -321,6 +321,7 @@ def test_start_port_in_use_raises(tmp_path):
     sp, out, states = _new_sp(tmp_path)
     (tmp_path / "bedrock_server.exe").write_text("x", encoding="utf-8")
     with (
+        mock.patch.object(server, "_get_constants", return_value=("bedrock_server.exe", True)),
         mock.patch.object(server, "get_server_port", return_value=19132),
         mock.patch.object(server, "check_port_in_use", return_value=True),
     ):
@@ -338,6 +339,7 @@ def test_start_success_and_crash_counter_reset(tmp_path):
     sp._crash_restart_count = 3
     fake_mod = _fake_subprocess()
     with (
+        mock.patch.object(server, "_get_constants", return_value=("bedrock_server.exe", True)),
         mock.patch.object(server, "get_server_port", return_value=19132),
         mock.patch.object(server, "check_port_in_use", return_value=False),
         mock.patch.object(server, "subprocess", fake_mod),
@@ -401,6 +403,7 @@ def test_start_generic_exception_reraises(tmp_path):
     fake_mod = _fake_subprocess()
     fake_mod.Popen = mock.MagicMock(side_effect=popen_side_effect)
     with (
+        mock.patch.object(server, "_get_constants", return_value=("bedrock_server.exe", True)),
         mock.patch.object(server, "get_server_port", return_value=19132),
         mock.patch.object(server, "check_port_in_use", return_value=False),
         mock.patch.object(server, "subprocess", fake_mod),
@@ -419,6 +422,7 @@ def test_start_oserror_is_wrapped(tmp_path):
     fake_mod = _fake_subprocess()
     fake_mod.Popen = mock.MagicMock(side_effect=popen_side_effect)
     with (
+        mock.patch.object(server, "_get_constants", return_value=("bedrock_server.exe", True)),
         mock.patch.object(server, "get_server_port", return_value=19132),
         mock.patch.object(server, "check_port_in_use", return_value=False),
         mock.patch.object(server, "subprocess", fake_mod),
@@ -1494,6 +1498,7 @@ def test_check_app_update_file_cache_stale_refreshes(tmp_path):
     with (
         mock.patch.object(app_update, "_APP_UPDATE_CACHE_FILE", str(cache_file)),
         mock.patch.object(app_update, "_check_via_html", return_value=_release_info()),
+        mock.patch.object(app_update, "IS_WINDOWS", True),
         mock.patch.object(app_update, "_save_cache") as save,
     ):
         result = app_update.check_app_update()
