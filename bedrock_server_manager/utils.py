@@ -469,6 +469,11 @@ def _browse_directory_windows(initial_dir="", title="选择文件夹"):
 
     buf = create_unicode_buffer(260)
     bi = BROWSEINFO()
+    # 对话框由 HTTP handler 的后台线程弹出；owner 为 NULL 时窗口会被前台
+    # 浏览器完全遮住（窗口存在但用户看不到）。显式以当前前台窗口为 owner。
+    user32 = windll.user32
+    user32.GetForegroundWindow.restype = wintypes.HWND
+    bi.hwndOwner = user32.GetForegroundWindow()
     # LPWSTR 字段必须放指针；直接赋 c_wchar_Array 会抛
     # TypeError: incompatible types, c_wchar_Array_260 instance instead of c_wchar_p
     bi.pszDisplayName = cast(buf, wintypes.LPWSTR)

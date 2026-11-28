@@ -15,6 +15,7 @@ from bedrock_server_manager.constants import IS_WINDOWS, SERVER_EXE
 class TestBrowseDirectoryWindows(unittest.TestCase):
     def _call(self, pidl, get_path):
         fake_windll = mock.MagicMock()
+        fake_windll.user32.GetForegroundWindow.return_value = 4321
         fake_windll.shell32.SHBrowseForFolderW.return_value = pidl
         fake_windll.shell32.SHGetPathFromIDListW.side_effect = get_path
         with (
@@ -33,6 +34,18 @@ class TestBrowseDirectoryWindows(unittest.TestCase):
 
     def test_cancel_returns_none(self):
         self.assertIsNone(self._call(0, lambda *_: 1))
+
+    def test_dialog_owner_is_foreground_window(self):
+        fake_windll = mock.MagicMock()
+        fake_windll.user32.GetForegroundWindow.return_value = 424242
+        fake_windll.shell32.SHBrowseForFolderW.return_value = 0  # 取消即可
+        with (
+            mock.patch.object(ctypes, "windll", fake_windll),
+            mock.patch.object(utils, "IS_WINDOWS", True),
+        ):
+            utils.browse_directory()
+        browse_info = fake_windll.shell32.SHBrowseForFolderW.call_args[0][0]._obj
+        self.assertEqual(browse_info.hwndOwner, 424242)
 
     def test_path_conversion_failure_returns_none(self):
         self.assertIsNone(self._call(12345, lambda *_: 0))
