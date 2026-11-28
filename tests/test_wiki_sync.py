@@ -70,7 +70,7 @@ class TestRealDocs(unittest.TestCase):
         for path in sorted(self.src.glob("*.md")):
             text = sync_wiki.convert_links(path.read_text(encoding="utf-8"), BLOB)
             self.assertNotRegex(text, r"\]\(\.\./", f"{path.name} 仍含仓库相对链接")
-            self.assertNotRegex(text, r"\]\(\d{2}-[a-z0-9-]+\.md", f"{path.name} 仍含 .md 页内链接")
+            self.assertNotRegex(text, r"\]\((?:en-)?\d{2}-[a-z0-9-]+\.md", f"{path.name} 仍含 .md 页内链接")
 
     def test_every_link_target_exists_on_github_style(self):
         """页内链接的目标必须是 docs/wiki 里真实存在的页面"""
@@ -78,8 +78,39 @@ class TestRealDocs(unittest.TestCase):
         pages.add("Home")
         for path in self.src.glob("*.md"):
             text = sync_wiki.convert_links(path.read_text(encoding="utf-8"), BLOB)
-            for target in re.findall(r"\]\((\d{2}-[a-z0-9-]+)(?:#[^)]*)?\)", text):
+            for target in re.findall(r"\]\(((?:en-)?\d{2}-[a-z0-9-]+)(?:#[^)]*)?\)", text):
                 self.assertIn(target, pages, f"{path.name} 链接到不存在的页面 {target}")
+
+
+class TestBilingual(unittest.TestCase):
+    """英文 Wiki：12 章 + English 首页，且能被侧边栏收录。"""
+
+    def setUp(self):
+        self.src = REPO / "docs" / "wiki"
+
+    def test_english_pages_exist(self):
+        self.assertTrue((self.src / "English.md").is_file())
+        for index in range(1, 13):
+            matches = list(self.src.glob(f"en-{index:02d}-*.md"))
+            self.assertEqual(len(matches), 1, f"缺少第 {index} 章英文文档")
+
+    def test_chinese_home_links_english(self):
+        text = (self.src / "README.md").read_text(encoding="utf-8")
+        self.assertIn("English.md", text)
+        converted = sync_wiki.convert_links(text, BLOB)
+        self.assertIn("](English)", converted)
+
+    def test_english_home_links_all_chapters(self):
+        text = sync_wiki.convert_links((self.src / "English.md").read_text(encoding="utf-8"), BLOB)
+        for index in range(1, 13):
+            self.assertIn(f"](en-{index:02d}-", text)
+
+    def test_sidebar_groups_languages(self):
+        sidebar = sync_wiki.build_sidebar(["01-a", "English", "en-01-a"], "https://github.com/o/r")
+        self.assertIn("**中文**", sidebar)
+        self.assertIn("**English**", sidebar)
+        self.assertIn("- [English home](English)", sidebar)
+        self.assertLess(sidebar.index("**中文**"), sidebar.index("**English**"))
 
 
 class TestDryRun(unittest.TestCase):
@@ -91,7 +122,8 @@ class TestDryRun(unittest.TestCase):
         out = buf.getvalue()
         self.assertIn("目标:", out)
         self.assertIn("README.md", out)
-        self.assertIn("12", out)  # 12 章侧边栏条目
+        self.assertIn("中文 12 章", out)
+        self.assertIn("English 12 章", out)
 
     def test_missing_source_dir_returns_error(self):
         original = sync_wiki.SRC_DIR

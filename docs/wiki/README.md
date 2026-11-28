@@ -7,6 +7,8 @@
 > 本目录是 Wiki 的**源文件**：改这里，然后用 `python tools/sync_wiki.py` 发布
 > （页面名与文件名一致，`README.md` 对应 `Home`；脚本会自动转换链接并生成侧边栏）。
 
+**English documentation: [English](English.md)**
+
 ## 目录
 
 | 章节 | 内容 |

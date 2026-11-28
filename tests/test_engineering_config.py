@@ -216,10 +216,15 @@ class TestWikiDocuments(unittest.TestCase):
         self.wiki = REPO / "docs" / "wiki"
 
     def test_index_links_every_page(self):
-        index = (self.wiki / "README.md").read_text(encoding="utf-8")
+        zh_index = (self.wiki / "README.md").read_text(encoding="utf-8")
+        en_index = (self.wiki / "English.md").read_text(encoding="utf-8")
         pages = sorted(p.name for p in self.wiki.glob("*.md") if p.name != "README.md")
-        self.assertGreaterEqual(len(pages), 10, "wiki 页面过少")
+        self.assertGreaterEqual(len(pages), 25, "wiki 页面过少（应含中英各 12 章 + English 首页）")
         for name in pages:
+            if name == "English.md":
+                self.assertIn("(English.md)", zh_index, "中文索引未链接英文首页")
+                continue
+            index = en_index if name.startswith("en-") else zh_index
             self.assertIn(f"({name})", index, f"wiki 索引未链接 {name}")
 
     def test_pages_link_back_to_index(self):
@@ -227,7 +232,8 @@ class TestWikiDocuments(unittest.TestCase):
             if page.name == "README.md":
                 continue
             text = page.read_text(encoding="utf-8")
-            self.assertIn("(README.md)", text, f"{page.name} 缺少返回索引链接")
+            expected = "(English.md)" if page.name.startswith("en-") else "(README.md)"
+            self.assertIn(expected, text, f"{page.name} 缺少返回索引链接")
 
     def test_in_app_help_points_to_wiki(self):
         html = (REPO / "bedrock_server_manager" / "web" / "index.html").read_text(encoding="utf-8")
