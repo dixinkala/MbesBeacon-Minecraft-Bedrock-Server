@@ -30,6 +30,11 @@ from .utils import add_server_dir_history, atomic_write_json, detect_servers, sa
 from .verify import get_official_version_info, verify_download_full
 from .version_sources import builtin_manifest, fetch_manifest, platform_key
 
+
+class InstallIntegrityError(RuntimeError):
+    """下载文件完整性校验失败：属于致命错误，不能换源重试。"""
+
+
 # 版本号允许的字符集：数字开头，只含数字/字母/点/下划线/连字符。
 # 版本号会被拼进下载 URL 与临时文件名，不校验则可写入安装目录之外
 # （如 "../../../X" 会使 zip 落到上级目录）。
@@ -824,19 +829,45 @@ def detect_server_version(dir_path):
             try:
                 import ctypes.wintypes
 
-                size = ctypes.windll.version.GetFileVersionInfoSizeW(exe_path, None)
+                version_api = ctypes.windll.version
+                # 显式声明签名：不带 argtypes 时 str 无法自动转成 LPCWSTR，
+                # 且 VerQueryValueW 的第 3 个参数是"输出指针的指针"，必须用 c_void_p。
+                version_api.GetFileVersionInfoSizeW.argtypes = [
+                    ctypes.wintypes.LPCWSTR,
+                    ctypes.POINTER(ctypes.wintypes.DWORD),
+                ]
+                version_api.GetFileVersionInfoSizeW.restype = ctypes.wintypes.DWORD
+                version_api.GetFileVersionInfoW.argtypes = [
+                    ctypes.wintypes.LPCWSTR,
+                    ctypes.wintypes.DWORD,
+                    ctypes.wintypes.DWORD,
+                    ctypes.c_void_p,
+                ]
+                version_api.GetFileVersionInfoW.restype = ctypes.wintypes.BOOL
+                version_api.VerQueryValueW.argtypes = [
+                    ctypes.c_void_p,
+                    ctypes.wintypes.LPCWSTR,
+                    ctypes.POINTER(ctypes.c_void_p),
+                    ctypes.POINTER(ctypes.wintypes.UINT),
+                ]
+                version_api.VerQueryValueW.restype = ctypes.wintypes.BOOL
+
+                size = version_api.GetFileVersionInfoSizeW(exe_path, None)
                 if size > 0:
                     buf = ctypes.create_string_buffer(size)
-                    if ctypes.windll.version.GetFileVersionInfoW(exe_path, None, size, buf):
+                    if version_api.GetFileVersionInfoW(exe_path, 0, size, ctypes.cast(buf, ctypes.c_void_p)):
 
                         class LANGANDCODEPAGE(ctypes.Structure):
                             _fields_ = [("wLanguage", ctypes.wintypes.WORD), ("wCodePage", ctypes.wintypes.WORD)]
 
-                        lang_addr = ctypes.c_uint()
-                        lang_len = ctypes.c_uint()
+                        lang_addr = ctypes.c_void_p()
+                        lang_len = ctypes.wintypes.UINT()
                         lang_list = []
-                        if ctypes.windll.version.VerQueryValueW(
-                            buf, "\\VarFileInfo\\Translation", ctypes.byref(lang_addr), ctypes.byref(lang_len)
+                        if version_api.VerQueryValueW(
+                            ctypes.cast(buf, ctypes.c_void_p),
+                            "\\VarFileInfo\\Translation",
+                            ctypes.byref(lang_addr),
+                            ctypes.byref(lang_len),
                         ):
                             lang_ptr = ctypes.cast(lang_addr, ctypes.POINTER(LANGANDCODEPAGE))
                             for i in range(lang_len.value // ctypes.sizeof(LANGANDCODEPAGE)):
@@ -847,12 +878,17 @@ def detect_server_version(dir_path):
                             for field in ["ProductVersion", "FileVersion"]:
                                 try:
                                     sub_block = f"\\StringFileInfo\\{wlang:04x}{wcp:04x}\\{field}"
-                                    val_addr = ctypes.c_uint()
-                                    val_len = ctypes.c_uint()
-                                    if ctypes.windll.version.VerQueryValueW(
-                                        buf, sub_block, ctypes.byref(val_addr), ctypes.byref(val_len)
+                                    val_addr = ctypes.c_void_p()
+                                    val_len = ctypes.wintypes.UINT()
+                                    if version_api.VerQueryValueW(
+                                        ctypes.cast(buf, ctypes.c_void_p),
+                                        sub_block,
+                                        ctypes.byref(val_addr),
+                                        ctypes.byref(val_len),
                                     ):
-                                        ver = ctypes.wstring_at(val_addr, val_len - 1).strip()
+                                        # val_len 是字节数（含结尾 NUL），wstring_at 需要字符数
+                                        char_count = max(0, val_len.value // ctypes.sizeof(ctypes.c_wchar) - 1)
+                                        ver = ctypes.wstring_at(val_addr.value, char_count).strip()
                                         if ver and re.match(r"^[\d.]+$", ver):
                                             if not isinstance(versions_map, dict):
                                                 versions_map = {}
@@ -1088,21 +1124,23 @@ def do_install(dir_target, version, autostart, custom_url="", source_index=0):
                         except OSError:
                             # 删除损坏的 ZIP 失败可忽略
                             pass
-                        raise RuntimeError(
+                        raise InstallIntegrityError(
                             tr_msg(
                                 "下载文件完整性校验失败: %s\n提示: 可尝试切换其他下载源或使用自定义地址",
                                 "Download file integrity check failed: %s\nTip: try switching to another download source or use a custom URL",
                                 error_msg,
                             )
                         )
-                except RuntimeError:
-                    raise  # 重新抛出校验失败的异常
+                except InstallIntegrityError:
+                    raise  # 校验失败是致命错误，不换源重试
                 except Exception as ve:
                     safe_log_exception("install", f"do_install 忽略异常: {ve}", "warning")
                     install_state.log_line(
                         tr_msg("下载完整性校验跳过: %.80s", "Download integrity check skipped: %.80s", str(ve))
                     )
                 break
+            except InstallIntegrityError:
+                raise  # 完整性校验失败：直接中止，不能当成"该源失败"继续换源
             except Exception as e:
                 safe_log_exception("install", f"do_install 忽略异常: {e}", "warning")
                 last_error = str(e)

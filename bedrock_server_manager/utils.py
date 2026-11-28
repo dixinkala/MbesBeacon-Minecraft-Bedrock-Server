@@ -438,6 +438,7 @@ def _browse_directory_windows(initial_dir="", title="选择文件夹"):
         byref,
         c_int,
         c_void_p,
+        cast,
         create_unicode_buffer,
         windll,
         wintypes,
@@ -468,7 +469,9 @@ def _browse_directory_windows(initial_dir="", title="选择文件夹"):
 
     buf = create_unicode_buffer(260)
     bi = BROWSEINFO()
-    bi.pszDisplayName = buf
+    # LPWSTR 字段必须放指针；直接赋 c_wchar_Array 会抛
+    # TypeError: incompatible types, c_wchar_Array_260 instance instead of c_wchar_p
+    bi.pszDisplayName = cast(buf, wintypes.LPWSTR)
     bi.lpszTitle = title
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
     pidl = SHBrowseForFolderW(byref(bi))
