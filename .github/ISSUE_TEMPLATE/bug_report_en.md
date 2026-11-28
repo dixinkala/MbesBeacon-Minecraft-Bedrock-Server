@@ -34,7 +34,7 @@ assignees: ''
 ## 💻 Environment
 
 - **OS**: [e.g. Windows 10 22H2 / Windows 11 23H2 or Ubuntu 20.04+]
-- **MbesBeacon version**: [e.g. v1.0.21]
+- **MbesBeacon version**: [e.g. v1.0.26]
 - **Minecraft Bedrock server version**: [e.g. 1.21.0.03]
 - **Installation method**: [EXE / run from source]
 - **CPU architecture**: [x64 / ARM64]
