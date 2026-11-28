@@ -32,7 +32,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "docs" / "wiki"
 
-PAGE_LINK_RE = re.compile(r"\]\((\d{2}-[a-z0-9-]+)\.md(#[^)]+)?\)")
+PAGE_LINK_RE = re.compile(r"\]\(((?:en-)?\d{2}-[a-z0-9-]+)\.md(#[^)]+)?\)")
 
 # 文档里指向仓库其他文件的相对链接：Wiki 没有这些文件，改为 main 分支绝对地址
 REPO_FILE_LINKS = {
@@ -46,8 +46,11 @@ REPO_FILE_LINKS = {
     "../CODE_OF_CONDUCT.md": "CODE_OF_CONDUCT.md",
 }
 
-SIDEBAR_HEADER = "**MbesBeacon 完整文档**"
+SIDEBAR_HEADER = "**MbesBeacon 文档 / Docs**"
 FOOTER_TEXT = "文档源文件：仓库内 `docs/wiki/` · 许可证：MIT"
+
+#: 英文页面前缀（docs/wiki/en-*.md -> Wiki 页面 en-*）
+EN_PREFIX = "en-"
 
 
 def page_name(filename: str) -> str:
@@ -62,14 +65,19 @@ def convert_links(text: str, blob_base: str) -> str:
     for relative, target in REPO_FILE_LINKS.items():
         text = text.replace(f"]({relative})", f"]({blob_base}/{target})")
     text = text.replace("](README.md)", "](Home)")
+    text = text.replace("](English.md)", "](English)")
     text = PAGE_LINK_RE.sub(lambda m: f"]({m.group(1)}{m.group(2) or ''})", text)
     return text
 
 
 def build_sidebar(pages: list[str], repo_url: str) -> str:
-    """生成 _Sidebar.md（首页在首位，其余按文件名排序）。"""
-    lines = [SIDEBAR_HEADER, "", "- [首页](Home)"]
-    lines += [f"- [{name}]({name})" for name in pages]
+    """生成 _Sidebar.md：中文与英文分组，首页在首位。"""
+    zh_pages = [name for name in pages if not name.startswith(EN_PREFIX) and name != "English"]
+    en_pages = [name for name in pages if name.startswith(EN_PREFIX)]
+    lines = [SIDEBAR_HEADER, "", "**中文**", "", "- [首页](Home)"]
+    lines += [f"- [{name}]({name})" for name in zh_pages]
+    lines += ["", "**English**", "", "- [English home](English)"]
+    lines += [f"- [{name}]({name})" for name in en_pages]
     lines += ["", "---", "", f"- [源码仓库]({repo_url})", f"- [最新 Release]({repo_url}/releases/latest)"]
     return "\n".join(lines) + "\n"
 
@@ -134,6 +142,8 @@ def main(argv: list[str] | None = None) -> int:
     wiki_url = repo_url + ".wiki.git"
     blob_base = repo_url + "/blob/main"
     chapter_pages = [page_name(p.name) for p in sources if p.name != "README.md"]
+    zh_count = sum(1 for p in chapter_pages if not p.startswith(EN_PREFIX) and p != "English")
+    en_count = sum(1 for p in chapter_pages if p.startswith(EN_PREFIX))
 
     if args.dry_run:
         print(f"源目录: {SRC_DIR}")
@@ -141,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
         for path in sources:
             text = convert_links(path.read_text(encoding="utf-8"), blob_base)
             print(f"  {path.name:<28} -> {page_name(path.name):<22} {len(text):>5} 字符")
-        print(f"侧边栏: {len(chapter_pages)} 个章节 + 首页")
+        print(f"侧边栏: 中文 {zh_count} 章 / English {en_count} 章 + 首页")
         return 0
 
     work = Path(tempfile.mkdtemp(prefix="mbes_wiki_"))

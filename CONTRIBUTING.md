@@ -139,7 +139,7 @@ python tools/sync_builtin_versions.py --check
 
 | 位置 | 用途 |
 |---|---|
-| `docs/wiki/` | **文档源文件**（13 篇 markdown），随代码一起 review |
+| `docs/wiki/` | **文档源文件**（中文 12 章 + English 12 章 + 两个首页，共 26 篇），随代码一起 review |
 | GitHub Wiki | 面向用户的在线版本，由同步脚本从 `docs/wiki/` 发布 |
 | 软件内置帮助 | `web/index.html` 里的 `HELP` / `I18N_HELP_EN`，只放常用操作速查，详情指向 Wiki |
 
@@ -154,6 +154,8 @@ python tools/sync_builtin_versions.py --check
 
 - `docs/wiki/README.md` → Wiki 的 `Home` 页
 - `docs/wiki/01-xxx.md` → Wiki 的 `01-xxx` 页（页面名 = 文件名去掉 `.md`）
+- `docs/wiki/en-01-xxx.md` → Wiki 的 `en-01-xxx` 页；`English.md` → `English` 页
+- 中英文页面各自互相链接，侧边栏按「中文 / English」分组
 - 页内 `.md` 链接自动去掉后缀；`../LICENSE` 等仓库相对链接转成 GitHub 绝对地址
 - 自动生成 `_Sidebar.md` / `_Footer.md`
 - 没有变化时不会产生空提交

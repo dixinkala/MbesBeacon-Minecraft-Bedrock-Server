@@ -474,7 +474,7 @@ MbesBeacon-Minecraft-Bedrock-Server/
 │   ├── test_builtin_tunnel.py  # Built-in tunnels (downloads/extraction/playit/frp)
 │   ├── test_levilamina.py      # LeviLamina (enable/disable, mods management)
 │   └── test_instances.py       # Parallel instances (registry/switch/isolation)
-├── docs/                       # Screenshots, demo and the wiki sources (12 chapters)
+├── docs/                       # Screenshots, demo and wiki sources (12 Chinese + 12 English chapters)
 ├── tools/                      # Dev tools (sync_wiki.py; sync_builtin_versions.py)
 ├── .github/                    # GitHub Actions CI workflows
 ├── BedrockServerManager.spec   # PyInstaller build config

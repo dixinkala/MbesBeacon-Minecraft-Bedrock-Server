@@ -142,7 +142,7 @@ User-facing docs live in three places:
 
 | Location | Purpose |
 |---|---|
-| `docs/wiki/` | **Source of truth** (13 markdown pages), reviewed with the code |
+| `docs/wiki/` | **Source of truth** (12 Chinese + 12 English chapters + two home pages, 26 files), reviewed with the code |
 | GitHub Wiki | Published version, generated from `docs/wiki/` by the sync script |
 | In-app help | `HELP` / `I18N_HELP_EN` in `web/index.html` — quick reference only, links to the Wiki |
 
@@ -157,6 +157,8 @@ User-facing docs live in three places:
 
 - `docs/wiki/README.md` → Wiki `Home` page
 - `docs/wiki/01-xxx.md` → Wiki `01-xxx` page (page name = filename without `.md`)
+- `docs/wiki/en-01-xxx.md` → Wiki `en-01-xxx`; `English.md` → `English`
+- Chinese and English pages link to each other; the sidebar groups them as 中文 / English
 - In-page `.md` links lose the extension; `../LICENSE`-style links become absolute GitHub URLs
 - Generates `_Sidebar.md` / `_Footer.md`
 - Produces no empty commit when nothing changed
