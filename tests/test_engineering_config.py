@@ -6,6 +6,8 @@ import re
 import unittest
 from unittest.mock import MagicMock, patch
 
+from bedrock_server_manager.constants import APP_VERSION
+
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
 
@@ -207,6 +209,39 @@ class TestInAppHelpLicense(unittest.TestCase):
             "blob/main/LICENSE",
         ):
             self.assertIn(expected, line, f"英文帮助缺少 {expected}")
+
+
+class TestWindowsFileVersion(unittest.TestCase):
+    """version_info.txt 的数值版本与字符串版本都必须跟随 APP_VERSION。
+
+    只改字符串会导致资源管理器"文件版本"仍显示旧值（FileVersionRaw 取自
+    FixedFileInfo 的 filevers/prodvers），v1.0.26 曾因此翻车。
+    """
+
+    def setUp(self):
+        self.text = (REPO / "version_info.txt").read_text(encoding="utf-8")
+        self.version = APP_VERSION
+
+    def _expected_tuple(self) -> str:
+        parts = [int(p) for p in self.version.split(".")]
+        while len(parts) < 4:
+            parts.append(0)
+        return "(" + ", ".join(str(p) for p in parts) + ")"
+
+    def test_fixed_file_info_matches_app_version(self):
+        expected = self._expected_tuple()
+        for key in ("filevers", "prodvers"):
+            match = re.search(rf"{key}=\(([^)]*)\)", self.text)
+            self.assertIsNotNone(match, f"version_info.txt 缺少 {key}")
+            actual = "(" + match.group(1) + ")"
+            self.assertEqual(actual, expected, f"{key} 未跟随 APP_VERSION")
+
+    def test_string_versions_match_app_version(self):
+        expected = f"{self.version}.0" if self.version.count(".") == 2 else self.version
+        for key in ("FileVersion", "ProductVersion"):
+            match = re.search(rf"StringStruct\(u'{key}', u'([^']+)'\)", self.text)
+            self.assertIsNotNone(match, f"version_info.txt 缺少 {key}")
+            self.assertEqual(match.group(1), expected, f"{key} 字符串未跟随 APP_VERSION")
 
 
 class TestWikiDocuments(unittest.TestCase):
