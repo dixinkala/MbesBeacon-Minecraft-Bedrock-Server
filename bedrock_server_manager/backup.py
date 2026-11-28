@@ -115,7 +115,7 @@ def _cleanup_old_backups(backup_root, max_backups, server_name=None):
             elif not os.path.isdir(full):
                 continue
             candidates.append(full)
-        candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        candidates.sort(key=lambda p: backup_timestamp(os.path.basename(p)), reverse=True)
         for old in candidates[max_backups:]:
             if os.path.isdir(old):
                 shutil.rmtree(old, ignore_errors=True)
@@ -148,9 +148,9 @@ def backup_worlds(dir_path: str, max_backups: int = DEFAULT_MAX_BACKUPS) -> str:
                 [
                     os.path.join(backup_root, d)
                     for d in os.listdir(backup_root)
-                    if d.startswith(server_name + "_worlds_") and os.path.isdir(os.path.join(backup_root, d))
+                    if is_backup_entry(d, server_name) and os.path.isdir(os.path.join(backup_root, d))
                 ],
-                key=os.path.getmtime,
+                key=lambda p: backup_timestamp(os.path.basename(p)),
                 reverse=True,
             )
             for old in backups[max_backups:]:
@@ -174,6 +174,34 @@ def get_backup_root(dir_path: str) -> str:
     return os.path.join(os.path.dirname(dir_path), "_worlds_backups")
 
 
+def backup_timestamp(name: str) -> str:
+    """从备份名里取出 ``YYYYmmdd_HHMMSS``（取不到返回空串）。
+
+    保留策略按**名字里的时间戳**排序，而不是 mtime：目录备份由 copytree
+    创建，会继承 ``worlds/`` 的修改时间，用 mtime 排序会把刚创建的备份
+    当成最旧的优先删除。
+    """
+    stem = name[:-4] if name.lower().endswith(".zip") else name
+    if "_worlds_" not in stem:
+        return ""
+    suffix = stem.split("_worlds_")[-1]
+    return suffix if _BACKUP_TS_RE.match(suffix) else ""
+
+
+def is_backup_entry(name: str, server_name: str) -> bool:
+    """判断备份根目录下的条目名是否是本服务器的真备份。
+
+    严格要求 ``<服务器名>_worlds_<YYYYmmdd_HHMMSS>``（可带 ``.zip``）：
+    备份根目录是用户可见目录，``<服务器名>_worlds_notes`` 这类用户文件夹
+    绝不能当成备份列出、删除或恢复（删除是 rmtree，恢复会覆盖 worlds）。
+    """
+    stem = name[:-4] if name.lower().endswith(".zip") else name
+    prefix = f"{server_name}_worlds_"
+    if not stem.startswith(prefix):
+        return False
+    return bool(_BACKUP_TS_RE.match(stem[len(prefix) :]))
+
+
 def list_backups(dir_path: str) -> list[dict]:
     """列出指定服务器的所有世界备份，返回 [{name, path, size, time}, ...]，按时间倒序。"""
     if not dir_path or not os.path.isdir(dir_path):
@@ -182,11 +210,10 @@ def list_backups(dir_path: str) -> list[dict]:
     if not os.path.isdir(backup_root):
         return []
     server_name = os.path.basename(dir_path)
-    prefix = server_name + "_worlds_"
     result = []
     try:
         for name in os.listdir(backup_root):
-            if not name.startswith(prefix):
+            if not is_backup_entry(name, server_name):
                 continue
             full = os.path.join(backup_root, name)
             # 支持目录型备份和 ZIP 压缩备份
@@ -251,6 +278,11 @@ def restore_backup(backup_path: str, server_dir: str) -> tuple[bool, str]:
     root_abs = os.path.normpath(os.path.abspath(backup_root))
     if os.path.normcase(backup_abs) == os.path.normcase(root_abs):
         return False, tr_msg("非法路径，不能恢复备份根目录本身", "Invalid path: cannot restore the backup root itself")
+    if not is_backup_entry(os.path.basename(backup_abs), os.path.basename(server_dir)):
+        return False, tr_msg(
+            "非法路径，只能恢复备份目录内的备份",
+            "Invalid path: only backups inside the backup directory can be restored",
+        )
     # 停止服务器
     try:
         p = get_server_proc()
@@ -379,6 +411,11 @@ def delete_backup(backup_path: str, server_dir: str | None = None) -> tuple[bool
     root_abs = os.path.normpath(os.path.abspath(backup_root))
     if os.path.normcase(backup_abs) == os.path.normcase(root_abs):
         return False, tr_msg("非法路径，不能删除备份根目录", "Invalid path: cannot delete the backup root itself")
+    if not is_backup_entry(os.path.basename(backup_abs), os.path.basename(server_dir)):
+        return False, tr_msg(
+            "非法路径，只能删除备份目录内的备份",
+            "Invalid path: only backups inside the backup directory can be deleted",
+        )
     try:
         if os.path.isdir(backup_path):
             shutil.rmtree(backup_path, ignore_errors=True)
