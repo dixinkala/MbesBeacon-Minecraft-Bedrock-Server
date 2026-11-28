@@ -6,15 +6,14 @@ import os
 import tarfile
 import tempfile
 import threading
-import unittest
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from unittest import mock
+from unittest import TestCase, main, mock
 
 from bedrock_server_manager import builtin_tunnel as bt
 
 
-class TestPlatformAndAssets(unittest.TestCase):
+class TestPlatformAndAssets(TestCase):
     def test_windows_assets(self):
         with mock.patch.object(bt, "IS_WINDOWS", True), mock.patch.object(bt.platform, "machine", return_value="AMD64"):
             self.assertEqual(bt.platform_tag(), ("windows", "x86_64"))
@@ -66,7 +65,7 @@ class _FileHandler(BaseHTTPRequestHandler):
         self.wfile.write(self.payload)
 
 
-class TestDownload(unittest.TestCase):
+class TestDownload(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), _FileHandler)
@@ -93,17 +92,17 @@ class TestDownload(unittest.TestCase):
             self.assertEqual(os.listdir(tmp), [])
 
 
-class TestExtraction(unittest.TestCase):
+class TestExtraction(TestCase):
     def test_extract_from_zip_ignores_other_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             archive = os.path.join(tmp, "frp.zip")
             with zipfile.ZipFile(archive, "w") as zf:
-                zf.writestr("frp_0.1_windows_amd64/frpc.exe", b"FAKE-FRPC")
-                zf.writestr("frp_0.1_windows_amd64/frps.exe", b"FAKE-FRPS")
+                zf.writestr(f"frp_0.1/frpc{os.path.splitext(bt._exe('frpc'))[1]}", b"FAKE-FRPC")
+                zf.writestr("frp_0.1/frps.exe", b"FAKE-FRPS")
                 zf.writestr("../../evil.exe", b"EVIL")
             target_dir = os.path.join(tmp, "out")
             target = bt.extract_frpc(archive, target_dir)
-            self.assertTrue(target.endswith("frpc.exe"))
+            self.assertTrue(target.endswith(bt._exe("frpc")))
             with open(target, "rb") as handle:
                 self.assertEqual(handle.read(), b"FAKE-FRPC")
             self.assertFalse(os.path.exists(os.path.join(target_dir, "frps.exe")))
@@ -133,7 +132,7 @@ class TestExtraction(unittest.TestCase):
                 bt.extract_frpc(archive, os.path.join(tmp, "out"))
 
 
-class TestFrpConfig(unittest.TestCase):
+class TestFrpConfig(TestCase):
     def setUp(self):
         from bedrock_server_manager.app_context import AppContext
 
@@ -174,7 +173,7 @@ class TestFrpConfig(unittest.TestCase):
         self.assertEqual(bt.frp_config()["remote_port"], 19132)
 
 
-class TestPlayitHelpers(unittest.TestCase):
+class TestPlayitHelpers(TestCase):
     def test_secret_path_parsing(self):
         manager = bt.PlayitManager()
         fake = mock.Mock(stdout="C:\\ProgramData\\playit_gg\\playit.toml\n", stderr="")
@@ -232,7 +231,7 @@ class TestPlayitHelpers(unittest.TestCase):
             manager.start()
 
 
-class TestFrpManager(unittest.TestCase):
+class TestFrpManager(TestCase):
     def test_start_requires_install(self):
         manager = bt.FrpManager()
         with (
@@ -274,4 +273,4 @@ class TestFrpManager(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    main(verbosity=2)

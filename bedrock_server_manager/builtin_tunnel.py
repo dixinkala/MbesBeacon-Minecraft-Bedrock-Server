@@ -386,33 +386,35 @@ class _LineBuffer:
 
 
 def _tail_file(path: str, buffer: _LineBuffer, stop_event: threading.Event, poll: float = 0.5) -> None:
-    """跟随日志文件追加内容（文件不存在时等待）。"""
+    """跟随日志文件追加内容（文件不存在时等待，退出时确保关闭句柄）。"""
     handle = None
     inode = None
-    while not stop_event.is_set():
-        if handle is None:
-            try:
-                # 长生命周期读取器：循环里持续追加读取，不能用 with 块；
-                # 关闭时机由 stop 事件控制（函数末尾统一 close）。
-                handle = open(path, encoding="utf-8", errors="ignore")  # noqa: SIM115
-                inode = os.fstat(handle.fileno()).st_ino
-                handle.seek(0, os.SEEK_END)
-            except OSError:
-                time.sleep(poll)
+    try:
+        while not stop_event.is_set():
+            if handle is None:
+                try:
+                    # 长生命周期读取器：循环内持续读取，退出时由 finally 统一关闭
+                    handle = open(path, encoding="utf-8", errors="ignore")  # noqa: SIM115
+                    inode = os.fstat(handle.fileno()).st_ino
+                    handle.seek(0, os.SEEK_END)
+                except OSError:
+                    time.sleep(poll)
+                    continue
+            line = handle.readline()
+            if line:
+                buffer.add(line)
                 continue
-        line = handle.readline()
-        if line:
-            buffer.add(line)
-            continue
-        with contextlib.suppress(OSError):
-            if inode is not None and os.stat(path).st_ino != inode:
+            with contextlib.suppress(OSError):
+                if inode is not None and os.stat(path).st_ino != inode:
+                    handle.close()
+                    handle = None
+                    inode = None
+                    continue
+            time.sleep(poll)
+    finally:
+        if handle is not None:
+            with contextlib.suppress(OSError):
                 handle.close()
-                handle = None
-                continue
-        time.sleep(poll)
-    if handle is not None:
-        with contextlib.suppress(OSError):
-            handle.close()
 
 
 # --------------------------------------------------------------------------- playit 管理
