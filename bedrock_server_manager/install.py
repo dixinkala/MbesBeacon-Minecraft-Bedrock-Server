@@ -755,7 +755,7 @@ def get_bedrock_versions(ignore_ssl=False, include_preview=False):
     """获取基岩版服务端版本列表。
 
     版本来源优先级（逐层兜底）：
-    1. **自建清单** ``dixinkala/mbesbeacon-bds-versions``（GitHub Actions 每 6 小时更新）
+    1. **自建清单** ``dixinkala/mbesbeacon-bds-versions``（GitHub Actions 每小时更新）
     2. **社区清单** ``Bedrock-OSS/BDS-Versions``（自建清单不可达时）
     3. **官方 links API**（补充当前稳定版/预览版，确保及时）
     4. **内置快照**（完全离线时使用，见 ``builtin_versions``）

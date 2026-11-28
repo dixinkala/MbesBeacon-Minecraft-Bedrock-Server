@@ -26,7 +26,7 @@ SERVER_EXE = "bedrock_server.exe" if IS_WINDOWS else "bedrock_server"
 
 # 下载源 API（官方下载链接 API，返回各平台下载地址）
 LINKS_API = "https://net-secondary.web.minecraft-services.net/api/v1.0/download/links"
-# 版本清单的主来源：自建仓库（GitHub Actions 每 6 小时从官方 links API 更新）。
+# 版本清单的主来源：自建仓库（GitHub Actions 每小时从官方 links API 更新）。
 # 清单结构兼容 Bedrock-OSS，只有版本号，不含哈希。
 VERSIONS_JSON_URL = "https://raw.githubusercontent.com/dixinkala/mbesbeacon-bds-versions/main/versions.json"
 # 兜底来源 1：Bedrock-OSS 社区清单（仅当自建仓库不可达时使用）

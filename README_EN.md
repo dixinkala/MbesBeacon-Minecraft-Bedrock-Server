@@ -585,7 +585,7 @@ A:
 3. Check whether the network can reach minecraft.net
 
 ### Q: The version list won't load / shows very few versions?
-A: The version list comes from the [self-hosted manifest](https://github.com/dixinkala/mbesbeacon-bds-versions) (updated every 6 hours); if it cannot be reached the app falls back to the community manifest and then to the built-in snapshot. Check GitHub connectivity, or enter a version number manually.
+A: The version list comes from the [self-hosted manifest](https://github.com/dixinkala/mbesbeacon-bds-versions) (updated hourly); if it cannot be reached the app falls back to the community manifest and then to the built-in snapshot. Check GitHub connectivity, or enter a version number manually.
 
 ### Q: Config changes have no effect?
 A: Config takes effect after a server restart. Click "Stop" then "Start" in the console.

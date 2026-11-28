@@ -33,7 +33,7 @@ Manually selected folders are remembered and can be switched from the "Current s
 
 | Source | Description |
 |---|---|
-| Version list | Fetched from the self-hosted manifest [`dixinkala/mbesbeacon-bds-versions`](https://github.com/dixinkala/mbesbeacon-bds-versions) (updated every 6 hours by GitHub Actions); falls back to the community list, then to the built-in snapshot |
+| Version list | Fetched from the self-hosted manifest [`dixinkala/mbesbeacon-bds-versions`](https://github.com/dixinkala/mbesbeacon-bds-versions) (updated hourly by GitHub Actions); falls back to the community list, then to the built-in snapshot |
 | "Detect latest" | Reads the current stable version from the official Mojang API |
 | Manual input | Any version string; the download URL is built with the official CDN rule |
 | Custom URL | Paste a third-party/mirror zip link; leave empty to use the official CDN |
