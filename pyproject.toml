@@ -53,6 +53,8 @@ ignore = [
 "__init__.py" = ["F401"]  # 未使用的导入（__init__.py 中用于导出）
 "test_*.py" = ["N802"]  # 测试文件放宽要求
 "*_test.py" = ["N802"]
+# 覆盖率专项测试大量使用嵌套 with 与短生命周期 open，保持可读性
+"tests/test_core_coverage_*.py" = ["SIM115", "SIM117"]
 "run.py" = ["E402"]  # 入口文件：先输出版权信息再导入主模块（有意设计）
 "bedrock_server_manager/state.py" = ["E402"]  # 向后兼容：先定义全局变量再导入 AppContext（有意设计）
 
@@ -97,9 +99,9 @@ source = ["bedrock_server_manager"]
 omit = []
 
 [tool.coverage.report]
-# 覆盖率下限（棘轮）：当前实测约 59%，先卡在 52% 防止回退，
-# 后续补测试时逐步上调。低于此值 pytest --cov 会以非零码退出。
-fail_under = 52
+# 总覆盖率下限（棘轮）：当前实测约 90%。逐文件门槛由 tools/check_coverage.py
+# 负责（重要模块 85% / 其余 80%），这里卡住整体水平防止回退。
+fail_under = 85
 show_missing = true
 skip_covered = false
 exclude_lines = [

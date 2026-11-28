@@ -36,8 +36,6 @@ class ServerRoutesMixin:
                 return
         except Exception as e:
             # 端口检测失败不影响启动（实际启动时会再次检测）
-            from ...app_logger import safe_log_exception
-
             safe_log_exception("routes/server", f"端口占用检测异常: {e}", "debug")
         try:
             p = get_server_proc()

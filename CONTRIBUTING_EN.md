@@ -80,8 +80,12 @@ pip install -r requirements-dev.txt  # dev/test deps (pytest, pytest-cov, ruff)
 # 4. Run the dev version
 python run.py
 
-# 5. Run tests (with coverage gate)
+# 5. Run tests (global floor 85%)
 pytest --cov
+
+# 5.1 Per-file coverage gate (important 85% / others 80%)
+pytest --cov --cov-report=json:.coverage.json
+python tools/check_coverage.py --strict
 
 # 6. Frontend tests
 node --test "tests/js/**/*.test.mjs"
