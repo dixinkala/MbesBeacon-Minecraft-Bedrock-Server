@@ -2559,8 +2559,18 @@ class TestHandlerHttp(_HttpCase):
         self.assertIn("控制台连接数", json.loads(body)["error"])
 
     def test_get_sse_acquire_release(self):
+        """同步调用 do_GET：acquire 后无论流是否异常都要 release（finally）。"""
+
         def fake_stream(handler_self, q):
             handler_self._send(200, "stream")
+
+        fake = object.__new__(H.Handler)
+        fake.path = "/api/console/stream"
+        fake.headers = {}
+        fake.client_address = ("127.0.0.1", 12345)
+        fake._send = mock.MagicMock()
+        fake._check_host = lambda: True
+        fake._check_auth = lambda: True
 
         with (
             mock.patch.object(H, "check_rate_limit", return_value=(True, 0)),
@@ -2568,13 +2578,9 @@ class TestHandlerHttp(_HttpCase):
             mock.patch.object(H, "_acquire_stream_slot", return_value=True) as acquire,
             mock.patch.object(H, "_release_stream_slot") as release,
         ):
-            status, _, body = self.request("GET", "/api/console/stream", headers={"X-API-Token": "test-token"})
-        self.assertEqual((status, body), (200, b"stream"))
+            H.Handler.do_GET(fake)
+
         acquire.assert_called_once()
-        # 客户端可能先收到响应，handler 线程稍后才执行 finally 里的 release
-        deadline = time.time() + 2
-        while not release.called and time.time() < deadline:
-            time.sleep(0.02)
         release.assert_called_once()
 
     def test_post_host_mismatch_403(self):
