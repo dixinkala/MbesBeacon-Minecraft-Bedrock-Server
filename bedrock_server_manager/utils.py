@@ -251,10 +251,30 @@ def props_path():
     return os.path.join(d, "server.properties") if d else ""
 
 
+#: LeviLamina 打过补丁的启动器（lip setup 产物）
+MODDED_SERVER_EXE = "bedrock_server_mod.exe"
+
+
+def resolve_server_exe(server_dir: str) -> str:
+    """返回应使用的服务端可执行文件名；未安装时返回空串。
+
+    优先 ``bedrock_server_mod.exe``（LeviLamina 已启用），否则官方
+    ``bedrock_server.exe``。两者都不在时视为未安装。
+    """
+    if not server_dir:
+        return ""
+    modded = os.path.join(server_dir, MODDED_SERVER_EXE)
+    if os.path.isfile(modded):
+        return MODDED_SERVER_EXE
+    if os.path.isfile(os.path.join(server_dir, SERVER_EXE)):
+        return SERVER_EXE
+    return ""
+
+
 def installed() -> bool:
-    """检查当前目录是否已安装服务器（包含 bedrock_server.exe）。"""
+    """检查当前目录是否已安装服务器（官方或 LeviLamina 版均可）。"""
     d = resolve_server_dir()
-    return bool(d) and os.path.isfile(os.path.join(d, SERVER_EXE))
+    return bool(d) and bool(resolve_server_exe(d))
 
 
 def detect_servers(force_refresh: bool = False) -> list[dict]:

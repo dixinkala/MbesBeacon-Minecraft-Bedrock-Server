@@ -622,9 +622,28 @@ const I18N_EN = {
   "本地端口": "Local port",
   "先安装": "Install first",
   "playit 需要账号：打开领取链接登录后，在网页上创建一条 UDP 隧道指向本机 19132，再点启动。": "playit needs an account: open the claim link, create a UDP tunnel to port 19132, then press Start.",
-  "frp 需要你自己的公网服务器（frps）。": "frp needs your own public server (frps)."
+  "frp 需要你自己的公网服务器（frps）。": "frp needs your own public server (frps).",
+  "🧩 LeviLamina 插件（mods）": "🧩 LeviLamina mods",
+  "下载 lip": "Download lip",
+  "启用 LeviLamina": "Enable LeviLamina",
+  "禁用 LeviLamina": "Disable LeviLamina",
+  "安装插件包（.zip）": "Install mod (.zip)",
+  "lip 包名或 URL（如 @foo/bar@1.0.0）": "lip package or URL (e.g. @foo/bar@1.0.0)",
+  "lip 安装": "lip install",
+  "lip 卸载": "lip uninstall",
+  "未安装 lip": "lip not installed",
+  "已启用": "enabled",
+  "未启用": "not enabled",
+  "插件": "mods",
+  "启用": "Enable",
+  "禁用": "Disable",
+  "删除": "Delete",
+  "启用 LeviLamina 会按兼容版本重装服务端文件（约 100 MB 下载），配置文件会自动备份。继续？": "Enabling LeviLamina reinstalls server files for the compatible BDS version (~100 MB download). Config files are backed up automatically. Continue?",
+  "禁用后改用官方服务端启动，mods 与 lip 数据会保留。继续？": "After disabling, the official server is used. mods and lip data are kept. Continue?",
+  "当前平台不支持 LeviLamina（仅 Windows x64）。": "This platform does not support LeviLamina (Windows x64 only).",
+  "启用中…（下载约 100 MB，请稍候）": "Enabling... (~100 MB download)"
 };
-const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Internet friends cannot join?    Public Access tab: UPnP first, then built-in playit (account),\n                                      or built-in frp (own server)\n                                      or configure an external tunnel client (UDP port)\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
+const I18N_HELP_EN = "[MbesBeacon — Minecraft Bedrock Server Manager Help]\n\n═══════════════════════════════════════\n🚀 Quick start\n═══════════════════════════════════════\n  First run\n    Three-step wizard: 1) install directory  2) version  3) install\n    The server starts automatically; manage it on tab 3 (Console)\n\n  Existing server\n    Common paths are scanned on startup; if nothing is found, click \"📁 Browse\"\n    next to \"Current Server\" and pick the directory manually\n\n  Joining a game\n    The header shows your address — click 📋 to copy. Friends add a server in-game\n    with \"<LAN IP>:19132\".\n    · 127.0.0.1 only works on the same machine\n    · Public play needs UDP 19132 port forwarding or a tunnel\n    · Allow the app in the Windows firewall prompt on first launch\n\n═══════════════════════════════════════\n🎨 UI & shortcuts\n═══════════════════════════════════════\n  · Theme: 10 presets + custom accent color + light/dark mode (saved automatically)\n  · Tray: right-click to open the UI, start/stop the server, or exit; closing the\n    browser tab does not stop the server\n  · Language: switches instantly, and the choice is remembered\n\n  Ctrl+S save config    Ctrl+R restart server    Ctrl+F search console\n  backtick key focuses command input    ↑↓ history / completions    Tab complete\n\n═══════════════════════════════════════\n📋 Feature cheat sheet\n═══════════════════════════════════════\n  1 Install       Pick directory and version; custom URL supported; downloads are\n                  verified; server update 🔄, app update 📦\n  2 Config        Edit common server.properties keys; save, then restart; rollback\n  3 Console       Start/stop/restart, live log, search and export, completion;\n                  dangerous commands require confirmation\n  4 Players       Permission / kick / ban; allowlist, blocklist, IP bans\n  5 Worlds        List, switch (level-name), rename / copy / delete, import / export\n  6 Backups       Manual and automatic backups, restore with rollback, keep last 10\n  7 Monitor       CPU / memory / players / state, refreshed every 5 s\n  8 Packs         Enable / disable / import resource and behavior packs, delete\n  9 Scheduled     Restart / backup / announce; skipped while the server is stopped,\n                  missed daily tasks run once after startup\n\n═══════════════════════════════════════\n❓ FAQ (short)\n═══════════════════════════════════════\n  Q Windows SmartScreen warning?     More info → Run anyway\n  Q Closed the browser tab?          Server keeps running; reopen from the tray\n  Q Friends cannot join?             Allow UDP 19132, use your LAN IP, check the allowlist\n  Q Install LeviLamina mods?         Packs tab: download lip, enable LeviLamina, then install .zip mods or lip packages\n  Q Internet friends cannot join?    Public Access tab: UPnP first, then built-in playit (account),\n                                      or built-in frp (own server)\n                                      or configure an external tunnel client (UDP port)\n  Q Manage from a phone/LAN PC?      Enable Remote Management on the Install tab, set a password,\n                                      restart, then open http://<LAN IP>:19100\n  Q Config changes ignored?          Restart the server after saving\n  Q Where is user data?              %APPDATA%\\MbesBeacon (settings / logs / cache)\n  Q Where are worlds?                worlds folder inside the server directory\n\n═══════════════════════════════════════\n📚 Full manual\n═══════════════════════════════════════\n  This page only covers common tasks. Detailed parameters, failure handling,\n  troubleshooting and the API reference live in the repository docs:\n  https://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/tree/main/docs/wiki\n\n\n═══════════════════════════════════════\n📄 License\n═══════════════════════════════════════\nReleased under the MIT License.\nCopyright (c) 2026 MbesBeacon Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.\n\nFull text: LICENSE in the repository root\nhttps://github.com/dixinkala/MbesBeacon-Minecraft-Bedrock-Server/blob/main/LICENSE";
 (function(){
   let lang = null, manual = null;
   try{ lang = localStorage.getItem('mbesbeacon_lang'); manual = localStorage.getItem('mbesbeacon_lang_manual'); }catch(e){}
@@ -1258,6 +1277,25 @@ window.MBS_LANG = lang;
       </div>
       <div id="packsContent" style="color:var(--dim);font-size:13px;">点击「刷新包列表」加载已安装的包</div>
     </div>
+    <div class="card" id="cardLev">
+      <h3>🧩 LeviLamina 插件（mods）</h3>
+      <div class="row"><span class="hint" id="levStatus"></span></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;">
+        <button class="btn" id="btnLipInstall">下载 lip</button>
+        <button class="btn primary" id="btnLevEnable">启用 LeviLamina</button>
+        <button class="btn" id="btnLevDisable">禁用 LeviLamina</button>
+        <input type="file" id="modImport" accept=".zip" style="display:none;" onchange="importMod(this)">
+        <button class="btn" onclick="document.getElementById('modImport').click()">安装插件包（.zip）</button>
+      </div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;">
+        <input id="lipPkg" placeholder="lip 包名或 URL（如 @foo/bar@1.0.0）" style="min-width:280px;">
+        <button class="btn" id="btnLipPkgInstall">lip 安装</button>
+        <button class="btn" id="btnLipPkgUninstall">lip 卸载</button>
+      </div>
+      <div id="modsList" style="font-size:13px;color:var(--dim);margin-top:8px;"></div>
+      <pre id="levLog" style="max-height:140px;overflow:auto;white-space:pre-wrap;font-size:12px;color:#8b949e;margin:6px 0 0;"></pre>
+      <div class="msg" id="levMsg"></div>
+    </div>
   </div>
 
   <!-- 计划任务 -->
@@ -1478,6 +1516,7 @@ const HELP=`【MbesBeacon — Minecraft 基岩版服务器管理器 使用帮助
   Q 好友进不来？                    → 防火墙放行 UDP 19132、填对局域网 IP、检查白名单
   Q 手机/别的电脑怎么管理？         → 安装页「远程管理」启用并设密码，重启后访问 http://<局域网IP>:19100
   Q 互联网好友怎么进来？            → 安装页「公网联机」：UPnP 自动映射 → 内置 playit（账号领取）→ 内置 frp（自备服务器）
+  Q 想装 LeviLamina 插件？          → ⑧ 包管理页：下载 lip → 启用 LeviLamina → 安装 .zip 插件或 lip 包
   Q 改了配置不生效？                → 保存后需要重启服务器
   Q 数据存在哪？                    → %APPDATA%\MbesBeacon（设置 / 日志 / 缓存）
   Q 存档在哪？                      → 服务器目录下的 worlds\ 文件夹
@@ -3077,7 +3116,129 @@ async function addIpBan(){
   else showAlert('封禁失败：'+r.error);
 }
 
-// ---- 包管理 ----
+// ---- LeviLamina ----
+  let levPollTimer = null;
+  function setLevMsg(text, ok){
+    const el = $('levMsg');
+    el.textContent = text || '';
+    el.style.color = ok ? 'var(--ok, #3fb950)' : 'var(--err)';
+  }
+  function renderLev(data){
+    const st = data.state || {};
+    const parts = [];
+    if(!st.supported) parts.push(tt('当前平台不支持 LeviLamina（仅 Windows x64）。'));
+    parts.push('lip: ' + (st.lip_installed ? ('v' + (st.lip_version || '?')) : tt('未安装 lip')));
+    parts.push((st.enabled ? tt('已启用') : tt('未启用')) + (st.loader_version ? (' · LeviLamina ' + st.loader_version) : ''));
+    if(st.bds_version) parts.push('BDS ' + st.bds_version);
+    parts.push((st.mods || []).length + ' ' + tt('插件'));
+    $('levStatus').textContent = parts.join(' · ');
+    $('btnLevEnable').disabled = !st.supported || st.enabled || !st.lip_installed;
+    $('btnLevDisable').disabled = !st.enabled;
+    $('btnLipInstall').disabled = !st.supported;
+    const list = $('modsList');
+    list.innerHTML = '';
+    for(const mod of (st.mods || [])){
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #20262e;';
+      const label = document.createElement('span');
+      label.textContent = mod.name + (mod.version ? ('@' + mod.version) : '') + ' · ' + (mod.type || '');
+      label.style.flex = '1';
+      const btnToggle = document.createElement('button');
+      btnToggle.className = 'btn';
+      btnToggle.textContent = mod.enabled ? tt('禁用') : tt('启用');
+      btnToggle.onclick = () => toggleLevMod(mod.entry, !mod.enabled);
+      const btnDelete = document.createElement('button');
+      btnDelete.className = 'btn danger';
+      btnDelete.textContent = tt('删除');
+      btnDelete.onclick = () => deleteLevMod(mod.entry);
+      row.appendChild(label); row.appendChild(btnToggle); row.appendChild(btnDelete);
+      list.appendChild(row);
+    }
+    if(!(st.mods || []).length) list.textContent = '';
+    const job = data.job || {};
+    if(job.lines && job.lines.length) $('levLog').textContent = job.lines.join('\n');
+  }
+  async function loadLev(){
+    try{
+      const r = await jget('/api/levilamina/status');
+      if(r.ok) renderLev(r);
+      const job = r.job || {};
+      if(job.running){ setLevMsg(tt('启用中…（下载约 100 MB，请稍候）'), true); pollLev(); }
+      else if(job.done && !job.ok && job.error){ setLevMsg(job.error, false); }
+      return r;
+    }catch(e){ return {ok:false}; }
+  }
+  function pollLev(){
+    clearTimeout(levPollTimer);
+    levPollTimer = setTimeout(async () => {
+      const r = await loadLev();
+      const job = (r && r.job) || {};
+      if(!job.running && job.done){ loadLev(); }
+    }, 2500);
+  }
+  $('btnLipInstall').onclick = async () => {
+    setLevMsg(tt('下载中…'), true);
+    const r = await jpost('/api/levilamina/lip/install', {});
+    setLevMsg(r.ok ? ('lip ' + (r.version || '')) : (r.error || '失败'), r.ok);
+    loadLev();
+  };
+  $('btnLevEnable').onclick = async () => {
+    if(!confirm(tt('启用 LeviLamina 会按兼容版本重装服务端文件（约 100 MB 下载），配置文件会自动备份。继续？'))) return;
+    const r = await jpost('/api/levilamina/enable', {confirm:true});
+    if(!r.ok){ setLevMsg(r.error || '失败', false); return; }
+    setLevMsg(tt('启用中…（下载约 100 MB，请稍候）'), true);
+    pollLev();
+  };
+  $('btnLevDisable').onclick = async () => {
+    if(!confirm(tt('禁用后改用官方服务端启动，mods 与 lip 数据会保留。继续？'))) return;
+    const r = await jpost('/api/levilamina/disable', {confirm:true});
+    setLevMsg(r.ok ? '' : (r.error || '失败'), r.ok);
+    loadLev();
+  };
+  window.importMod = async (input) => {
+    const file = input && input.files && input.files[0];
+    if(!file) return;
+    try{
+      setLevMsg(tt('正在读取文件...'), true);
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const r = await jpost('/api/levilamina/mods/install', {file_data: base64, file_name: file.name});
+      setLevMsg(r.ok ? '' : (r.error || '安装失败'), r.ok);
+    }catch(e){ setLevMsg(String(e), false); }
+    finally{ input.value=''; loadLev(); }
+  };
+  async function toggleLevMod(name, enabled){
+    const r = await jpost('/api/levilamina/mods/toggle', {name, enabled});
+    setLevMsg(r.ok ? '' : (r.error || '失败'), r.ok);
+    loadLev();
+  }
+  async function deleteLevMod(name){
+    if(!confirm('删除插件 ' + name + ' ?')) return;
+    const r = await jpost('/api/levilamina/mods/delete', {name, confirm:true});
+    setLevMsg(r.ok ? '' : (r.error || '失败'), r.ok);
+    loadLev();
+  }
+  $('btnLipPkgInstall').onclick = async () => {
+    const pkg = $('lipPkg').value.trim();
+    if(!pkg) return;
+    setLevMsg(tt('下载中…'), true);
+    const r = await jpost('/api/levilamina/lip/install_pkg', {package: pkg});
+    setLevMsg(r.ok ? '' : (r.error || '失败'), r.ok);
+    loadLev();
+  };
+  $('btnLipPkgUninstall').onclick = async () => {
+    const pkg = $('lipPkg').value.trim();
+    if(!pkg) return;
+    const r = await jpost('/api/levilamina/lip/uninstall_pkg', {package: pkg});
+    setLevMsg(r.ok ? '' : (r.error || '失败'), r.ok);
+    loadLev();
+  };
+  loadLev();
+  // ---- 包管理 ----
 async function loadPacks(){
   try{
     const r=await jget('/api/packs');

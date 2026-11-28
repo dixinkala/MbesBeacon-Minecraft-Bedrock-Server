@@ -817,7 +817,9 @@ def detect_server_version(dir_path):
             return versions_map[key]
     # 2. 从服务端文件版本属性读取（仅 Windows：使用 Win32 API 读取 PE 文件版本资源）
     if IS_WINDOWS:
-        exe_path = os.path.join(dir_path, SERVER_EXE)
+        from .utils import resolve_server_exe
+
+        exe_path = os.path.join(dir_path, resolve_server_exe(dir_path) or SERVER_EXE)
         if os.path.isfile(exe_path):
             try:
                 import ctypes.wintypes

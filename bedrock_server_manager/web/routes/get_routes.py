@@ -16,7 +16,7 @@ from ...config import (
     load_properties,
     properties_to_dict,
 )
-from ...constants import APP_MARKER, APP_TITLE, APP_VERSION, IS_WINDOWS, SERVER_EXE
+from ...constants import APP_MARKER, APP_TITLE, APP_VERSION, IS_WINDOWS
 from ...install import (
     DOWNLOAD_SOURCES,
     FALLBACK_VERSIONS,
@@ -42,6 +42,7 @@ from ...utils import (
     load_theme,
     props_path,
     resolve_server_dir,
+    resolve_server_exe,
     safe_log_exception,
     save_settings,
     sync_log_file,
@@ -463,7 +464,7 @@ class GetRoutesMixin:
                 result["dirs"] = other + subdirs
             else:
                 result["dirs"] = subdirs
-            result["is_server"] = os.path.isfile(os.path.join(base, SERVER_EXE))
+            result["is_server"] = bool(resolve_server_exe(base))
             result["has_exe"] = result["is_server"]
         except Exception as e:
             safe_log_exception("get_routes", f"_get_listdir 忽略异常: {e}", "warning")
@@ -561,5 +562,26 @@ class GetRoutesMixin:
                 "platform": builtin_tunnel.platform_tag(),
                 "playit": builtin_tunnel.playit.status(),
                 "frp": builtin_tunnel.frp.status(),
+            }
+        )
+
+    @register_get_route("/api/levilamina/status")
+    def _get_levilamina_status(self, q):
+        """LeviLamina 状态 + 后台任务进度。"""
+        from ... import levilamina
+        from ...server import server_running
+
+        d = resolve_server_dir()
+        try:
+            info = levilamina.state(d)
+        except Exception as e:
+            safe_log_exception("get_routes", f"LeviLamina 状态查询失败: {e}", "warning")
+            info = {"supported": levilamina.supported(), "error": str(e), "mods": []}
+        self._json(
+            {
+                "ok": True,
+                "state": info,
+                "job": levilamina.job.status(),
+                "server_running": bool(server_running()),
             }
         )

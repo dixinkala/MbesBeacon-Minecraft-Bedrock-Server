@@ -633,3 +633,170 @@ class PostExtraRoutesMixin:
         status = builtin_tunnel.frp.stop()
         audit_log("TUNNEL_FRP_STOP", "", None)
         self._json({"ok": True, "status": status})
+
+    # ---- LeviLamina ----
+
+    @register_post_route("/api/levilamina/lip/install")
+    def _post_levilamina_lip_install(self, data):
+        from ... import levilamina
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            result = levilamina.install_lip()
+            audit_log("LEVILAMINA_LIP", f"version={result.get('version', '')}", None)
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/levilamina/enable")
+    def _post_levilamina_enable(self, data):
+        from ... import levilamina
+        from ...install import detect_server_version
+        from ...server import server_running
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        if not bool((data or {}).get("confirm")):
+            self._json({"ok": False, "error": "请先确认：会按兼容版本重装服务端文件（已自动备份配置）"}, code=400)
+            return
+        if server_running():
+            self._json({"ok": False, "error": "请先停止服务器"}, code=400)
+            return
+        d = resolve_server_dir()
+        if not d:
+            self._json({"ok": False, "error": "未设置服务器目录"}, code=400)
+            return
+        version = detect_server_version(d)
+        try:
+            result = levilamina.enable_loader(d, version)
+            audit_log("LEVILAMINA_ENABLE", f"game={result.get('game')} version={version}", None)
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/levilamina/disable")
+    def _post_levilamina_disable(self, data):
+        from ... import levilamina
+        from ...server import server_running
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        if server_running():
+            self._json({"ok": False, "error": "请先停止服务器"}, code=400)
+            return
+        try:
+            result = levilamina.disable_loader(resolve_server_dir())
+            audit_log("LEVILAMINA_DISABLE", "", None)
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/levilamina/mods/install")
+    def _post_levilamina_mod_install(self, data):
+        import base64
+        import tempfile
+
+        from ... import levilamina
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        d = resolve_server_dir()
+        if not d:
+            self._json({"ok": False, "error": "未设置服务器目录"}, code=400)
+            return
+        url = str((data or {}).get("url") or "").strip()
+        raw = (data or {}).get("file_data") or ""
+        try:
+            if url:
+                result = levilamina.install_mod_url(d, url)
+            elif raw:
+                blob = base64.b64decode(raw, validate=True)
+                if len(blob) > 120 * 1024 * 1024:
+                    self._json({"ok": False, "error": "插件包过大"}, code=400)
+                    return
+                fd, tmp = tempfile.mkstemp(prefix="mod-", suffix=".zip")
+                try:
+                    with open(fd, "wb") as handle:
+                        handle.write(blob)
+                    result = levilamina.install_mod_zip(d, tmp, display_name=str((data or {}).get("file_name") or ""))
+                finally:
+                    import contextlib
+                    import os
+
+                    with contextlib.suppress(OSError):
+                        os.unlink(tmp)
+            else:
+                self._json({"ok": False, "error": "请提供插件包文件或 URL"}, code=400)
+                return
+            audit_log("LEVILAMINA_MOD_INSTALL", str((data or {}).get("file_name") or url)[:120], None)
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+        except Exception as e:
+            safe_log_exception("post_extra", f"安装插件失败: {e}", "warning")
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/levilamina/mods/toggle")
+    def _post_levilamina_mod_toggle(self, data):
+        from ... import levilamina
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            result = levilamina.toggle_mod(
+                resolve_server_dir(), str((data or {}).get("name") or ""), bool((data or {}).get("enabled", True))
+            )
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/levilamina/mods/delete")
+    def _post_levilamina_mod_delete(self, data):
+        from ... import levilamina
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        if not bool((data or {}).get("confirm")):
+            self._json({"ok": False, "error": "删除插件需要确认"}, code=400)
+            return
+        try:
+            result = levilamina.delete_mod(resolve_server_dir(), str((data or {}).get("name") or ""))
+            audit_log("LEVILAMINA_MOD_DELETE", str(result.get("name")), None)
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/levilamina/lip/install_pkg")
+    def _post_levilamina_lip_install_pkg(self, data):
+        from ... import levilamina
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            result = levilamina.lip_install(resolve_server_dir(), str((data or {}).get("package") or ""))
+            audit_log("LEVILAMINA_LIP_INSTALL", str((data or {}).get("package"))[:120], None)
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)
+
+    @register_post_route("/api/levilamina/lip/uninstall_pkg")
+    def _post_levilamina_lip_uninstall_pkg(self, data):
+        from ... import levilamina
+
+        if not self._tunnel_loopback_guard():
+            self._json({"ok": False, "error": "只能在运行本程序的机器上操作"}, code=403)
+            return
+        try:
+            result = levilamina.lip_uninstall(resolve_server_dir(), str((data or {}).get("package") or ""))
+            audit_log("LEVILAMINA_LIP_UNINSTALL", str((data or {}).get("package"))[:120], None)
+            self._json({"ok": True, **result})
+        except levilamina.LeviLaminaError as e:
+            self._json({"ok": False, "error": str(e)}, code=400)

@@ -132,7 +132,10 @@ class ServerProcess:
             if self.running:
                 return
             try:
-                exe = os.path.join(self.server_dir, SERVER_EXE)
+                from .utils import resolve_server_exe
+
+                exe_name = resolve_server_exe(self.server_dir) or SERVER_EXE
+                exe = os.path.join(self.server_dir, exe_name)
                 if not os.path.exists(exe):
                     raise FileNotFoundError(f"未找到 {SERVER_EXE}，请先安装服务器。")
                 # 端口占用检测：所有启动入口（Web 路由 / 托盘 / 安装后自动启动 /
