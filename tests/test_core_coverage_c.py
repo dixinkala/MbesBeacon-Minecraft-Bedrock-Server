@@ -1198,10 +1198,17 @@ class TestBuiltinExtraction(_SettingsCase):
             thread = threading.Thread(target=bt._tail_file, args=(log_path, buffer, stop), kwargs={"poll": 0.01})
             thread.start()
             try:
-                with open(log_path, "a", encoding="utf-8") as handle:
-                    handle.write("[INFO] tailed line\n")
-                    handle.flush()
-                self.assertTrue(_wait_until(lambda: "tailed line" in " ".join(buffer.tail()), timeout=3))
+                # 线程启动与首次写入存在竞态：循环追加直到被读到（最多 3 秒）
+                deadline = time.time() + 3
+                seen = False
+                while time.time() < deadline:
+                    with open(log_path, "a", encoding="utf-8") as handle:
+                        handle.write("[INFO] tailed line\n")
+                        handle.flush()
+                    if _wait_until(lambda: "tailed line" in " ".join(buffer.tail()), timeout=0.3):
+                        seen = True
+                        break
+                self.assertTrue(seen)
             finally:
                 stop.set()
                 thread.join(3)
