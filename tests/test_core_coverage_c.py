@@ -2464,7 +2464,16 @@ class TestHandlerHostAndAuth(_HttpCase):
         stub = _Stub()
         with mock.patch("bedrock_server_manager.app_logger.get_app_logger") as logger:
             H.Handler._log(stub, "hello", "info")
-        logger.return_value.log.assert_called_once_with("info", "hello")
+        logger.return_value.info.assert_called_once_with("hello")
+        logger.return_value.log.assert_not_called()
+        with mock.patch("bedrock_server_manager.app_logger.get_app_logger") as logger:
+            H.Handler._log(stub, "boom", "warning")
+        logger.return_value.warning.assert_called_once_with("boom")
+        with mock.patch(
+            "bedrock_server_manager.app_logger.get_app_logger", return_value=mock.Mock(spec=["info"])
+        ) as logger:
+            H.Handler._log(stub, "fallback", "not-a-level")
+        logger.return_value.info.assert_called_once_with("fallback")
         with mock.patch("bedrock_server_manager.app_logger.get_app_logger", side_effect=RuntimeError("no logger")):
             H.Handler._log(stub, "hello")
 

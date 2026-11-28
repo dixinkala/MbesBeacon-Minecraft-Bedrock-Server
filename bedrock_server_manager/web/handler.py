@@ -183,11 +183,21 @@ class Handler(
         self.wfile.write(body)
 
     def _log(self, message, level="info"):
-        """Log message."""
+        """Log message.
+
+        ``logging.Logger.log()`` 需要整数级别，直接传 "info" 会抛
+        "level must be an integer"，导致每次调用都退化成一条警告日志。
+        这里按级别名调用对应方法。
+        """
         try:
             from ..app_logger import get_app_logger
 
-            get_app_logger().log(level, message)
+            logger = get_app_logger()
+            method = getattr(logger, str(level).lower(), None)
+            if callable(method):
+                method(message)
+            else:
+                logger.info(message)
         except Exception as e:
             # 应用日志记录失败不影响 API 响应
             safe_log_exception("handler", f"_log 忽略异常: {e}", "warning")
