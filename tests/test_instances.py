@@ -2,8 +2,7 @@
 
 import os
 import tempfile
-import unittest
-from unittest import mock
+from unittest import TestCase, main, mock
 
 from bedrock_server_manager import server
 from bedrock_server_manager.app_context import AppContext
@@ -37,7 +36,7 @@ class FakeProc:
         self.sent.append(cmd)
 
 
-class InstanceTestBase(unittest.TestCase):
+class InstanceTestBase(TestCase):
     def setUp(self):
         self.ctx = AppContext.instance()
         self._settings = dict(self.ctx.settings)
@@ -200,4 +199,4 @@ class TestSyncBootstrap(InstanceTestBase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    main(verbosity=2)

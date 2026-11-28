@@ -418,31 +418,38 @@ def unregister_instance(server_dir: str) -> bool:
     return True
 
 
+def _instance_port(dir_path: str) -> int:
+    """读取某实例端口（失败回退 19132）。"""
+    try:
+        return get_server_port(dir_path)
+    except Exception:
+        return 19132
+
+
+def _instance_version(dir_path: str, versions_map: dict) -> str:
+    """从 settings 的目录->版本映射读取实例版本（避免 import install 造成循环依赖）。"""
+    key = _instance_key(dir_path)
+    value = versions_map.get(key) if isinstance(versions_map, dict) else ""
+    return str(value or "")
+
+
 def list_instances() -> list[dict]:
     """实例列表（含运行状态/端口/版本/是否为当前实例）。"""
     settings = AppContext.instance().settings
     active_key = _instance_key(settings.get("server_dir", ""))
+    versions_map = settings.get("server_versions") or {}
     result: list[dict] = []
     for entry in instance_dirs():
         dir_path = entry["dir"]
         key = _instance_key(dir_path)
         inst = _instances.get(key)
-        running = bool(inst and inst["proc"].running)
-        port = 19132
-        version = ""
-        with contextlib.suppress(Exception):
-            port = get_server_port(dir_path)
-        with contextlib.suppress(Exception):
-            from .install import detect_server_version
-
-            version = detect_server_version(dir_path)
         result.append(
             {
                 "dir": dir_path,
                 "name": entry.get("name") or os.path.basename(dir_path),
-                "running": running,
-                "port": port,
-                "version": version,
+                "running": bool(inst and inst["proc"].running),
+                "port": _instance_port(dir_path),
+                "version": _instance_version(dir_path, versions_map),
                 "active": key == active_key,
             }
         )
