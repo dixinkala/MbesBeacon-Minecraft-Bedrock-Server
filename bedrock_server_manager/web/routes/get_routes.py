@@ -549,3 +549,17 @@ class GetRoutesMixin:
                 "default_commands": dict(tunnel.DEFAULT_COMMANDS),
             }
         )
+
+    @register_get_route("/api/tunnel/builtin")
+    def _get_builtin_tunnel(self, q):
+        """内置穿透工具状态（playit / frp）。"""
+        from ... import builtin_tunnel
+
+        self._json(
+            {
+                "ok": True,
+                "platform": builtin_tunnel.platform_tag(),
+                "playit": builtin_tunnel.playit.status(),
+                "frp": builtin_tunnel.frp.status(),
+            }
+        )
