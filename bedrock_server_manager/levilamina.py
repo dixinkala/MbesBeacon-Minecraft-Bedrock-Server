@@ -28,14 +28,14 @@ import zipfile
 from urllib.parse import urlparse
 
 from .app_logger import safe_log_exception
-from .constants import APP_DATA_DIR, IS_WINDOWS
+from .constants import APP_DATA_DIR, IS_WINDOWS, SERVER_EXE
 
 LIP_REPO = "LiteLDev/lip"
 GITHUB_API = "https://api.github.com"
 USER_AGENT = "MbesBeacon-LeviLamina"
 LIP_DIR = os.path.join(APP_DATA_DIR, "tools", "lip")
 MODDED_EXE = "bedrock_server_mod.exe"
-OFFICIAL_EXE = "bedrock_server.exe"
+OFFICIAL_EXE = SERVER_EXE
 MODS_DIR = "mods"
 DISABLED_DIR = "mods.disabled"
 BACKUP_DIR = "mbes_backup"

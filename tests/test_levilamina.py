@@ -44,13 +44,13 @@ class TestVersionMapping(TestCase):
 class TestResolveServerExe(TestCase):
     def test_prefers_modded(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, SERVER_EXE))
+            _write(os.path.join(tmp, L.OFFICIAL_EXE))
             _write(os.path.join(tmp, L.MODDED_EXE))
             self.assertEqual(resolve_server_exe(tmp), MODDED_SERVER_EXE)
 
     def test_falls_back_to_official(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, SERVER_EXE))
+            _write(os.path.join(tmp, L.OFFICIAL_EXE))
             self.assertEqual(resolve_server_exe(tmp), SERVER_EXE)
 
     def test_missing(self):
@@ -61,7 +61,7 @@ class TestResolveServerExe(TestCase):
 class TestState(TestCase):
     def test_not_installed(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, SERVER_EXE))
+            _write(os.path.join(tmp, L.OFFICIAL_EXE))
             st = L.state(tmp)
         self.assertFalse(st["installed"])
         self.assertFalse(st["enabled"])
@@ -79,7 +79,7 @@ class TestState(TestCase):
     def test_disabled_when_official_present(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write(os.path.join(tmp, L.MODDED_EXE))
-            _write(os.path.join(tmp, SERVER_EXE))
+            _write(os.path.join(tmp, L.OFFICIAL_EXE))
             st = L.state(tmp)
         self.assertTrue(st["installed"])
         self.assertFalse(st["enabled"])
@@ -220,7 +220,7 @@ class TestEnableDisable(TestCase):
 
     def test_enable_job_success(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, SERVER_EXE))
+            _write(os.path.join(tmp, L.OFFICIAL_EXE))
 
             def fake_run(argv, cwd, on_line, timeout=0):
                 _write(os.path.join(cwd, L.MODDED_EXE))
@@ -242,7 +242,7 @@ class TestEnableDisable(TestCase):
 
     def test_enable_job_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _write(os.path.join(tmp, SERVER_EXE))
+            _write(os.path.join(tmp, L.OFFICIAL_EXE))
             with (
                 mock.patch.object(L, "supported", return_value=True),
                 mock.patch.object(L, "lip_installed", return_value=True),
